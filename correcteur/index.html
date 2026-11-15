@@ -13,6 +13,8 @@ Deux modes, un seul fichier :
 - page de Classe (correcteur.html) : + évaluations A/AR/ECA/NA (commun/eval.js, base evals/calcul, clé « Ceinture-Fiche », ex. « Jaune-B ») ; fichiers communs dans outils/
 Données : commun/fiches-calcul.js (window.FICHES_CALCUL). Calculs exacts en BigInt (pas d'erreur d'arrondi sur les décimaux).
 Historique :
+- 2.1.0 (2026-11-15) un « A » sur une fiche valide aussi en A les ceintures précédentes pas encore validées (clé de ceinture seule, ex. « Blanche » : on n'écrit jamais sur les fiches) ;
+  réglage « Ceintures d'avant : auto » (localStorage, par appareil, oui par défaut) ; une seule étape à annuler (setMany).
 - 2.0.0 (2026-11-15) charte Repères, évaluations dans Classe (filtre par groupe, ceinture acquise, PDF, Ctrl+Z), fiches dans un fichier de données.
 - 1.0.0 (2026-11-15) version reçue + installation, bouton Retour, Échap, numéro de version.
 -->
@@ -111,7 +113,7 @@ footer a{color:var(--encre-douce)}
 <div id="toast" class="toast" role="status"></div>
 <script>document.write('<script src="' + COMMUN + 'fiches-calcul.js"><\/script>' + (MODE_APP ? '' : '<script src="' + COMMUN + 'eval.js"><\/script>'));</script>
 <script>
-const VERSION = "2.0.0";
+const VERSION = "2.1.0";
 const CLASSE_URL = "https://claude.ai/artifact/Fjw3PS19NxsGxkekSUaoZA";
 const SOURCE_FICHES = window.FICHES_CALCUL;
 const belts = SOURCE_FICHES.trim().split(/\n(?=[A-Z][^\n]*\|)/).map(block => {
@@ -334,13 +336,27 @@ function newSheet() {
 /* Évaluations (seulement dans Classe) */
 const beltOf = {};
 belts.forEach((b, i) => b.sheets.forEach(s => beltOf[sheetKey(s)] = i));
-function acquired(name) { /* plus haute ceinture avec au moins une fiche « A » */
-  let best = -1;
-  for (const [k, i] of Object.entries(beltOf)) if (i > best && store.get(k, name) === "A") best = i;
-  return best;
+/* Une ceinture est validée si une de ses fiches a « A », ou si elle a été validée automatiquement (clé = nom de la ceinture seul). */
+const validated = (b, name) => store.get(b.name, name) === "A" || b.sheets.some(s => store.get(sheetKey(s), name) === "A");
+function acquired(name) { /* plus haute ceinture validée */
+  for (let i = belts.length - 1; i >= 0; i--) if (validated(belts[i], name)) return i;
+  return -1;
+}
+let autoPrev = true;
+try { autoPrev = localStorage.getItem("calcul-auto-precedentes") !== "0"; } catch {}
+function onMark(key, name, m) {
+  const changes = [{key, name, m}];
+  if (m === "A" && autoPrev) for (let i = 0; i < beltOf[key]; i++)
+    if (!validated(belts[i], name)) changes.push({key: belts[i].name, name, m: "A"});
+  store.setMany(changes);
+  if (changes.length > 1) Evals.toast(name + " : " + (changes.length - 1) + " ceinture" + (changes.length > 2 ? "s" : "") + " d’avant validée" + (changes.length > 2 ? "s" : "") + " aussi");
 }
 function pupils() {
-  return store.roster.map(p => { const i = acquired(p.name); return {...p, info: p.group + (i >= 0 ? " · ceinture " + belts[i].name.toLowerCase() : "")}; });
+  const b = shown && belts[beltOf[sheetKey(shown)]];
+  return store.roster.map(p => {
+    const i = acquired(p.name), auto = b && store.get(b.name, p.name) === "A";
+    return {...p, info: p.group + (i >= 0 ? " · ceinture " + belts[i].name.toLowerCase() : "") + (auto ? " · " + b.name.toLowerCase() + " validée auto" : "")};
+  });
 }
 async function startEvals() {
   if (MODE_APP) {
@@ -350,7 +366,9 @@ async function startEvals() {
   get("back").hidden = false;
   try {
     store = await Evals.start("calcul", VERSION);
-    panel = new Evals.Panel(evalHost, {store, key: () => shown && sheetKey(shown), pupils, filters: true, pdf: exportPdf});
+    panel = new Evals.Panel(evalHost, {store, key: () => shown && sheetKey(shown), pupils, filters: true, pdf: exportPdf, onMark,
+      extra: () => '<button type="button" class="btn petit" data-ev="x" aria-pressed="' + autoPrev + '" title="Un A valide aussi les ceintures d’avant pas encore validées">' + (autoPrev ? "✓" : "✗") + " Ceintures d’avant : " + (autoPrev ? "auto" : "non") + "</button>",
+      onExtra: () => { autoPrev = !autoPrev; try { localStorage.setItem("calcul-auto-precedentes", autoPrev ? "1" : "0"); } catch {} }});
   } catch (e) {
     evalHost.innerHTML = '<div class="vers-classe"><span>⚠ Les évaluations n’ont pas pu se charger (base de Classe injoignable).</span><button class="btn petit" type="button" id="retry">↻ Réessayer</button></div>';
     get("retry").onclick = startEvals;
@@ -358,10 +376,10 @@ async function startEvals() {
 }
 function exportPdf() {
   const rows = store.roster.map(p => ({name: p.name, cells: belts.map(b => {
-    const l = store.last(b.sheets.map(sheetKey), p.name);
-    return l ? {m: l.m, t: l.m + " · " + l.key.split("-").pop()} : null;
+    const l = store.last([b.name].concat(b.sheets.map(sheetKey)), p.name);
+    return l ? {m: l.m, t: l.m + " · " + (l.key === b.name ? "auto" : l.key.split("-").pop())} : null;
   })}));
-  return Evals.pdf({sections: [{title: "Ceintures de calcul posé", sub: "Dernière évaluation de chaque ceinture (code · fiche)", cols: belts.map(b => b.name), rows}],
+  return Evals.pdf({sections: [{title: "Ceintures de calcul posé", sub: "Dernière évaluation de chaque ceinture (code · fiche, « auto » = validée par une ceinture suivante)", cols: belts.map(b => b.name), rows}],
     filename: "evaluations-ceintures-calcul.pdf", color: "#23914A", colsPerPage: 11});
 }
 

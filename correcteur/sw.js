@@ -1,6 +1,6 @@
 // Fonctionnement hors ligne de l'appli installée.
 // Changer CACHE à chaque nouvelle version (en même temps que VERSION dans index.html).
-const CACHE = "correcteur-2.0.0";
+const CACHE = "correcteur-2.1.0";
 const FILES = ["./", "./index.html", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png",
   "../commun/charte.css", "../commun/fiches-calcul.js"];
 

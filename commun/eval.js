@@ -72,14 +72,29 @@ Store.prototype.set = function(key, name, m, quiet){
   if(!quiet){ this.undoS.push({key:key, name:name, prev:prev, next:m}); this.redoS = []; }
   this.backup(); this.emit(); this.save();
 };
+/* Plusieurs cases d'un coup (ex. ceintures précédentes validées en même temps) : une seule étape à annuler */
+Store.prototype.setMany = function(list, quiet){
+  var self = this, now = Date.now(), done = [];
+  list.forEach(function(c){
+    var prev = self.get(c.key, c.name);
+    if(prev === c.m) return;
+    (self.doc.marks[c.key] || (self.doc.marks[c.key] = {}))[c.name] = {m:c.m, at:now};
+    done.push({key:c.key, name:c.name, prev:prev, next:c.m});
+  });
+  if(!done.length) return;
+  if(!quiet){ this.undoS.push(done.length === 1 ? done[0] : {many:done, name:done[0].name}); this.redoS = []; }
+  this.backup(); this.emit(); this.save();
+};
 Store.prototype.undo = function(){
   var u = this.undoS.pop(); if(!u){ toast('Rien à annuler'); return; }
-  this.redoS.push(u); this.set(u.key, u.name, u.prev, true);
-  toast('Annulé : ' + u.name + (u.prev ? ' → ' + u.prev : ' → vide'));
+  this.redoS.push(u);
+  this.setMany((u.many || [u]).map(function(c){ return {key:c.key, name:c.name, m:c.prev}; }), true);
+  toast('Annulé : ' + u.name + (u.many ? ' (' + u.many.length + ' cases)' : u.prev ? ' → ' + u.prev : ' → vide'));
 };
 Store.prototype.redo = function(){
   var u = this.redoS.pop(); if(!u){ toast('Rien à rétablir'); return; }
-  this.undoS.push(u); this.set(u.key, u.name, u.next, true);
+  this.undoS.push(u);
+  this.setMany((u.many || [u]).map(function(c){ return {key:c.key, name:c.name, m:c.next}; }), true);
   toast('Rétabli : ' + u.name);
 };
 Store.prototype.placeOf = function(p){ var e = this.doc.place[p.name]; return e && e.v || (/^CM1/.test(p.group) ? 'CM1' : /^CM2/.test(p.group) ? 'CM2' : 'both'); };
@@ -106,7 +121,9 @@ Store.prototype.flush = async function(){
 };
 
 /* ---------- Le panneau « Évaluations » ----------
-   opts : {store, key(), pupils() -> [{name, group, info}], filters: bool, places: [niveau] ou null, pdf() } */
+   opts : {store, key(), pupils() -> [{name, group, info}], filters: bool, places: bool, pdf(),
+           onMark(clé, prénom, code ou null) : remplace l'enregistrement simple (facultatif),
+           extra() -> HTML de boutons en plus (data-ev="x"), onExtra(bouton) (facultatifs) } */
 function Panel(el, opts){
   var S = opts.store, LSo = 'evals-open-' + S.name, LSf = 'evals-filtre-' + S.name, filt = 'tous';
   try{ filt = localStorage.getItem(LSf) || 'tous'; }catch(e){}
@@ -137,7 +154,7 @@ function Panel(el, opts){
       '<div class="evbody"><div class="evtools">' + f +
       '<button type="button" class="btn petit" data-ev="undo" title="Annuler (Ctrl+Z)"' + (S.undoS.length ? '' : ' disabled') + '>↶ Annuler</button>' +
       (S.status === 'err' ? '<button type="button" class="btn petit" data-ev="retry">↻ Réessayer</button>' : '') +
-      '<button type="button" class="btn petit" data-ev="pdf">⬇ Tableau PDF</button></div>' +
+      '<button type="button" class="btn petit" data-ev="pdf">⬇ Tableau PDF</button>' + (opts.extra ? opts.extra() : '') + '</div>' +
       (L.length ? '<ul class="evlist">' + rows + '</ul>' : '<p class="aide">Aucun élève. Les prénoms viennent de Classe › Maths (groupes).</p>') + places +
       '<p class="legende">A Acquis · AR À renforcer · ECA En cours d’acquisition · NA Non acquis. Touche une 2<sup>e</sup> fois pour effacer. Ctrl+Z annule.</p></div></details>';
     if(focus && focus.ev){
@@ -148,9 +165,10 @@ function Panel(el, opts){
   el.addEventListener('click', async function(e){
     var b = e.target.closest('[data-ev]'); if(!b || b.tagName === 'SELECT') return;
     var a = b.dataset.ev, key = opts.key();
-    if(a === 'mk'){ var cur = S.get(key, b.dataset.n); S.set(key, b.dataset.n, cur === b.dataset.m ? null : b.dataset.m); if(navigator.vibrate) try{ navigator.vibrate(8); }catch(x){} }
+    if(a === 'mk'){ var cur = S.get(key, b.dataset.n), next = cur === b.dataset.m ? null : b.dataset.m; if(opts.onMark) opts.onMark(key, b.dataset.n, next); else S.set(key, b.dataset.n, next); if(navigator.vibrate) try{ navigator.vibrate(8); }catch(x){} }
     else if(a === 'filtre'){ filt = b.dataset.g; try{ localStorage.setItem(LSf, filt); }catch(x){} render(); }
     else if(a === 'undo') S.undo();
+    else if(a === 'x' && opts.onExtra){ opts.onExtra(b); render(); }
     else if(a === 'retry') S.flush();
     else if(a === 'pdf'){ b.disabled = true; b.textContent = 'Préparation…'; try{ await opts.pdf(); }catch(x){ toast('Le PDF n’a pas pu être préparé. Réessaie.'); } render(); }
   });

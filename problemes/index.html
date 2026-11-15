@@ -1,0 +1,202 @@
+<!doctype html>
+<!-- TECHNIQUE
+Fiche d'identité
+- Rôle : corrigés des ateliers de problèmes CM1 et CM2, et évaluation des élèves atelier par atelier.
+- Quand : en classe pendant les ateliers (téléphone), ou le soir pour corriger et faire le point (ordinateur).
+- Où : téléphone (appli installée, corrigés seuls) ; Classe sur téléphone et ordinateur (corrigés + évaluations).
+- Écran n° 1 : le dernier atelier ouvert, avec CM1/CM2 et le numéro à taper.
+- Ce qu'il ne fait pas : pas de liste d'élèves à lui (elle vient de Classe › Maths) ; pas de calcul posé (Correcteur de calcul posé).
+Version : voir VERSION (et CACHE dans sw.js).
+Charte Repères v1 (commun/charte.css), couleur de l'outil --outil-problemes.
+Deux modes, un seul fichier :
+- appli installée (github.io ou ?mode=app) : corrigés seuls, hors ligne, AUCUN prénom (dépôt public) ; fichiers communs dans ../commun/
+- page de Classe (problemes.html) : + évaluations (commun/eval.js, base evals/problemes) ; fichiers communs dans outils/
+Données : commun/corriges-problemes.js (window.CORRIGES_PROBLEMES).
+Clés d'évaluation : « CM1-12 » (niveau-numéro), comme l'ancien fichier.
+Historique : 2.0.0 (2026-11-15) charte Repères, appli installable, évaluations dans Classe, Ctrl+Z, flèches ← →, bouton Retour.
+-->
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#E1EEF0">
+<title>Ateliers de problèmes · Correcteur</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+<script>
+var MODE_APP = /github\.io$/.test(location.hostname) || /[?&]mode=app/.test(location.search);
+var COMMUN = MODE_APP ? '../commun/' : 'outils/';
+document.write('<link rel="stylesheet" href="' + COMMUN + 'charte.css">');
+if (MODE_APP) document.write('<link rel="manifest" href="manifest.webmanifest"><link rel="icon" href="icon-192.png"><link rel="apple-touch-icon" href="icon-192.png">');
+</script>
+<style>
+:root{--outil:var(--outil-problemes)}
+.choix{display:flex;align-items:center;flex-wrap:wrap;gap:10px;justify-content:space-between}
+.choix .seg button[data-level=CM1]{--sel:var(--cm1)}.choix .seg button[data-level=CM2]{--sel:var(--cm2)}
+form{display:flex;gap:6px;align-items:center}
+#number{width:76px;text-align:center;min-height:var(--cible);border:1px solid var(--trait);border-radius:var(--arrondi-m);background:var(--surface-2);font-size:1.1rem}
+.picker{margin-top:10px;border-top:1px solid var(--trait);padding-top:6px}
+.picker>summary{cursor:pointer;padding:8px 0;font-weight:700}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(46px,1fr));gap:6px;margin:4px 0}
+.grid button{min-height:44px;border:1px solid var(--trait);border-radius:var(--arrondi-s);background:var(--surface-2);font-weight:700;position:relative}
+.grid button[aria-current=true]{background:var(--outil);border-color:var(--outil);color:var(--sur-outil)}
+.grid button .pt{position:absolute;right:3px;top:3px;width:7px;height:7px;border-radius:50%;background:var(--valide)}
+.nav{display:flex;justify-content:space-between;gap:8px;margin:16px 0 10px}
+.titre{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+h2{margin:0;font-size:1.6rem;line-height:1.15}
+.topic{margin:2px 0 4px;color:var(--encre-douce)}
+.list{display:grid;gap:8px;margin:12px 0 0;padding:0;list-style:none}
+.problem{display:grid;grid-template-columns:44px minmax(0,1fr);gap:4px 12px;padding:12px 14px;background:var(--surface);border:1px solid var(--trait);border-radius:var(--arrondi-m)}
+.number{grid-row:1 / span 2;align-self:start;display:grid;place-items:center;min-height:34px;border-radius:var(--arrondi-s);background:color-mix(in srgb,var(--outil) 14%,var(--surface));color:var(--encre);font-size:.82rem;font-weight:700;text-align:center}
+.answer{margin:0;font-size:1.06rem;font-weight:700}
+.steps{grid-column:2;list-style:none;padding:0;margin:0;color:var(--encre-douce);font-size:.93rem;font-variant-numeric:tabular-nums}
+.steps li+li{margin-top:2px}
+@media(min-width:680px){.problem{grid-template-columns:44px minmax(150px,.95fr) minmax(220px,1.45fr);align-items:start}.number{grid-row:1}.steps{grid-column:3}}
+footer{margin:22px 0 34px;font-size:.82rem;color:var(--encre-douce)}
+@media print{.choix,.picker,.nav,footer{display:none}.shell{width:100%}.problem{break-inside:avoid}}
+</style>
+</head>
+<body>
+<header class="entete"><div class="shell bar">
+  <a class="retour" href="index.html" id="back" data-cnav-hide hidden>← Classe</a>
+  <span class="tuile" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></span>
+  <h1>Ateliers de problèmes<small>Corrigés pour l'enseignant</small></h1>
+</div></header>
+<main class="shell">
+  <section class="carte flotte" aria-label="Choisir un atelier">
+    <div class="choix">
+      <div class="seg" role="group" aria-label="Niveau"><button type="button" data-level="CM1">CM1</button><button type="button" data-level="CM2">CM2</button></div>
+      <form id="jump"><input id="number" aria-label="Numéro d’atelier" inputmode="numeric" maxlength="3" placeholder="N°" autocomplete="off"><button class="btn plein" type="submit">Ouvrir</button></form>
+    </div>
+    <p id="message" class="msg" role="status"></p>
+    <details class="picker"><summary>Tous les ateliers</summary><div id="grid" class="grid"></div></details>
+  </section>
+  <nav class="nav" aria-label="Ateliers voisins"><button class="btn" id="prev" type="button" title="Atelier précédent (←)">← Précédent</button><button class="btn" id="next" type="button" title="Atelier suivant (→)">Suivant →</button></nav>
+  <section aria-labelledby="heading">
+    <div class="titre"><h2 id="heading" tabindex="-1"></h2><span id="lvl" class="niv"></span></div>
+    <p id="topic" class="topic"></p>
+    <div id="evals"></div>
+    <ol id="rows" class="list"></ol>
+  </section>
+  <footer>Corrigés établis à partir des fichiers CM1 et CM2 fournis · <span id="version"></span></footer>
+</main>
+<div id="toast" class="toast" role="status"></div>
+<script>document.write('<script src="' + COMMUN + 'corriges-problemes.js"><\/script>' + (MODE_APP ? '' : '<script src="' + COMMUN + 'eval.js"><\/script>'));</script>
+<script>
+const VERSION = "2.0.0";
+const CLASSE_URL = "https://claude.ai/artifact/Fjw3PS19NxsGxkekSUaoZA";
+const data = window.CORRIGES_PROBLEMES;
+const get = id => document.getElementById(id);
+const levels = [...document.querySelectorAll("[data-level]")];
+const byLevel = Object.fromEntries(Object.entries(data).map(([k, v]) => [k, Object.keys(v).map(Number).sort((a, b) => a - b)]));
+const last = {CM1: byLevel.CM1[0], CM2: byLevel.CM2[0]};
+let level = "CM1", returning = false, store = null, panel = null;
+try {
+  const saved = JSON.parse(localStorage.getItem("ateliers-problemes-v1"));
+  if (data[saved?.level]) { level = saved.level; returning = true; }
+  for (const k of Object.keys(last)) if (data[k][saved?.last?.[k]]) last[k] = saved.last[k];
+} catch {}
+const evalKey = () => level + "-" + last[level];
+const prime = lv => lv === "CM2" ? "′" : "";
+
+function render() {
+  const number = last[level], numbers = byLevel[level], index = numbers.indexOf(number), w = data[level][number];
+  levels.forEach(b => b.setAttribute("aria-pressed", String(b.dataset.level === level)));
+  get("number").value = number;
+  get("heading").textContent = "Atelier " + number + prime(level);
+  get("lvl").textContent = level; get("lvl").className = "niv " + level.toLowerCase();
+  get("topic").textContent = w.title;
+  renderGrid();
+  get("rows").replaceChildren(...w.rows.map(([label, answer, calcs]) => {
+    const li = document.createElement("li"); li.className = "problem";
+    const n = document.createElement("span"); n.className = "number"; n.textContent = label; n.setAttribute("aria-label", "Problème " + label);
+    const a = document.createElement("p"); a.className = "answer"; a.textContent = answer;
+    li.append(n, a);
+    if (calcs.length) { const ul = document.createElement("ul"); ul.className = "steps"; ul.append(...calcs.map(c => { const x = document.createElement("li"); x.textContent = c; return x; })); li.append(ul); }
+    return li;
+  }));
+  get("prev").disabled = index === 0; get("next").disabled = index === numbers.length - 1;
+  if (panel) panel.render();
+  try { localStorage.setItem("ateliers-problemes-v1", JSON.stringify({level, last})); } catch {}
+}
+function renderGrid() {
+  const number = last[level], numbers = byLevel[level];
+  const grid = get("grid");
+  grid.replaceChildren(...numbers.map(v => {
+    const b = document.createElement("button");
+    b.type = "button"; b.textContent = v + prime(level);
+    b.setAttribute("aria-label", "Atelier " + v + prime(level));
+    if (v === number) b.setAttribute("aria-current", "true");
+    if (store && pupils().some(p => store.get(level + "-" + v, p.name))) { const d = document.createElement("span"); d.className = "pt"; d.title = "Déjà évalué"; b.append(d); }
+    b.onclick = () => select(v, true);
+    return b;
+  }));
+}
+function select(number, focus = false, push = true) {
+  if (!data[level][number]) { get("message").textContent = number > 0 ? "L’atelier " + number + " n’est pas dans le fichier " + level + "." : "Tape un numéro d’atelier."; return; }
+  get("message").textContent = "";
+  last[level] = number;
+  const h = "#" + level.toLowerCase() + "-" + number;
+  if (push && location.hash !== h) history.pushState(null, "", h);
+  render();
+  if (focus) { document.querySelector(".picker").open = false; get("heading").focus({preventScroll: true}); get("heading").scrollIntoView({block: "nearest"}); }
+}
+function fromHash() {
+  const m = /^#(cm[12])-(\d+)$/i.exec(location.hash);
+  if (m) { level = m[1].toUpperCase(); if (data[level][+m[2]]) last[level] = +m[2]; }
+}
+get("prev").onclick = () => { const n = byLevel[level], i = n.indexOf(last[level]); if (i > 0) select(n[i - 1]); };
+get("next").onclick = () => { const n = byLevel[level], i = n.indexOf(last[level]); if (i < n.length - 1) select(n[i + 1]); };
+levels.forEach(b => b.onclick = () => { level = b.dataset.level; select(last[level]); document.querySelector(".picker").open = true; });
+get("jump").onsubmit = e => { e.preventDefault(); select(Number(get("number").value.trim().replace(/['’′]$/, "")), true); get("number").blur(); };
+addEventListener("popstate", () => { fromHash(); render(); });
+document.addEventListener("keydown", e => {
+  if (e.target.matches("input,select,textarea") || e.ctrlKey || e.metaKey || e.altKey) return;
+  if (e.key === "ArrowLeft") get("prev").click();
+  else if (e.key === "ArrowRight") get("next").click();
+  else if (/^\d$/.test(e.key)) { get("number").focus(); get("number").select(); }
+});
+
+/* Élèves du niveau affiché (mode Classe) */
+function pupils() {
+  if (!store) return [];
+  return store.roster.filter(p => { const v = store.placeOf(p); return v === "both" || v === level; }).map(p => ({...p, info: p.group}));
+}
+async function startEvals() {
+  const box = get("evals");
+  if (MODE_APP) {
+    box.innerHTML = '<div class="vers-classe"><span>👥 Les évaluations des élèves se font dans <b>Classe</b> › Outils et réglages › Maths.</span><a class="btn petit" href="' + CLASSE_URL + '" target="_blank" rel="noopener">Ouvrir Classe ↗</a></div>';
+    return;
+  }
+  get("back").hidden = false;
+  try {
+    store = await Evals.start("problemes", VERSION);
+    panel = new Evals.Panel(box, {store, key: evalKey, pupils, places: true, pdf: exportPdf});
+    store.on(renderGrid);
+    render();
+  } catch (e) {
+    box.innerHTML = '<div class="vers-classe"><span>⚠ Les évaluations n’ont pas pu se charger (base de Classe injoignable).</span><button class="btn petit" type="button" id="retry">↻ Réessayer</button></div>';
+    get("retry").onclick = startEvals;
+  }
+}
+function exportPdf() {
+  const sections = Object.keys(byLevel).map(lv => {
+    const nums = byLevel[lv];
+    const rows = store.roster.filter(p => { const v = store.placeOf(p); return v === "both" || v === lv; })
+      .map(p => ({name: p.name, cells: nums.map(n => ({m: store.get(lv + "-" + n, p.name)}))}));
+    return {title: "Ateliers de problèmes · " + lv, sub: "Ateliers " + nums[0] + " à " + nums.at(-1), cols: nums.map(n => n + prime(lv)), rows};
+  });
+  return Evals.pdf({sections, filename: "evaluations-ateliers-problemes.pdf", color: "#0F7A8F"});
+}
+
+get("version").textContent = "version " + VERSION;
+fromHash();
+history.replaceState(null, "", "#" + level.toLowerCase() + "-" + last[level]);
+render();
+document.querySelector(".picker").open = !returning;
+startEvals();
+if (MODE_APP && "serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("./sw.js").catch(() => {});
+</script>
+<script>if (!MODE_APP) document.write('<script src="side-nav.js" defer><\/script>');</script>
+</body>
+</html>

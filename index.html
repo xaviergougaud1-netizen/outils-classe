@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Outils de classe</title>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="commun/charte.css">
+<style>
+.outils{display:grid;gap:10px;margin-top:-26px;position:relative}
+.outil{display:flex;align-items:center;gap:14px;padding:14px;border-radius:var(--arrondi-l);background:var(--surface);border:1px solid var(--trait);text-decoration:none;color:var(--encre)}
+.outil img{width:52px;height:52px;border-radius:12px}
+.outil b{display:block;font-size:1.1rem}.outil small{color:var(--encre-douce)}
+</style>
+</head>
+<body>
+<header class="entete"><div class="shell bar"><h1>Outils de classe<small>Ouvre un outil, puis ⋮ › Ajouter à l'écran d'accueil</small></h1></div></header>
+<main class="shell">
+  <div class="outils">
+    <a class="outil" href="correcteur/"><img src="correcteur/icon-192.png" alt=""><span><b>Correcteur de calcul posé</b><small>Ceintures de calcul : tape le premier calcul de la fiche</small></span></a>
+    <a class="outil" href="problemes/"><img src="problemes/icon-192.png" alt=""><span><b>Ateliers de problèmes</b><small>Corrigés CM1 et CM2, atelier par atelier</small></span></a>
+  </div>
+  <p class="aide" style="margin:18px 0">Les évaluations des élèves se font dans Classe (aucun prénom n'est enregistré ici).</p>
+</main>
+</body>
+</html>

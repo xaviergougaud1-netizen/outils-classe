@@ -1,113 +1,99 @@
 <!doctype html>
 <!-- TECHNIQUE
 Fiche d'identité
-- Rôle : corriger vite une fiche de ceinture de calcul posé (Charivari) en tapant son premier calcul.
-- Quand : en classe, pendant ou après les ceintures, téléphone en main.
-- Où : téléphone surtout (appli installée), ordinateur possible ; ouvert aussi depuis la tuile de « Classe ».
+- Rôle : corriger vite une fiche de ceinture de calcul posé (Charivari) en tapant son premier calcul, et évaluer les élèves fiche par fiche.
+- Quand : en classe, pendant ou après les ceintures, téléphone en main ; le soir sur l'ordinateur pour faire le point.
+- Où : téléphone (appli installée, corrigés seuls) ; Classe sur téléphone et ordinateur (corrigés + évaluations).
 - Écran n° 1 : la recherche avec le pavé numérique ; le corrigé s'affiche dès qu'une seule fiche correspond.
-- Ce qu'il ne fait pas : pas de suivi des ceintures par élève (aucune donnée d'élève ici).
+- Ce qu'il ne fait pas : pas de liste d'élèves à lui (elle vient de Classe › Maths) ; pas de problèmes (Ateliers de problèmes).
 Version : voir VERSION (et CACHE dans sw.js, à changer ensemble).
-Choix techniques : PWA statique sur GitHub Pages (dépôt outils-classe, dossier correcteur/), hors ligne par sw.js.
-  Fiches dans SOURCE_FICHES (une ceinture = une ligne « Nom|couleur|décimales », puis une ligne par fiche, calculs séparés par « ; », « @n » = rang du quotient).
-  Calculs exacts en BigInt (pas d'erreur d'arrondi sur les décimaux).
-Historique : 1.0.0 (2026-11-15) version reçue + installation, bouton Retour, Échap, numéro de version.
+Charte Repères v1 (commun/charte.css), couleur de l'outil --outil-calcul.
+Deux modes, un seul fichier :
+- appli installée (github.io ou ?mode=app) : corrigés seuls, hors ligne, AUCUN prénom (dépôt public) ; fichiers communs dans ../commun/
+- page de Classe (correcteur.html) : + évaluations A/AR/ECA/NA (commun/eval.js, base evals/calcul, clé « Ceinture-Fiche », ex. « Jaune-B ») ; fichiers communs dans outils/
+Données : commun/fiches-calcul.js (window.FICHES_CALCUL). Calculs exacts en BigInt (pas d'erreur d'arrondi sur les décimaux).
+Historique :
+- 2.0.0 (2026-11-15) charte Repères, évaluations dans Classe (filtre par groupe, ceinture acquise, PDF, Ctrl+Z), fiches dans un fichier de données.
+- 1.0.0 (2026-11-15) version reçue + installation, bouton Retour, Échap, numéro de version.
 -->
 <html lang="fr">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="theme-color" content="#123e36">
-<meta name="apple-mobile-web-app-capable" content="yes">
-
-<link rel="apple-touch-icon" href="icon-192.png">
-<link rel="icon" href="icon-192.png">
-<link rel="manifest" href="manifest.webmanifest">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#E0EFE5">
+<title>Correcteur de calcul posé</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+<script>
+var MODE_APP = /github\.io$/.test(location.hostname) || /[?&]mode=app/.test(location.search);
+var COMMUN = MODE_APP ? '../commun/' : 'outils/';
+document.write('<link rel="stylesheet" href="' + COMMUN + 'charte.css">');
+if (MODE_APP) document.write('<link rel="manifest" href="manifest.webmanifest"><link rel="icon" href="icon-192.png"><link rel="apple-touch-icon" href="icon-192.png">');
+</script>
 <style>
-:root{color-scheme:light;--paper:#f7f7ef;--ink:#182c25;--muted:#50635b;--line:#dce3d9;--green:#123e36;--mint:#d9efdd;font-family:Inter,system-ui,sans-serif}
-*{box-sizing:border-box}
-body{margin:0;background:var(--paper);color:var(--ink)}
-.shell{width:min(100% - 32px,640px);margin-inline:auto}
-.hero{background:var(--green);color:white;padding:18px 0 48px}
-.bar{display:flex;align-items:center;justify-content:space-between}
-.mark{display:grid;place-items:center;border-radius:13px;background:#d8ed9e;color:var(--green);width:42px;height:42px;font-size:30px;font-weight:700}
-button,input{font:inherit}
-button{cursor:pointer;color:inherit}
-:focus-visible{outline:3px solid #578359;outline-offset:3px}
-.share{border:1px solid #86ad98;border-radius:999px;background:transparent;color:white;padding:10px 16px}
-h1{font:600 clamp(2.65rem,9vw,4.4rem)/.98 Georgia,serif;letter-spacing:-.055em;margin:22px 0 10px}
-.intro p{margin:0;color:#d6e8de}
-main{padding-bottom:96px}
-.search{position:relative;margin-top:-25px;background:white;border:1px solid var(--line);border-radius:22px;padding:16px;box-shadow:0 12px 28px #173b2a0d}
-label{display:block;font-weight:700;margin-bottom:8px;font-size:.93rem}
-input{width:100%;border:1px solid #9eafa4;border-radius:12px;padding:12px 13px;font-size:1.25rem;background:#fafcf8;color:var(--ink)}
-#second-wrap{margin-top:14px}
+:root{--outil:var(--outil-calcul)}
+main{padding-bottom:100px}
+label{display:block;font-weight:700;margin-bottom:6px;font-size:.93rem}
+.saisie{width:100%;border:1px solid var(--trait);border-radius:var(--arrondi-m);padding:11px 13px;font-size:1.25rem;background:var(--surface-2);min-height:var(--cible)}
+#second-wrap{margin-top:12px}
 .keypad{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:10px}
-.keypad button{min-height:45px;border:1px solid var(--line);border-radius:10px;background:#f5f7f1;font-size:1.13rem;font-weight:630;touch-action:manipulation}
-.keypad button.op{background:var(--mint);color:#174c36}
-#status{font-size:.88rem;color:var(--muted);margin:10px 0 0}
-#status:empty{display:none}
-#choices{display:flex;flex-wrap:wrap;gap:7px}
-#choices:empty{display:none}
-.choice{border:1px solid var(--line);background:white;border-radius:10px;padding:9px;text-align:left;margin-top:8px;font-size:.87rem}
-.choice small{display:block;color:var(--muted);margin-top:2px}
+.keypad button{min-height:var(--cible);border:1px solid var(--trait);border-radius:10px;background:var(--surface-2);font-size:1.15rem;font-weight:700}
+.keypad button.op{background:color-mix(in srgb,var(--outil) 14%,var(--surface));color:var(--encre)}
+#status{font-size:.9rem;color:var(--encre-douce);margin:10px 0 0}#status:empty{display:none}
+#choices{display:flex;flex-wrap:wrap;gap:7px}#choices:empty{display:none}
+.choice{border:1px solid var(--trait);background:var(--surface);border-radius:10px;padding:9px 11px;text-align:left;margin-top:8px;font-size:.9rem;min-height:var(--cible)}
+.choice.go{background:var(--outil);border-color:var(--outil);color:var(--sur-outil);font-weight:700}
+.choice small{display:block;color:var(--encre-douce);margin-top:2px}
 #correction{margin-top:18px}
-.sheet-title{background:#fff;border:1px solid var(--line);border-left:6px solid var(--belt);border-radius:14px;padding:13px 14px;margin-bottom:8px}
-h2{font-size:1.2rem;margin:0 0 4px}
-.sheet-title p{margin:0;color:var(--muted);font-size:.84rem}
-.calc{border:1px solid var(--line);background:white;border-radius:12px;margin:6px 0}
-.calc summary{display:grid;grid-template-columns:24px minmax(0,1fr) auto 12px;align-items:center;gap:7px;padding:10px;min-height:53px;cursor:pointer;list-style:none}
-summary::-webkit-details-marker{display:none}
-.calc summary::after{content:'›';font-size:1.4rem;color:#50635b}
+.sheet-title{display:flex;align-items:center;gap:12px;background:var(--surface);border:1px solid var(--trait);border-radius:var(--arrondi-l);padding:12px 14px;margin-bottom:8px}
+.ceint{flex:none;width:40px;height:40px;border-radius:10px;background:var(--belt);box-shadow:inset 0 0 0 1px rgba(0,0,0,.12);display:grid;place-items:center;color:#fff;font-weight:700}
+h2{font-size:1.2rem;margin:0}
+.sheet-title p{margin:0;color:var(--encre-douce);font-size:.86rem}
+.calc{border:1px solid var(--trait);background:var(--surface);border-radius:var(--arrondi-m);margin:6px 0}
+.calc summary{display:grid;grid-template-columns:26px minmax(0,1fr) auto 12px;align-items:center;gap:8px;padding:10px 12px;min-height:54px;cursor:pointer;list-style:none}
+.calc summary::-webkit-details-marker{display:none}
+.calc summary::after{content:'›';font-size:1.4rem;color:var(--encre-douce)}
 .calc[open] summary::after{transform:rotate(90deg)}
-.num{color:var(--muted);font-size:.76rem;text-align:center}
+.num{color:var(--encre-douce);font-size:.78rem;text-align:center}
 .expr,.answer,.work{font-variant-numeric:tabular-nums}
-.expr{font-size:clamp(.85rem,3.4vw,1.04rem);font-weight:550}
-.answer{text-align:right;font-weight:750;color:#174c36;white-space:nowrap}
-.expr small,.answer small{display:block;font-size:.72rem;font-weight:500;color:var(--muted);margin-top:2px}
-.work{padding:12px 14px;border-top:1px solid var(--line);background:#f7faf5;border-radius:0 0 12px 12px;font-size:.9rem;overflow:auto}
+.expr{font-size:clamp(.88rem,3.4vw,1.05rem);font-weight:700}
+.answer{text-align:right;font-weight:700;color:var(--outil);white-space:nowrap;font-size:1.05rem}
+.expr small,.answer small{display:block;font-size:.74rem;font-weight:400;color:var(--encre-douce);margin-top:2px}
+.work{padding:12px 14px;border-top:1px solid var(--trait);background:var(--surface-2);border-radius:0 0 var(--arrondi-m) var(--arrondi-m);font-size:.92rem;overflow:auto}
 .work p{margin:8px 0 0}
 .stack{display:grid;grid-template-columns:max-content auto;gap:4px 12px;align-items:center;width:max-content;max-width:100%}
 .stack code{text-align:right;white-space:pre;font-size:1rem}
-.stack small{color:var(--muted)}
-.rule{height:1px;background:#a5b5a9;grid-column:1/2}
+.stack small{color:var(--encre-douce)}
+.rule{height:1px;background:var(--encre-douce);grid-column:1/2}
 .division{border-collapse:collapse;width:100%;text-align:right;white-space:nowrap}
-.division th,.division td{padding:5px 3px;border-bottom:1px solid var(--line)}
-.division th{font-size:.76rem;color:var(--muted)}
-.browse{margin-top:17px;background:#fff;border:1px solid var(--line);border-radius:14px;padding:12px}
-.browse summary{cursor:pointer;font-weight:650;padding:4px}
-.belt{display:flex;align-items:center;gap:6px;border-top:1px solid var(--line);padding:6px 0}
-.belt span{flex:1;font-size:.9rem}
-.belt button{min-width:36px;min-height:38px;border:1px solid var(--line);background:#f5f7f1;border-radius:8px}
-footer{text-align:center;margin:18px 0;font-size:.78rem}
-footer a{color:var(--muted)}
-.dock{position:fixed;bottom:0;left:0;right:0;text-align:center;background:#f7f7eff0;padding:9px 15px calc(9px + env(safe-area-inset-bottom));border-top:1px solid var(--line)}
-.dock button{color:white;background:var(--green);border:0;border-radius:12px;min-height:46px;width:min(100%,608px);font-weight:700}
-[hidden]{display:none!important}
-
-.version{color:var(--muted);margin-top:4px}
+.division th,.division td{padding:5px 3px;border-bottom:1px solid var(--trait)}
+.division th{font-size:.78rem;color:var(--encre-douce)}
+.browse{margin-top:17px;background:var(--surface);border:1px solid var(--trait);border-radius:var(--arrondi-l);padding:8px 14px}
+.browse summary{cursor:pointer;font-weight:700;padding:8px 0}
+.belt{display:flex;align-items:center;gap:8px;border-top:1px solid var(--trait);padding:6px 0}
+.belt .dot{flex:none;width:22px;height:22px;border-radius:6px;background:var(--belt);box-shadow:inset 0 0 0 1px rgba(0,0,0,.12)}
+.belt span{flex:1;font-size:.95rem;font-weight:700}
+.belt button{min-width:44px;min-height:44px;border:1px solid var(--trait);background:var(--surface-2);border-radius:var(--arrondi-s);font-weight:700}
+.belt button[aria-current=true]{background:var(--outil);border-color:var(--outil);color:var(--sur-outil)}
+footer{text-align:center;margin:18px 0;font-size:.8rem;color:var(--encre-douce)}
+footer a{color:var(--encre-douce)}
+.dock{position:fixed;bottom:0;left:0;right:0;text-align:center;background:color-mix(in srgb,var(--fond) 94%,transparent);padding:9px 15px calc(9px + env(safe-area-inset-bottom));border-top:1px solid var(--trait);z-index:5}
+.dock .btn{width:min(100%,608px)}
 </style>
-<title>Correcteur de calcul posé</title>
-
-
 </head>
 <body>
-<header class="hero">
-  <div class="shell bar">
-    <span class="mark" aria-hidden="true">÷</span>
-    <button id="share" class="share" type="button">Partager</button>
-  </div>
-  <div class="shell intro">
-    <h1>Correcteur<br>de calcul posé</h1>
-    <p>Ceintures de calcul · Tests v6</p>
-  </div>
-</header>
+<header class="entete"><div class="shell bar">
+  <a class="retour" href="index.html" id="back" data-cnav-hide hidden>← Classe</a>
+  <span class="tuile" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="12" cy="6" r="1.4" fill="currentColor"/><path d="M5 12h14"/><circle cx="12" cy="18" r="1.4" fill="currentColor"/></svg></span>
+  <h1>Correcteur de calcul posé<small>Ceintures de calcul · tests v6</small></h1>
+</div></header>
 <main class="shell">
-  <section class="search" aria-label="Recherche de fiche">
+  <section class="carte flotte" aria-label="Recherche de fiche">
     <label for="first">Premier nombre ou premier calcul</label>
-    <input id="first" placeholder="Ex. 47 ou 47 + 279" autocomplete="off" spellcheck="false" inputmode="none">
+    <input id="first" class="saisie" placeholder="Ex. 47 ou 47 + 279" autocomplete="off" spellcheck="false" inputmode="none">
     <div id="second-wrap" hidden>
       <label for="second">Deuxième nombre ou deuxième calcul</label>
-      <input id="second" autocomplete="off" spellcheck="false" inputmode="none" placeholder="Pour départager les fiches">
+      <input id="second" class="saisie" autocomplete="off" spellcheck="false" inputmode="none" placeholder="Pour départager les fiches">
     </div>
     <div id="keypad" class="keypad" aria-label="Clavier de calcul"></div>
     <p id="status" role="status"></p>
@@ -118,73 +104,16 @@ footer a{color:var(--muted)}
     <summary>Choisir une ceinture</summary>
     <div id="catalog"></div>
   </details>
-  <footer><a href="https://www.charivarialecole.fr/archives/8508">Fiches de Charivari à l’école</a><div class="version" id="version"></div></footer>
+  <div id="evals-app"></div>
+  <footer><a href="https://www.charivarialecole.fr/archives/8508">Fiches de Charivari à l’école</a> · <span id="version"></span></footer>
 </main>
-<div class="dock" id="dock" hidden><button id="reset" type="button">↺ &nbsp; Nouvelle fiche</button></div>
+<div class="dock" id="dock" hidden><button class="btn plein" id="reset" type="button" title="Nouvelle fiche (Échap)">↺ &nbsp;Nouvelle fiche</button></div>
+<div id="toast" class="toast" role="status"></div>
+<script>document.write('<script src="' + COMMUN + 'fiches-calcul.js"><\/script>' + (MODE_APP ? '' : '<script src="' + COMMUN + 'eval.js"><\/script>'));</script>
 <script>
-const VERSION = "1.0.0";
-const SOURCE_FICHES = `
-Blanche|#7b8293|0
-47+279;98+67;578+634;464+609;776+44;252+518
-598+51;172+59;872+208;77+126;646+810;43+63
-825+237;136+88;57+96;676+239;840+805;97+268
-319+546;89+33;751+308;65+543;129+46;672+539
-Jaune|#a06d04|0
-769+451;90+263;794-236;447-68;861-171;763-34
-680+571;406+96;527-436;681-628;996-29;337-246
-113+658;76+705;363-86;374-296;761-591;453-262
-145+269;97+888;814-53;394-196;995-367;638-99
-Orange|#bc5b26|0
-568+574;733-345;68*8;26*5;47*7;638*3
-288+451;844-238;35*5;62*9;317*8;56*4
-407+538;765-594;87*4;431*2;79*9;67*8
-195+98;117-59;60*8;76*2;95*7;48*3
-Rose|#a74370|0
-337-139;59*5;670-74;884*38;1245*17;483*25
-644-449;70*4;337*32;706*64;559-85;2321*19
-468-299;56*8;831*25;467-74;5201*31;721*69
-354+157;69*7;779*63;2889*52;545-59;693*48
-Vert clair|#42814c|0
-465-77;619*75;968/8;213/2;283/9;4193/5
-648-74;465*59;4406/3;671/8;110/6;917/7
-678-309;774*69;659/4;274/7;3633/2;391/9
-809-540;2345*81;4566/3;446/5;651/7;279/8
-Vert foncé|#22644e|0
-76*7739;2185*139;8205-942;847+8056+964;950/6;254/3
-36*1338;5481*233;8220-723;964+5416+735;531/7;270/4
-98*7194;5288*220;8650-871;735+9911+750;730/4;572/6
-87*6906;8097*46;7170-851;750+6984+735;495/3;530/6
-Bleu clair|#277899|0
-87*6906;8097/7;4+85.27+6.4;7.3+48.52+15;85-74.69;71.5-18.83
-49*7681;9065/8;16+71.56+7.9;3.7+18.08+9;153.8-84.03;108-79.14
-78*3965;9127/9;54+22.46+4.2;7.6+91.64+3;172-77.74;93.7-43.41
-49*1687;8712/8;28+48.44+10.3;7.4+85.89+9;124.5-50.94;101-44.2
-Bleu foncé|#304d9c|2
-460-77;61*759;968/8;213/2;283/9;4193/5
-608-74;46*595;4406/3;671/8;110/6;917/7
-670-309;74*697;659/4;274/7;3633/2;391/9
-809-540;45*8123;4566/3;446/5;651/7;279/8
-Violette|#6c45a6|2
-4*37.79;126.3*8.2;509.8*0.76;4.71+80.6+964;6.1*68.11;2685/7
-5.3*617.3;210.1*0.8;362.8*8.62;8.7+8.56+96.4;6.1*68.11;8365/7
-2163*8.4;1.31*12.05;8.71*14;5620-7.03;8461/9;2.6*978
-14.7*9;49.04*1.3;5.98*7.5;3407-61.2;2433/8;7.6*54.7
-Marron|#8e5439|2
-170.4/4;45.45/6;663/13;5600-50.7;861/14;36*27.59
-14.07/3;490/16;59.8/7;34-6.12;2433/12;7.6*3547
-2163/13;103.1/6;871/14;56.2-7.03;86.14/4;26*9.78
-4052/16;454/13;66.3/5;324-4.29;16.61/7;47*14.59
-Noire|#323143|2
-356.3/4;9+45.7+8.94;8451-13.47;40.7*58.96;4307/14;536*27.59
-261.15/3;8+29.9+6.48;6492-27.63;30.8*79.56;5227/13;842*54.67
-304.25/4;7+48.6+9.501;8745-36.52;80.4*57.96;8443/14;557*24.38
-267.1/3;8+59.3+7.88;2491-73.84;70.6*49.85;7827/13;649*75.83
-Brillante|#926515|0
-108-57.09;3.2*9.654;10647/14@1;756.1-63.218;4.7*687;5316/9@2;347-154.6;8.2*982.5;67250/13@1;48.42-29.31;864.2*9.5;64210/8@2
-247-184.6;82*982.5;67250/13@1;48.42-29.31;864.2*9.5;64210/8@2;203-57.09;3.72*9.6;10647/14@1;756.1-63.218;4.7*687;5316/9@2
-726-4.509;7.2*5.649;10992/14@1;582.1-21.803;47*68.7;7247/9@2;535-154.6;2.8*982.5;67251/13@1;48.42-29.31;864.2*9.5;64210/8@2
-`;
-
+const VERSION = "2.0.0";
+const CLASSE_URL = "https://claude.ai/artifact/Fjw3PS19NxsGxkekSUaoZA";
+const SOURCE_FICHES = window.FICHES_CALCUL;
 const belts = SOURCE_FICHES.trim().split(/\n(?=[A-Z][^\n]*\|)/).map(block => {
   const [head, ...variants] = block.split("\n");
   const [name, color, precision] = head.split("|");
@@ -293,152 +222,153 @@ function solve(operation) {
   }
   return {answer: format(result,totalDecimals), hint: "", work};
 }
-let activeInput, shown;
+let activeInput, shown, store = null, panel = null;
+const evalHost = document.createElement("div");
+const sheetKey = s => s.name + "-" + s.label;
 function show(sheet, scroll = false) {
   if (sheet === shown && !scroll) return;
   shown = sheet;
   correction.hidden = !sheet;
   get("dock").hidden = !sheet;
-  if (!sheet) {
-    correction.replaceChildren();
-    return;
-  }
-  const heading = '<div class="sheet-title" style="--belt:' + sheet.color + '"><h2>' + title(sheet) +
-    "</h2><p>Touche un calcul pour voir les étapes.</p></div>";
-  const rows = sheet.operations.map((operation,i) => {
+  markCatalog();
+  if (!sheet) { correction.replaceChildren(); return; }
+  const heading = '<div class="sheet-title" style="--belt:' + sheet.color + '"><span class="ceint" aria-hidden="true">' + sheet.label + '</span><div><h2>' + title(sheet) +
+    "</h2><p>Touche un calcul pour voir les étapes.</p></div></div>";
+  const rows = sheet.operations.map((operation, i) => {
     const solved = solve(operation);
-    return '<details class="calc"><summary><span class="num">' + (i + 1) +
-      '</span><span class="expr">' + pretty(operation.expression) +
-      (solved.hint ? "<small>" + solved.hint + "</small>" : "") +
-      '</span><span class="answer">' + solved.answer + '</span></summary><div class="work">' + solved.work + "</div></details>";
+    return '<details class="calc"><summary><span class="num">' + (i + 1) + '</span><span class="expr">' + pretty(operation.expression) +
+      (solved.hint ? "<small>" + solved.hint + "</small>" : "") + '</span><span class="answer">' + solved.answer + '</span></summary><div class="work">' + solved.work + "</div></details>";
   }).join("");
   correction.innerHTML = heading + rows;
+  correction.querySelector(".sheet-title").after(evalHost);
+  if (panel) panel.render();
   if (scroll) {
-    if (!history.state?.fiche) history.pushState({fiche:1}, "");
-    correction.scrollIntoView({block:"start",behavior:"smooth"});
+    if (!history.state?.fiche) history.pushState({fiche: 1}, "");
+    correction.scrollIntoView({block: "start", behavior: "smooth"});
   }
 }
 const title = sheet => sheet.name + " · " + sheet.label + (sheet.printLabel ? " (A sur le PDF)" : "");
-function exact(expr, query) {
-  return expr === query || expr.split(/[+*/-]/)[0] === query;
-}
+function exact(expr, query) { return expr === query || expr.split(/[+*/-]/)[0] === query; }
 function update() {
-  const query = normalize(first.value);
-  const extra = normalize(second.value);
-  const choices = get("choices");
+  const query = normalize(first.value), extra = normalize(second.value), choices = get("choices");
   choices.replaceChildren();
-  const candidates = query ? sheets.filter(sheet => sheet.operations[0].expression.startsWith(query)) : [];
-  const matches = candidates.filter(sheet => exact(sheet.operations[0].expression,query));
+  const candidates = query ? sheets.filter(s => s.operations[0].expression.startsWith(query)) : [];
+  const matches = candidates.filter(s => exact(s.operations[0].expression, query));
   const pool = matches.length ? matches : candidates;
   const ambiguous = pool.length > 1;
   get("second-wrap").hidden = !ambiguous;
-  if (!ambiguous) {
-    second.value = "";
-    if (activeInput === second) activeInput = first;
-  }
-  const narrowed = ambiguous && extra ? pool.filter(sheet => sheet.operations[1].expression.startsWith(extra)) : pool;
+  if (!ambiguous) { second.value = ""; if (activeInput === second) activeInput = first; }
+  const narrowed = ambiguous && extra ? pool.filter(s => s.operations[1].expression.startsWith(extra)) : pool;
   const found = narrowed.length === 1 && (matches.includes(narrowed[0]) || (ambiguous && extra)) ? narrowed[0] : null;
   show(found);
-  get("status").textContent = !query ? "" : !narrowed.length ? "Aucune fiche correspondante." :
+  get("status").textContent = !query ? "" : !narrowed.length ? "Aucune fiche ne commence par ce calcul." :
     found ? title(found) : narrowed.length > 1 ? narrowed.length + " fiches correspondent." : "Continue la saisie ou ouvre la fiche proposée.";
   if (found) {
     const jump = document.createElement("button");
-    jump.className = "choice";
-    jump.textContent = "Voir le corrigé ↓";
-    jump.onclick = () => show(found,true);
+    jump.className = "choice go"; jump.textContent = "Voir le corrigé ↓";
+    jump.onclick = () => show(found, true);
     choices.append(jump);
   } else if (narrowed.length <= 8) {
     for (const sheet of narrowed) {
-      const button = document.createElement("button");
-      button.className = "choice";
-      button.innerHTML = title(sheet) + "<small>" + pretty(sheet.operations[0].expression) +
-        (ambiguous ? " · " + pretty(sheet.operations[1].expression) : "") + "</small>";
-      button.onclick = () => show(sheet,true);
-      choices.append(button);
+      const b = document.createElement("button");
+      b.className = "choice";
+      b.innerHTML = title(sheet) + "<small>" + pretty(sheet.operations[0].expression) + (ambiguous ? " · " + pretty(sheet.operations[1].expression) : "") + "</small>";
+      b.onclick = () => show(sheet, true);
+      choices.append(b);
     }
   }
+}
+function markCatalog() {
+  for (const b of document.querySelectorAll("#catalog button")) b.setAttribute("aria-current", String(!!shown && b.dataset.k === sheetKey(shown)));
 }
 function init() {
   activeInput = first;
-  for (const field of [first,second]) {
+  for (const field of [first, second]) {
     field.addEventListener("focus", () => activeInput = field);
-    field.addEventListener("input", () => {
-      if (field === first) second.value = "";
-      update();
-    });
-    field.addEventListener("keydown", event => {
-      if (event.key === "Enter" && shown) show(shown,true);
-    });
+    field.addEventListener("input", () => { if (field === first) second.value = ""; update(); });
+    field.addEventListener("keydown", e => { if (e.key === "Enter" && shown) show(shown, true); });
   }
   for (const key of ["7","8","9","÷","4","5","6","×","1","2","3","−",",","0","⌫","+"]) {
-    const button = document.createElement("button");
-    button.textContent = key;
-    if (key === "⌫") button.setAttribute("aria-label","Effacer un caractère");
-    if ("÷×−+".includes(key)) button.className = "op";
-    button.addEventListener("pointerdown",event => event.preventDefault());
-    button.onclick = () => {
-      const field = activeInput;
-      const start = field.selectionStart, end = field.selectionEnd;
-      const from = key === "⌫" && start === end ? Math.max(0,start-1) : start;
-      field.setRangeText(key === "⌫" ? "" : key,from,end,"end");
-      field.focus({preventScroll:true});
-      field.dispatchEvent(new Event("input"));
+    const b = document.createElement("button");
+    b.type = "button"; b.textContent = key;
+    if (key === "⌫") b.setAttribute("aria-label", "Effacer un caractère");
+    if ("÷×−+".includes(key)) b.className = "op";
+    b.addEventListener("pointerdown", e => e.preventDefault());
+    b.onclick = () => {
+      const f = activeInput, start = f.selectionStart, end = f.selectionEnd;
+      const from = key === "⌫" && start === end ? Math.max(0, start - 1) : start;
+      f.setRangeText(key === "⌫" ? "" : key, from, end, "end");
+      f.focus({preventScroll: true});
+      f.dispatchEvent(new Event("input"));
     };
-    get("keypad").append(button);
+    get("keypad").append(b);
   }
   for (const belt of belts) {
     const row = document.createElement("div");
-    row.className = "belt";
-    const name = document.createElement("span");
-    name.style.color = belt.color;
-    name.textContent = belt.name;
-    row.append(name);
+    row.className = "belt"; row.style.setProperty("--belt", belt.color);
+    const dot = document.createElement("i"); dot.className = "dot";
+    const name = document.createElement("span"); name.textContent = belt.name;
+    row.append(dot, name);
     for (const sheet of belt.sheets) {
-      const button = document.createElement("button");
-      button.textContent = sheet.label;
-      button.setAttribute("aria-label",title(sheet));
-      button.onclick = () => {get("browse").open = false; show(sheet,true);};
-      row.append(button);
+      const b = document.createElement("button");
+      b.textContent = sheet.label; b.dataset.k = sheetKey(sheet);
+      b.setAttribute("aria-label", title(sheet));
+      b.onclick = () => { get("browse").open = false; show(sheet, true); };
+      row.append(b);
     }
     get("catalog").append(row);
   }
-  get("reset").onclick = () => {
-    if (history.state?.fiche) history.back(); else newSheet();
-  };
+  get("reset").onclick = () => { if (history.state?.fiche) history.back(); else newSheet(); };
   addEventListener("popstate", () => newSheet());
-  document.addEventListener("keydown", event => {
-    if (event.key === "Escape") get("reset").click();
-  });
-  get("version").textContent = "Version " + VERSION;
+  document.addEventListener("keydown", e => { if (e.key === "Escape") get("reset").click(); });
+  get("version").textContent = "version " + VERSION;
 }
 function newSheet() {
-  first.value = "";
-  second.value = "";
+  first.value = ""; second.value = "";
   get("browse").open = false;
   update();
-  first.focus({preventScroll:true});
-  window.scrollTo({top:0,behavior:"smooth"});
+  first.focus({preventScroll: true});
+  window.scrollTo({top: 0, behavior: "smooth"});
 }
-function initApp() {
-  get("share").onclick = async () => {
-    try {
-      if (navigator.share) await navigator.share({title:document.title,url:location.href});
-      else {
-        await navigator.clipboard.writeText(location.href);
-        get("share").textContent = "Lien copié";
-        setTimeout(() => get("share").textContent = "Partager",1800);
-      }
-    } catch (error) {
-      if (error.name !== "AbortError") window.prompt("Copier le lien",location.href);
-    }
-  };
-  if ("serviceWorker" in navigator && location.protocol === "https:") {
-    navigator.serviceWorker.register("./sw.js").catch(() => {});
+
+/* Évaluations (seulement dans Classe) */
+const beltOf = {};
+belts.forEach((b, i) => b.sheets.forEach(s => beltOf[sheetKey(s)] = i));
+function acquired(name) { /* plus haute ceinture avec au moins une fiche « A » */
+  let best = -1;
+  for (const [k, i] of Object.entries(beltOf)) if (i > best && store.get(k, name) === "A") best = i;
+  return best;
+}
+function pupils() {
+  return store.roster.map(p => { const i = acquired(p.name); return {...p, info: p.group + (i >= 0 ? " · ceinture " + belts[i].name.toLowerCase() : "")}; });
+}
+async function startEvals() {
+  if (MODE_APP) {
+    get("evals-app").innerHTML = '<div class="vers-classe"><span>👥 Les évaluations des élèves se font dans <b>Classe</b> › Outils et réglages › Maths.</span><a class="btn petit" href="' + CLASSE_URL + '" target="_blank" rel="noopener">Ouvrir Classe ↗</a></div>';
+    return;
+  }
+  get("back").hidden = false;
+  try {
+    store = await Evals.start("calcul", VERSION);
+    panel = new Evals.Panel(evalHost, {store, key: () => shown && sheetKey(shown), pupils, filters: true, pdf: exportPdf});
+  } catch (e) {
+    evalHost.innerHTML = '<div class="vers-classe"><span>⚠ Les évaluations n’ont pas pu se charger (base de Classe injoignable).</span><button class="btn petit" type="button" id="retry">↻ Réessayer</button></div>';
+    get("retry").onclick = startEvals;
   }
 }
-init();
-initApp();
+function exportPdf() {
+  const rows = store.roster.map(p => ({name: p.name, cells: belts.map(b => {
+    const l = store.last(b.sheets.map(sheetKey), p.name);
+    return l ? {m: l.m, t: l.m + " · " + l.key.split("-").pop()} : null;
+  })}));
+  return Evals.pdf({sections: [{title: "Ceintures de calcul posé", sub: "Dernière évaluation de chaque ceinture (code · fiche)", cols: belts.map(b => b.name), rows}],
+    filename: "evaluations-ceintures-calcul.pdf", color: "#23914A", colsPerPage: 11});
+}
 
+init();
+startEvals();
+if (MODE_APP && "serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("./sw.js").catch(() => {});
 </script>
+<script>if (!MODE_APP) document.write('<script src="side-nav.js" defer><\/script>');</script>
 </body>
 </html>

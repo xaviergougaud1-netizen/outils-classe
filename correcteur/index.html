@@ -13,6 +13,9 @@ Deux modes, un seul fichier :
 - page de Classe (correcteur.html) : + évaluations A/AR/ECA/NA (commun/eval.js, base evals/calcul, clé « Ceinture-Fiche », ex. « Jaune-B ») ; fichiers communs dans outils/
 Données : commun/fiches-calcul.js (window.FICHES_CALCUL). Calculs exacts en BigInt (pas d'erreur d'arrondi sur les décimaux).
 Historique :
+- 2.5.0 (2026-11-17) bouton « À passer » (seulement les élèves dont c'est la prochaine ceinture, + ceux déjà évalués sur la fiche ; localStorage « calcul-a-passer ») ;
+  « Grille de la classe » (élèves × ceintures, même filtre de groupe que le panneau, case touchée = ouvre la fiche et montre l'élève) ;
+  eval.js : « ☑ Plusieurs » pour évaluer plusieurs élèves d'un coup (opts.changes : les ceintures d'avant suivent, une seule étape à annuler).
 - 2.4.0 (2026-11-17) corrigé d'abord, liste d'élèves dessous (bouton « Élèves ↓ » dans le titre de la fiche) ;
   chaque élève montre ses ceintures obtenues (12 pastilles de couleur, pleines = obtenues) et « ✓ déjà obtenue » si la ceinture ouverte l'est déjà ;
   multiplication posée avec le nombre le plus long en haut (76 × 9 742 → posée 9 742 × 76, comme les élèves) ;
@@ -130,6 +133,11 @@ footer a{color:var(--encre-douce)}
     <summary>Choisir une ceinture</summary>
     <div id="catalog"></div>
   </details>
+  <details id="grille-box" class="browse" hidden>
+    <summary>Grille de la classe</summary>
+    <p class="calc-tag">Touche une case pour ouvrir la fiche et retrouver l’élève.</p>
+    <div id="grille" class="grille"></div>
+  </details>
   <div id="evals-app"></div>
   <footer><a href="https://www.charivarialecole.fr/archives/8508">Fiches de Charivari à l’école</a> · <span id="version"></span></footer>
 </main>
@@ -137,7 +145,7 @@ footer a{color:var(--encre-douce)}
 <div id="toast" class="toast" role="status"></div>
 <script>document.write('<script src="' + COMMUN + 'fiches-calcul.js"><\/script>' + (MODE_APP ? '' : '<script src="' + COMMUN + 'eval.js"><\/script>'));</script>
 <script>
-const VERSION = "2.4.0";
+const VERSION = "2.5.0";
 const CLASSE_URL = "https://claude.ai/artifact/Fjw3PS19NxsGxkekSUaoZA";
 const SOURCE_FICHES = window.FICHES_CALCUL;
 const belts = SOURCE_FICHES.trim().split(/\n(?=[A-Z][^\n]*\|)/).map(block => {
@@ -444,17 +452,25 @@ function acquired(name) { /* plus haute ceinture validée */
 }
 let autoPrev = true;
 try { autoPrev = localStorage.getItem("calcul-auto-precedentes") !== "0"; } catch {}
-function onMark(key, name, m) {
-  const changes = [{key, name, m}];
+let toPass = false;
+try { toPass = localStorage.getItem("calcul-a-passer") === "1"; } catch {}
+/* Cases à écrire pour un élève : la fiche, et (si A) les ceintures d'avant pas encore validées. */
+function changes(key, name, m) {
+  const list = [{key, name, m}];
   if (m === "A" && autoPrev) for (let i = 0; i < beltOf[key]; i++)
-    if (!validated(belts[i], name)) changes.push({key: belts[i].name, name, m: "A"});
-  store.setMany(changes);
-  if (changes.length > 1) Evals.toast(name + " : " + (changes.length - 1) + " ceinture" + (changes.length > 2 ? "s" : "") + " d’avant validée" + (changes.length > 2 ? "s" : "") + " aussi");
+    if (!validated(belts[i], name)) list.push({key: belts[i].name, name, m: "A"});
+  return list;
+}
+function onMarked(names, m, extra) {
+  if (names.length > 1) Evals.toast(names.length + " élèves : " + (m || "effacé") + (extra ? " · " + extra + " ceinture" + (extra > 1 ? "s" : "") + " d’avant aussi" : ""));
+  else if (extra) Evals.toast(names[0] + " : " + extra + " ceinture" + (extra > 1 ? "s" : "") + " d’avant validée" + (extra > 1 ? "s" : "") + " aussi");
 }
 /* Pour chaque élève : ses ceintures obtenues (pastilles pleines), et si la ceinture ouverte est déjà obtenue ailleurs (autre fiche ou validation auto). */
 function pupils() {
   const here = shown ? beltOf[sheetKey(shown)] : -1, b = belts[here], current = shown && sheetKey(shown);
-  return store.roster.map(p => {
+  /* « À passer » : seulement ceux dont la ceinture ouverte est la prochaine, et ceux déjà évalués sur cette fiche (pour ne pas les perdre de vue). */
+  const roster = toPass && b ? store.roster.filter(p => acquired(p.name) + 1 === here || store.get(current, p.name)) : store.roster;
+  return roster.map(p => {
     const i = acquired(p.name);
     const dots = '<span class="mini-belts" aria-hidden="true">' + belts.map((x, k) =>
       '<i style="--belt:' + x.color + '" title="' + x.name + '" class="' + (validated(x, p.name) ? "on" : "") + (k === here ? " ici" : "") + '"></i>').join("") + "</span>";
@@ -475,15 +491,51 @@ async function startEvals() {
   get("back").hidden = false;
   try {
     store = await Evals.start("calcul", VERSION);
-    panel = new Evals.Panel(evalHost, {store, key: () => shown && sheetKey(shown), pupils, filters: true, pdf: exportPdf, onMark,
-      extra: () => '<button type="button" class="btn petit" data-ev="x" aria-pressed="' + autoPrev + '" title="Un A valide aussi les ceintures d’avant pas encore validées">' + (autoPrev ? "✓" : "✗") + " Ceintures d’avant : " + (autoPrev ? "auto" : "non") + "</button>",
-      onExtra: () => { autoPrev = !autoPrev; try { localStorage.setItem("calcul-auto-precedentes", autoPrev ? "1" : "0"); } catch {} }});
+    panel = new Evals.Panel(evalHost, {store, key: () => shown && sheetKey(shown), pupils, filters: true, pdf: exportPdf, changes, onMarked, onFilter: renderGrid,
+      extra: () => '<button type="button" class="btn petit" data-ev="x" data-x="passer" aria-pressed="' + toPass + '" title="Seulement les élèves dont c’est la prochaine ceinture">' + (toPass ? "✓ À passer" : "À passer") + "</button>" +
+        '<button type="button" class="btn petit" data-ev="x" data-x="auto" aria-pressed="' + autoPrev + '" title="Un A valide aussi les ceintures d’avant pas encore validées">' + (autoPrev ? "✓" : "✗") + " Ceintures d’avant : " + (autoPrev ? "auto" : "non") + "</button>",
+      onExtra: b => {
+        if (b.dataset.x === "passer") { toPass = !toPass; try { localStorage.setItem("calcul-a-passer", toPass ? "1" : "0"); } catch {} }
+        else { autoPrev = !autoPrev; try { localStorage.setItem("calcul-auto-precedentes", autoPrev ? "1" : "0"); } catch {} }
+      }});
+    store.on(renderGrid);
+    get("grille-box").hidden = false;
+    renderGrid();
     if (shown) { const s = shown; shown = null; show(s); }
   } catch (e) {
     evalHost.innerHTML = '<div class="vers-classe"><span>⚠ Les évaluations n’ont pas pu se charger (base de Classe injoignable).</span><button class="btn petit" type="button" id="retry">↻ Réessayer</button></div>';
     evalHost.querySelector("#retry").onclick = startEvals;
   }
 }
+/* Grille de la classe : dernière évaluation de chaque ceinture, même filtre de groupe que le panneau. */
+function renderGrid() {
+  const box = get("grille");
+  if (!store || !panel || !box) return;
+  const L = panel.byGroup(store.roster);
+  const esc = t => String(t).replace(/[&<>"']/g, c => "&#" + c.charCodeAt(0) + ";");
+  box.innerHTML = L.length ? "<table><thead><tr><th></th>" + belts.map(b => '<th title="' + b.name + '"><i style="--belt:' + b.color + '"></i></th>').join("") + "</tr></thead><tbody>" +
+    L.map(p => "<tr><th>" + esc(p.name) + "</th>" + belts.map((b, i) => {
+      const keys = [b.name].concat(b.sheets.map(sheetKey)), l = store.last(keys, p.name);
+      const ok = validated(b, p.name), m = ok ? "A" : l ? l.m : "";
+      return '<td><button type="button" data-b="' + i + '" data-n="' + esc(p.name) + '"' + (m ? ' data-m="' + m + '"' : "") + ' title="' + esc(p.name) + " · " + b.name + (m ? " · " + m : "") + '" aria-label="' + esc(p.name) + " · " + b.name + " · " + (m || "non évalué") + '">' + (m && m !== "A" ? m : "") + "</button></td>";
+    }).join("") + "</tr>").join("") + "</tbody></table>" : '<p class="calc-tag">Aucun élève dans ce groupe.</p>';
+}
+get("grille").addEventListener("click", e => {
+  const c = e.target.closest("button[data-b]");
+  if (!c) return;
+  const b = belts[+c.dataset.b], name = c.dataset.n;
+  const l = store.last(b.sheets.map(sheetKey), name);
+  const sheet = (l && b.sheets.find(s => sheetKey(s) === l.key)) || b.sheets[0];
+  show(sheet, true);
+  const panelBox = evalHost.querySelector("details.evals");
+  if (panelBox) panelBox.open = true;
+  setTimeout(() => {
+    const row = [...evalHost.querySelectorAll(".evlist li")].find(li => li.querySelector('[data-n="' + CSS.escape(name) + '"]'));
+    if (!row) { Evals.toast(name + " n’est pas dans la liste (filtre « À passer » ou groupe)"); return; }
+    row.scrollIntoView({block: "center", behavior: "smooth"});
+    row.classList.remove("flash"); void row.offsetWidth; row.classList.add("flash");
+  }, 450);
+});
 function exportPdf() {
   const rows = store.roster.map(p => ({name: p.name, cells: belts.map(b => {
     const l = store.last([b.name].concat(b.sheets.map(sheetKey)), p.name);

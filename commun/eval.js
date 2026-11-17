@@ -84,7 +84,8 @@ Store.prototype.setMany = function(list, quiet){
     done.push({key:c.key, name:c.name, prev:prev, next:c.m});
   });
   if(!done.length) return;
-  if(!quiet){ this.undoS.push(done.length === 1 ? done[0] : {many:done, name:done[0].name}); this.redoS = []; }
+  var who = done.reduce(function(a, c){ if(a.indexOf(c.name) < 0) a.push(c.name); return a; }, []);
+  if(!quiet){ this.undoS.push(done.length === 1 ? done[0] : {many:done, name: who.length > 1 ? who.length + ' élèves' : who[0]}); this.redoS = []; }
   this.backup(); this.emit(); this.save();
 };
 Store.prototype.undo = function(){
@@ -125,7 +126,9 @@ Store.prototype.flush = async function(){
 /* ---------- Le panneau « Évaluations » ----------
    opts : {store, key(), pupils() -> [{name, group, info}], filters: bool, places: bool, pdf(),
            onMark(clé, prénom, code ou null) : remplace l'enregistrement simple (facultatif),
-           extra() -> HTML de boutons en plus (data-ev="x"), onExtra(bouton) (facultatifs) } */
+           changes(clé, prénom, code) -> [{key, name, m}] : cases à écrire ensemble (sert aussi à la sélection de plusieurs élèves),
+           extra() -> HTML de boutons en plus (data-ev="x"), onExtra(bouton), onFilter() (facultatifs) }
+   Sélection de plusieurs élèves : bouton « ☑ Plusieurs », toucher les prénoms, puis A / AR / ECA / NA pour tous (une seule étape à annuler). */
 function Panel(el, opts){
   var S = opts.store, LSo = 'evals-open-' + S.name, LSf = 'evals-filtre-' + S.name, filt = 'tous';
   try{ filt = localStorage.getItem(LSf) || 'tous'; }catch(e){}
@@ -139,12 +142,20 @@ function Panel(el, opts){
     });
   }
   function filters(){ return [{id:'tous', label:'Tous', groups:null}].concat(S.groups.map(function(g){ return {id:g, label:g, groups:[g]}; }), levels()); }
-  function list(){
-    var all = opts.pupils();
+  var multi = false, picked = [];
+  function byGroup(all){
     if(!opts.filters || filt === 'tous') return all;
     var f = filters().filter(function(x){ return x.id === filt; })[0];
     if(!f){ filt = 'tous'; return all; }
     return all.filter(function(p){ return f.groups.indexOf(p.group) >= 0; });
+  }
+  function list(){ return byGroup(opts.pupils()); }
+  function changesFor(key, name, m){ return opts.changes ? opts.changes(key, name, m) : [{key:key, name:name, m:m}]; }
+  function mark(key, names, m){
+    var all = [];
+    names.forEach(function(n){ all = all.concat(changesFor(key, n, m)); });
+    S.setMany(all);
+    if(opts.onMarked) opts.onMarked(names, m, all.length - names.length);
   }
   function render(){
     var key = opts.key(), L = list();
@@ -155,9 +166,11 @@ function Panel(el, opts){
     var st = S.status === 'ok' ? '<span class="sync">Enregistré</span>' : S.status === 'err' ? '<span class="sync err">Non enregistré</span>' : '<span class="sync att">Enregistrement…</span>';
     var f = opts.filters && S.groups.length > 1 ? '<div class="seg" role="group" aria-label="Groupe">' + filters().map(function(g){
       return '<button type="button" data-ev="filtre" data-g="' + esc(g.id) + '" aria-pressed="' + (g.id === filt) + '">' + esc(g.label) + '</button>'; }).join('') + '</div>' : '';
+    picked = picked.filter(function(n){ return L.some(function(p){ return p.name === n; }); });
     var rows = L.map(function(p){
-      var cur = S.get(key, p.name);
-      return '<li><span class="nom">' + esc(p.name) + (p.info ? '<small>' + p.info + '</small>' : '') + '</span><span class="marks" role="group" aria-label="Évaluation de ' + esc(p.name) + '">' +
+      var cur = S.get(key, p.name), on = picked.indexOf(p.name) >= 0;
+      var nom = multi ? '<button type="button" class="nom pick" data-ev="pick" data-n="' + esc(p.name) + '" aria-pressed="' + on + '"><b>' + (on ? '☑ ' : '☐ ') + esc(p.name) + '</b>' : '<span class="nom">' + esc(p.name);
+      return '<li' + (on ? ' class="choisi"' : '') + '>' + nom + (p.info ? '<small>' + p.info + '</small>' : '') + (multi ? '</button>' : '</span>') + '<span class="marks" role="group" aria-label="Évaluation de ' + esc(p.name) + '">' +
         Object.keys(MARKS).map(function(m){ return '<button type="button" class="mk" data-ev="mk" data-n="' + esc(p.name) + '" data-m="' + m + '" aria-pressed="' + (cur === m) + '" title="' + MARKS[m] + '" aria-label="' + m + ' · ' + MARKS[m] + '">' + m + '</button>'; }).join('') + '</span></li>';
     }).join('');
     var places = opts.places ? '<details class="evplace"><summary>Niveau de chaque élève</summary><ul class="evlist">' + S.roster.map(function(p){
@@ -169,7 +182,12 @@ function Panel(el, opts){
       '<div class="evbody"><div class="evtools">' + f +
       '<button type="button" class="btn petit" data-ev="undo" title="Annuler (Ctrl+Z)"' + (S.undoS.length ? '' : ' disabled') + '>↶ Annuler</button>' +
       (S.status === 'err' ? '<button type="button" class="btn petit" data-ev="retry">↻ Réessayer</button>' : '') +
-      '<button type="button" class="btn petit" data-ev="pdf">⬇ Tableau PDF</button>' + (opts.extra ? opts.extra() : '') + '</div>' +
+      '<button type="button" class="btn petit" data-ev="pdf">⬇ Tableau PDF</button>' +
+      '<button type="button" class="btn petit" data-ev="multi" aria-pressed="' + multi + '" title="Toucher plusieurs prénoms puis un code pour tous">' + (multi ? '✕ Fin de la sélection' : '☑ Plusieurs') + '</button>' +
+      (opts.extra ? opts.extra() : '') + '</div>' +
+      (multi ? '<div class="multibar" role="group" aria-label="Évaluer les élèves choisis"><span><b>' + picked.length + '</b> choisi' + (picked.length > 1 ? 's' : '') + '</span>' +
+        '<button type="button" class="btn petit" data-ev="all">' + (picked.length === L.length && L.length ? 'Aucun' : 'Tous') + '</button>' +
+        '<span class="marks">' + Object.keys(MARKS).map(function(m){ return '<button type="button" class="mk" data-ev="mkmany" data-m="' + m + '" title="' + MARKS[m] + ' pour les élèves choisis"' + (picked.length ? '' : ' disabled') + '>' + m + '</button>'; }).join('') + '</span></div>' : '') +
       (L.length ? '<ul class="evlist">' + rows + '</ul>' : '<p class="aide">Aucun élève. Les prénoms viennent de Classe › Maths (groupes).</p>') + places +
       '<p class="legende">A Acquis · AR À renforcer · ECA En cours d’acquisition · NA Non acquis. Touche une 2<sup>e</sup> fois pour effacer. Ctrl+Z annule.</p></div></details>';
     if(focus && focus.ev){
@@ -180,8 +198,12 @@ function Panel(el, opts){
   el.addEventListener('click', async function(e){
     var b = e.target.closest('[data-ev]'); if(!b || b.tagName === 'SELECT') return;
     var a = b.dataset.ev, key = opts.key();
-    if(a === 'mk'){ var cur = S.get(key, b.dataset.n), next = cur === b.dataset.m ? null : b.dataset.m; if(opts.onMark) opts.onMark(key, b.dataset.n, next); else S.set(key, b.dataset.n, next); if(navigator.vibrate) try{ navigator.vibrate(8); }catch(x){} }
-    else if(a === 'filtre'){ filt = b.dataset.g; try{ localStorage.setItem(LSf, filt); }catch(x){} render(); }
+    if(a === 'mk'){ var cur = S.get(key, b.dataset.n), next = cur === b.dataset.m ? null : b.dataset.m; if(opts.onMark) opts.onMark(key, b.dataset.n, next); else mark(key, [b.dataset.n], next); if(navigator.vibrate) try{ navigator.vibrate(8); }catch(x){} }
+    else if(a === 'filtre'){ filt = b.dataset.g; try{ localStorage.setItem(LSf, filt); }catch(x){} render(); if(opts.onFilter) opts.onFilter(); }
+    else if(a === 'multi'){ multi = !multi; picked = []; render(); }
+    else if(a === 'pick'){ var n = b.dataset.n, i = picked.indexOf(n); if(i < 0) picked.push(n); else picked.splice(i, 1); render(); }
+    else if(a === 'all'){ var L2 = list(); picked = picked.length === L2.length ? [] : L2.map(function(p){ return p.name; }); render(); }
+    else if(a === 'mkmany' && picked.length){ var names = picked.slice(); multi = false; picked = []; mark(key, names, b.dataset.m); if(navigator.vibrate) try{ navigator.vibrate(15); }catch(x){} }
     else if(a === 'undo') S.undo();
     else if(a === 'x' && opts.onExtra){ opts.onExtra(b); render(); }
     else if(a === 'retry') S.flush();
@@ -191,6 +213,7 @@ function Panel(el, opts){
   el.addEventListener('toggle', function(e){ if(e.target.matches('.evals')) try{ localStorage.setItem(LSo, e.target.open ? '1' : '0'); }catch(x){} }, true);
   S.on(render);
   this.render = render;
+  this.byGroup = byGroup; /* même filtre de groupe que le panneau (pour une grille, un export…) */
   render();
 }
 

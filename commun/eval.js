@@ -49,6 +49,8 @@ Store.prototype.init = async function(){
   this.groups = Object.keys(st);
   this.roster = [];
   this.groups.forEach(function(g){ (st[g] || []).forEach(function(n){ if(!self.roster.some(function(p){ return p.name === n; })) self.roster.push({name:n, group:g}); }); });
+  /* Toutes les listes d'élèves (panneau, niveaux, PDF) suivent l'ordre alphabétique des prénoms. */
+  this.roster.sort(function(x, y){ return x.name.localeCompare(y.name, 'fr', {sensitivity:'base'}); });
   var sn = await this.ref.get();
   if(sn.exists) this.doc = merge(this.doc, sn.data());
   this.status = 'ok';
@@ -127,9 +129,22 @@ Store.prototype.flush = async function(){
 function Panel(el, opts){
   var S = opts.store, LSo = 'evals-open-' + S.name, LSf = 'evals-filtre-' + S.name, filt = 'tous';
   try{ filt = localStorage.getItem(LSf) || 'tous'; }catch(e){}
+  /* Groupes réunis par niveau : « CM2b » + « CM2c » donnent le filtre « CM2 b+c » (ou « Tout CM2 ») (seulement si le niveau a 2 groupes ou plus). */
+  function levels(){
+    var c = {};
+    S.groups.forEach(function(g){ var m = /^(CP|CE\s?\d|CM\s?\d)/i.exec(g); if(m){ var k = m[1].toUpperCase().replace(/\s/, ''); (c[k] = c[k] || []).push(g); } });
+    return Object.keys(c).filter(function(k){ return c[k].length > 1; }).map(function(k){
+      var suf = c[k].map(function(g){ return g.replace(/^(CP|CE\s?\d|CM\s?\d)\s*/i, ''); });
+      return {id:'niv:' + k, label: suf.every(function(x){ return x && x.length <= 2; }) ? k + ' ' + suf.join('+') : 'Tout ' + k, groups:c[k]};
+    });
+  }
+  function filters(){ return [{id:'tous', label:'Tous', groups:null}].concat(S.groups.map(function(g){ return {id:g, label:g, groups:[g]}; }), levels()); }
   function list(){
     var all = opts.pupils();
-    return opts.filters && filt !== 'tous' ? all.filter(function(p){ return p.group === filt; }) : all;
+    if(!opts.filters || filt === 'tous') return all;
+    var f = filters().filter(function(x){ return x.id === filt; })[0];
+    if(!f){ filt = 'tous'; return all; }
+    return all.filter(function(p){ return f.groups.indexOf(p.group) >= 0; });
   }
   function render(){
     var key = opts.key(), L = list();
@@ -138,8 +153,8 @@ function Panel(el, opts){
     var done = L.filter(function(p){ return S.get(key, p.name); }).length;
     var open = true; try{ open = localStorage.getItem(LSo) !== '0'; }catch(e){}
     var st = S.status === 'ok' ? '<span class="sync">Enregistré</span>' : S.status === 'err' ? '<span class="sync err">Non enregistré</span>' : '<span class="sync att">Enregistrement…</span>';
-    var f = opts.filters && S.groups.length > 1 ? '<div class="seg" role="group" aria-label="Groupe">' + ['tous'].concat(S.groups).map(function(g){
-      return '<button type="button" data-ev="filtre" data-g="' + esc(g) + '" aria-pressed="' + (g === filt) + '">' + (g === 'tous' ? 'Tous' : esc(g)) + '</button>'; }).join('') + '</div>' : '';
+    var f = opts.filters && S.groups.length > 1 ? '<div class="seg" role="group" aria-label="Groupe">' + filters().map(function(g){
+      return '<button type="button" data-ev="filtre" data-g="' + esc(g.id) + '" aria-pressed="' + (g.id === filt) + '">' + esc(g.label) + '</button>'; }).join('') + '</div>' : '';
     var rows = L.map(function(p){
       var cur = S.get(key, p.name);
       return '<li><span class="nom">' + esc(p.name) + (p.info ? '<small>' + p.info + '</small>' : '') + '</span><span class="marks" role="group" aria-label="Évaluation de ' + esc(p.name) + '">' +

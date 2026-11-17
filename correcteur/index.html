@@ -13,6 +13,16 @@ Deux modes, un seul fichier :
 - page de Classe (correcteur.html) : + évaluations A/AR/ECA/NA (commun/eval.js, base evals/calcul, clé « Ceinture-Fiche », ex. « Jaune-B ») ; fichiers communs dans outils/
 Données : commun/fiches-calcul.js (window.FICHES_CALCUL). Calculs exacts en BigInt (pas d'erreur d'arrondi sur les décimaux).
 Historique :
+- 2.4.0 (2026-11-17) corrigé d'abord, liste d'élèves dessous (bouton « Élèves ↓ » dans le titre de la fiche) ;
+  chaque élève montre ses ceintures obtenues (12 pastilles de couleur, pleines = obtenues) et « ✓ déjà obtenue » si la ceinture ouverte l'est déjà ;
+  multiplication posée avec le nombre le plus long en haut (76 × 9 742 → posée 9 742 × 76, comme les élèves) ;
+  eval.js : élèves par ordre alphabétique partout, filtre « CM2 b+c » qui réunit les groupes d'un même niveau (CM2b + CM2c).
+- 2.3.0 (2026-11-15) 5 derniers calculs de la calculatrice sous le pavé quand le champ est vide (localStorage « correcteur-derniers-calculs », par appareil) ;
+  gardés quand on quitte le calcul (Nouveau calcul, Échap, Entrée, champ vidé, appli mise de côté), touche pour reprendre, « Effacer la liste » confirmé en deux touchers (pas de confirm()) ;
+  « Réessayer » des évaluations relié (le bouton n’était pas encore dans la page).
+- 2.2.0 (2026-11-15) plus de 2e cadre de saisie (les 2 fiches au même 1er calcul sont proposées en boutons, avec leur 2e calcul) ;
+  calculatrice libre : un calcul complet qui n'ouvre aucune fiche affiche son résultat sous le pavé (étapes au toucher),
+  division à l'unité, au dixième et au centième avec le reste ; + et − acceptent plusieurs nombres.
 - 2.1.0 (2026-11-15) un « A » sur une fiche valide aussi en A les ceintures précédentes pas encore validées (clé de ceinture seule, ex. « Blanche » : on n'écrit jamais sur les fiches) ;
   réglage « Ceintures d'avant : auto » (localStorage, par appareil, oui par défaut) ; une seule étape à annuler (setMany).
 - 2.0.0 (2026-11-15) charte Repères, évaluations dans Classe (filtre par groupe, ceinture acquise, PDF, Ctrl+Z), fiches dans un fichier de données.
@@ -37,7 +47,16 @@ if (MODE_APP) document.write('<link rel="manifest" href="manifest.webmanifest"><
 main{padding-bottom:100px}
 label{display:block;font-weight:700;margin-bottom:6px;font-size:.93rem}
 .saisie{width:100%;border:1px solid var(--trait);border-radius:var(--arrondi-m);padding:11px 13px;font-size:1.25rem;background:var(--surface-2);min-height:var(--cible)}
-#second-wrap{margin-top:12px}
+#history{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}#history:empty{display:none}
+#history .calc-tag{flex-basis:100%;margin:0}
+#history button{min-height:40px;border:1px solid var(--trait);background:var(--surface-2);border-radius:999px;padding:4px 12px;font-size:.88rem;font-variant-numeric:tabular-nums}
+#history button b{color:var(--outil)}
+#history .vider{color:var(--encre-douce);border-style:dashed}
+#calc-result:empty{display:none}
+#calc-result{margin-top:10px}
+#calc-result .calc{border-color:color-mix(in srgb,var(--outil) 45%,var(--trait))}
+#calc-result .answer{font-size:1.25rem}
+.calc-tag{font-size:.78rem;font-weight:700;color:var(--encre-douce);margin:0 0 2px}
 .keypad{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:10px}
 .keypad button{min-height:var(--cible);border:1px solid var(--trait);border-radius:10px;background:var(--surface-2);font-size:1.15rem;font-weight:700}
 .keypad button.op{background:color-mix(in srgb,var(--outil) 14%,var(--surface));color:var(--encre)}
@@ -48,6 +67,7 @@ label{display:block;font-weight:700;margin-bottom:6px;font-size:.93rem}
 .choice small{display:block;color:var(--encre-douce);margin-top:2px}
 #correction{margin-top:18px}
 .sheet-title{display:flex;align-items:center;gap:12px;background:var(--surface);border:1px solid var(--trait);border-radius:var(--arrondi-l);padding:12px 14px;margin-bottom:8px}
+.sheet-title > div{flex:1;min-width:0}
 .ceint{flex:none;width:40px;height:40px;border-radius:10px;background:var(--belt);box-shadow:inset 0 0 0 1px rgba(0,0,0,.12);display:grid;place-items:center;color:#fff;font-weight:700}
 h2{font-size:1.2rem;margin:0}
 .sheet-title p{margin:0;color:var(--encre-douce);font-size:.86rem}
@@ -70,6 +90,12 @@ h2{font-size:1.2rem;margin:0}
 .division{border-collapse:collapse;width:100%;text-align:right;white-space:nowrap}
 .division th,.division td{padding:5px 3px;border-bottom:1px solid var(--trait)}
 .division th{font-size:.78rem;color:var(--encre-douce)}
+.evhost{margin-top:14px}
+.mini-belts{display:flex;gap:2px;margin-top:3px}
+.mini-belts i{width:10px;height:10px;border-radius:3px;box-shadow:inset 0 0 0 1.5px var(--belt);opacity:.45}
+.mini-belts i.on{background:var(--belt);opacity:1}
+.mini-belts i.ici{outline:2px solid var(--encre);outline-offset:1px}
+.deja{display:block;color:var(--outil);font-weight:700}
 .browse{margin-top:17px;background:var(--surface);border:1px solid var(--trait);border-radius:var(--arrondi-l);padding:8px 14px}
 .browse summary{cursor:pointer;font-weight:700;padding:8px 0}
 .belt{display:flex;align-items:center;gap:8px;border-top:1px solid var(--trait);padding:6px 0}
@@ -91,14 +117,12 @@ footer a{color:var(--encre-douce)}
 </div></header>
 <main class="shell">
   <section class="carte flotte" aria-label="Recherche de fiche">
-    <label for="first">Premier nombre ou premier calcul</label>
-    <input id="first" class="saisie" placeholder="Ex. 47 ou 47 + 279" autocomplete="off" spellcheck="false" inputmode="none">
-    <div id="second-wrap" hidden>
-      <label for="second">Deuxième nombre ou deuxième calcul</label>
-      <input id="second" class="saisie" autocomplete="off" spellcheck="false" inputmode="none" placeholder="Pour départager les fiches">
-    </div>
+    <label for="first">Premier calcul de la fiche, ou n’importe quel calcul</label>
+    <input id="first" class="saisie" placeholder="Ex. 47 + 279 ou 1 254 ÷ 7" autocomplete="off" spellcheck="false" inputmode="none">
     <div id="keypad" class="keypad" aria-label="Clavier de calcul"></div>
+    <div id="history" aria-label="Derniers calculs"></div>
     <p id="status" role="status"></p>
+    <div id="calc-result" aria-live="polite"></div>
     <div id="choices"></div>
   </section>
   <section id="correction" aria-label="Corrigé" hidden></section>
@@ -113,7 +137,7 @@ footer a{color:var(--encre-douce)}
 <div id="toast" class="toast" role="status"></div>
 <script>document.write('<script src="' + COMMUN + 'fiches-calcul.js"><\/script>' + (MODE_APP ? '' : '<script src="' + COMMUN + 'eval.js"><\/script>'));</script>
 <script>
-const VERSION = "2.1.0";
+const VERSION = "2.4.0";
 const CLASSE_URL = "https://claude.ai/artifact/Fjw3PS19NxsGxkekSUaoZA";
 const SOURCE_FICHES = window.FICHES_CALCUL;
 const belts = SOURCE_FICHES.trim().split(/\n(?=[A-Z][^\n]*\|)/).map(block => {
@@ -130,7 +154,7 @@ const belts = SOURCE_FICHES.trim().split(/\n(?=[A-Z][^\n]*\|)/).map(block => {
 });
 const sheets = belts.flatMap(belt => belt.sheets);
 const get = id => document.getElementById(id);
-const first = get("first"), second = get("second"), correction = get("correction");
+const first = get("first"), correction = get("correction");
 const glyph = {"+":"+","-":"−","*":"×","/":"÷"};
 const places = ["unités","dizaines","centaines","milliers","dizaines de milliers","centaines de milliers"];
 const precisionNames = ["unités","dixièmes","centièmes","millièmes"];
@@ -138,7 +162,7 @@ const power = n => 10n ** BigInt(n);
 const scale = s => s.split(".")[1]?.length ?? 0;
 const integer = s => BigInt(s.replace(".", ""));
 const scaled = (s, n) => integer(s) * power(n - scale(s));
-const spaced = s => s.replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+const spaced = s => s.replace(/\B(?=(\d{3})+(?!\d))/g, " ");
 function format(value, decimals = 0, fixed = false, group = true) {
   const sign = value < 0n ? "−" : "";
   const digits = (value < 0n ? -value : value).toString().padStart(decimals + 1, "0");
@@ -180,7 +204,7 @@ function stackRow(number, label = "") {
 const rule = '<div class="rule"></div><span></span>';
 function solve(operation) {
   const {expression, rank} = operation;
-  const [a, op, b, , c] = parse(expression);
+  const [a, op, b] = parse(expression);
   if (op === "/") {
     const {quotient, remainder, remainderRank, steps} = divide(a, b, rank);
     const rankLabel = rank === 1 ? "Au dixième" : rank === 2 ? "Au centième" : "";
@@ -197,18 +221,24 @@ function solve(operation) {
         " × " + pretty(b) + " + " + format(remainder, remainderRank) + "</p>"
     };
   }
-  const d = Math.max(...[a,b,c].filter(Boolean).map(scale));
+  /* + et − : autant de nombres qu'on veut (ex. 120 − 35 − 8) */
+  const parts = parse(expression), nums = parts.filter((_, i) => i % 2 === 0), signs = parts.filter((_, i) => i % 2);
+  const d = Math.max(...nums.map(scale));
   const result = op === "*" ? integer(a) * integer(b) :
-    scaled(a,d) + (op === "+" ? scaled(b,d) : -scaled(b,d)) + (c ? scaled(c,d) : 0n);
+    nums.reduce((sum, n, i) => i === 0 ? scaled(n,d) : signs[i - 1] === "-" ? sum - scaled(n,d) : sum + scaled(n,d), 0n);
   const raw = (v,n) => format(v,n,true,false);
   const totalDecimals = op === "*" ? scale(a) + scale(b) : d;
-  let work;
+  let work, hint = "";
   if (op === "*") {
-    const multiplier = b.replace(".", "");
-    let rows = stackRow(integer(a)) + stackRow("× " + integer(b)) + rule;
+    /* Les élèves posent le nombre qui a le plus de chiffres en haut : 76 × 9 742 se pose 9 742 × 76. */
+    const swap = b.replace(".", "").length > a.replace(".", "").length;
+    const top = swap ? b : a, bottom = swap ? a : b;
+    if (swap) hint = "Posée : " + pretty(top + "*" + bottom).trim();
+    const multiplier = bottom.replace(".", "");
+    let rows = stackRow(integer(top)) + stackRow("× " + integer(bottom)) + rule;
     if (multiplier.length > 1) {
       rows += [...multiplier].reverse().map((digit, i) =>
-        stackRow(integer(a) * BigInt(digit) * power(i), digit + " · " + places[i])).join("") + rule;
+        stackRow(integer(top) * BigInt(digit) * power(i), digit + " · " + places[i])).join("") + rule;
     }
     rows += stackRow(result);
     work = '<div class="stack">' + rows + "</div>";
@@ -218,14 +248,14 @@ function solve(operation) {
         format(result,totalDecimals,true) + "</b></p>";
     }
   } else {
-    work = '<div class="stack">' + stackRow(raw(scaled(a,d),d)) +
-      stackRow(glyph[op] + " " + raw(scaled(b,d),d)) +
-      (c ? stackRow("+ " + raw(scaled(c,d),d)) : "") + rule + stackRow(raw(result,d)) + "</div>";
+    work = '<div class="stack">' + nums.map((n, i) => stackRow((i ? glyph[signs[i - 1]] + " " : "") + raw(scaled(n,d),d))).join("") +
+      rule + stackRow(raw(result,d)) + "</div>";
   }
-  return {answer: format(result,totalDecimals), hint: "", work};
+  return {answer: format(result,totalDecimals), hint, work};
 }
-let activeInput, shown, store = null, panel = null;
+let shown, store = null, panel = null;
 const evalHost = document.createElement("div");
+evalHost.className = "evhost";
 const sheetKey = s => s.name + "-" + s.label;
 function show(sheet, scroll = false) {
   if (sheet === shown && !scroll) return;
@@ -235,14 +265,18 @@ function show(sheet, scroll = false) {
   markCatalog();
   if (!sheet) { correction.replaceChildren(); return; }
   const heading = '<div class="sheet-title" style="--belt:' + sheet.color + '"><span class="ceint" aria-hidden="true">' + sheet.label + '</span><div><h2>' + title(sheet) +
-    "</h2><p>Touche un calcul pour voir les étapes.</p></div></div>";
+    "</h2><p>Touche un calcul pour voir les étapes.</p></div>" +
+    (store ? '<button type="button" class="btn petit" data-goeval title="Aller à la liste des élèves">👥 Élèves ↓</button>' : "") + "</div>";
   const rows = sheet.operations.map((operation, i) => {
     const solved = solve(operation);
     return '<details class="calc"><summary><span class="num">' + (i + 1) + '</span><span class="expr">' + pretty(operation.expression) +
       (solved.hint ? "<small>" + solved.hint + "</small>" : "") + '</span><span class="answer">' + solved.answer + '</span></summary><div class="work">' + solved.work + "</div></details>";
   }).join("");
   correction.innerHTML = heading + rows;
-  correction.querySelector(".sheet-title").after(evalHost);
+  /* Le corrigé d'abord, la liste des élèves ensuite. */
+  correction.append(evalHost);
+  const go = correction.querySelector("[data-goeval]");
+  if (go) go.onclick = () => evalHost.scrollIntoView({block: "start", behavior: "smooth"});
   if (panel) panel.render();
   if (scroll) {
     if (!history.state?.fiche) history.pushState({fiche: 1}, "");
@@ -251,30 +285,98 @@ function show(sheet, scroll = false) {
 }
 const title = sheet => sheet.name + " · " + sheet.label + (sheet.printLabel ? " (A sur le PDF)" : "");
 function exact(expr, query) { return expr === query || expr.split(/[+*/-]/)[0] === query; }
+/* Calculatrice libre : un calcul complet qui n'est pas le 1er d'une fiche.
+   Renvoie {html} (résultat + étapes repliées), {error} (calcul complet mais impossible) ou null (saisie pas finie). */
+const COMPLETE = /^\d+(\.\d+)?([+*/-]\d+(\.\d+)?)+$/;
+function calculator(query) {
+  if (!COMPLETE.test(query)) return null;
+  const parts = parse(query), signs = parts.filter((_, i) => i % 2);
+  if (signs.length > 1 && signs.some(s => s === "*" || s === "/"))
+    return {error: "Pour × et ÷, tape un seul calcul à la fois (ex. 47 × 28)."};
+  const line = (operation, tag) => {
+    const solved = solve(operation);
+    return '<details class="calc"><summary><span class="num">=</span><span class="expr">' + pretty(operation.expression) +
+      "<small>" + (tag || solved.hint || "Touche pour voir les étapes") + '</small></span><span class="answer">' + solved.answer +
+      '</span></summary><div class="work">' + solved.work + "</div></details>";
+  };
+  if (signs[0] === "/") {
+    const divisor = parts[2];
+    if (scale(divisor)) return {error: "Le diviseur doit être un nombre entier."};
+    if (integer(divisor) === 0n) return {error: "On ne peut pas diviser par 0."};
+    return {html: '<p class="calc-tag">Calculatrice · touche une ligne pour les étapes</p>' +
+      [[0, "À l’unité"], [1, "Au dixième"], [2, "Au centième"]].map(([rank, tag]) => line({expression: query, rank}, tag)).join("")};
+  }
+  return {html: '<p class="calc-tag">Calculatrice</p>' + line({expression: query, rank: 0})};
+}
+/* Derniers calculs de la calculatrice (5 au plus, sur cet appareil, jamais de prénom).
+   Un calcul est gardé quand on le quitte : Nouveau calcul, Échap, Entrée, champ vidé ou appli mise de côté. */
+const RECENT_KEY = "correcteur-derniers-calculs";
+let recent = [], pending = null;
+try { recent = JSON.parse(localStorage.getItem(RECENT_KEY)) || []; } catch {}
+function saveRecent() { try { localStorage.setItem(RECENT_KEY, JSON.stringify(recent)); } catch {} }
+function keepPending() {
+  if (!pending) return;
+  recent = [pending, ...recent.filter(e => e !== pending)].slice(0, 5);
+  pending = null; saveRecent();
+}
+function shortAnswer(expression) {
+  try { return solve({expression, rank: 0}).answer.replace(/<small>Reste /, " r ").replace(/<[^>]+>/g, ""); } catch { return ""; }
+}
+function renderHistory(query) {
+  const box = get("history");
+  box.replaceChildren();
+  if (query || !recent.length) return;
+  box.innerHTML = '<p class="calc-tag">Derniers calculs · touche pour le reprendre</p>';
+  for (const expression of recent) {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.innerHTML = pretty(expression) + " = <b>" + shortAnswer(expression) + "</b>";
+    b.onclick = () => { first.value = pretty(expression).trim(); update(); };
+    box.append(b);
+  }
+  const clear = document.createElement("button");
+  clear.type = "button"; clear.className = "vider"; clear.textContent = "✕ Effacer la liste";
+  /* Confirmation en deux touchers : confirm() est ignoré dans la fenêtre de Claude (page de Classe). */
+  clear.onclick = () => {
+    if (!clear.dataset.armed) {
+      clear.dataset.armed = "1"; clear.textContent = "Touche encore pour effacer les " + recent.length;
+      setTimeout(() => { if (clear.isConnected) { delete clear.dataset.armed; clear.textContent = "✕ Effacer la liste"; } }, 3000);
+      return;
+    }
+    recent = []; saveRecent(); renderHistory("");
+  };
+  box.append(clear);
+}
 function update() {
-  const query = normalize(first.value), extra = normalize(second.value), choices = get("choices");
+  const query = normalize(first.value), choices = get("choices"), calcBox = get("calc-result");
+  if (!query) keepPending();
+  renderHistory(query);
   choices.replaceChildren();
   const candidates = query ? sheets.filter(s => s.operations[0].expression.startsWith(query)) : [];
   const matches = candidates.filter(s => exact(s.operations[0].expression, query));
-  const pool = matches.length ? matches : candidates;
-  const ambiguous = pool.length > 1;
-  get("second-wrap").hidden = !ambiguous;
-  if (!ambiguous) { second.value = ""; if (activeInput === second) activeInput = first; }
-  const narrowed = ambiguous && extra ? pool.filter(s => s.operations[1].expression.startsWith(extra)) : pool;
-  const found = narrowed.length === 1 && (matches.includes(narrowed[0]) || (ambiguous && extra)) ? narrowed[0] : null;
+  /* Deux fiches peuvent commencer par le même calcul : on propose les deux, avec leur 2e calcul pour les départager. */
+  const ambiguous = matches.length > 1;
+  const list = ambiguous ? matches : matches.length ? [] : candidates;
+  const found = matches.length === 1 ? matches[0] : null;
+  const calc = !matches.length ? calculator(query) : null;
   show(found);
-  get("status").textContent = !query ? "" : !narrowed.length ? "Aucune fiche ne commence par ce calcul." :
-    found ? title(found) : narrowed.length > 1 ? narrowed.length + " fiches correspondent." : "Continue la saisie ou ouvre la fiche proposée.";
+  calcBox.innerHTML = calc?.html ?? "";
+  if (calc?.html) pending = query;
+  get("status").textContent = !query ? "" : found ? title(found) : ambiguous ? "Ce calcul commence " + matches.length + " fiches : choisis la bonne." :
+    calc?.error ? calc.error : calc ? (list.length ? "" : "Ce calcul n’est le premier d’aucune fiche.") :
+    !candidates.length ? "Aucune fiche ne commence par ce calcul." : candidates.length > 1 ? candidates.length + " fiches correspondent." : "Continue la saisie ou ouvre la fiche proposée.";
+  get("dock").hidden = !found && !calc?.html;
+  get("reset").textContent = "↺  " + (found || !calc?.html ? "Nouvelle fiche" : "Nouveau calcul");
   if (found) {
     const jump = document.createElement("button");
     jump.className = "choice go"; jump.textContent = "Voir le corrigé ↓";
     jump.onclick = () => show(found, true);
     choices.append(jump);
-  } else if (narrowed.length <= 8) {
-    for (const sheet of narrowed) {
+  } else if (list.length <= 8) {
+    for (const sheet of list) {
       const b = document.createElement("button");
       b.className = "choice";
-      b.innerHTML = title(sheet) + "<small>" + pretty(sheet.operations[0].expression) + (ambiguous ? " · " + pretty(sheet.operations[1].expression) : "") + "</small>";
+      b.innerHTML = (calc?.html ? "Fiche " : "") + title(sheet) + "<small>" + pretty(sheet.operations[0].expression) + (ambiguous ? " · puis " + pretty(sheet.operations[1].expression) : "") + "</small>";
       b.onclick = () => show(sheet, true);
       choices.append(b);
     }
@@ -284,12 +386,9 @@ function markCatalog() {
   for (const b of document.querySelectorAll("#catalog button")) b.setAttribute("aria-current", String(!!shown && b.dataset.k === sheetKey(shown)));
 }
 function init() {
-  activeInput = first;
-  for (const field of [first, second]) {
-    field.addEventListener("focus", () => activeInput = field);
-    field.addEventListener("input", () => { if (field === first) second.value = ""; update(); });
-    field.addEventListener("keydown", e => { if (e.key === "Enter" && shown) show(shown, true); });
-  }
+  first.addEventListener("input", update);
+  first.addEventListener("keydown", e => { if (e.key === "Enter") { keepPending(); if (shown) show(shown, true); } });
+  document.addEventListener("visibilitychange", () => { if (document.hidden) keepPending(); });
   for (const key of ["7","8","9","÷","4","5","6","×","1","2","3","−",",","0","⌫","+"]) {
     const b = document.createElement("button");
     b.type = "button"; b.textContent = key;
@@ -297,7 +396,7 @@ function init() {
     if ("÷×−+".includes(key)) b.className = "op";
     b.addEventListener("pointerdown", e => e.preventDefault());
     b.onclick = () => {
-      const f = activeInput, start = f.selectionStart, end = f.selectionEnd;
+      const f = first, start = f.selectionStart, end = f.selectionEnd;
       const from = key === "⌫" && start === end ? Math.max(0, start - 1) : start;
       f.setRangeText(key === "⌫" ? "" : key, from, end, "end");
       f.focus({preventScroll: true});
@@ -324,9 +423,10 @@ function init() {
   addEventListener("popstate", () => newSheet());
   document.addEventListener("keydown", e => { if (e.key === "Escape") get("reset").click(); });
   get("version").textContent = "version " + VERSION;
+  renderHistory("");
 }
 function newSheet() {
-  first.value = ""; second.value = "";
+  first.value = "";
   get("browse").open = false;
   update();
   first.focus({preventScroll: true});
@@ -351,11 +451,20 @@ function onMark(key, name, m) {
   store.setMany(changes);
   if (changes.length > 1) Evals.toast(name + " : " + (changes.length - 1) + " ceinture" + (changes.length > 2 ? "s" : "") + " d’avant validée" + (changes.length > 2 ? "s" : "") + " aussi");
 }
+/* Pour chaque élève : ses ceintures obtenues (pastilles pleines), et si la ceinture ouverte est déjà obtenue ailleurs (autre fiche ou validation auto). */
 function pupils() {
-  const b = shown && belts[beltOf[sheetKey(shown)]];
+  const here = shown ? beltOf[sheetKey(shown)] : -1, b = belts[here], current = shown && sheetKey(shown);
   return store.roster.map(p => {
-    const i = acquired(p.name), auto = b && store.get(b.name, p.name) === "A";
-    return {...p, info: p.group + (i >= 0 ? " · ceinture " + belts[i].name.toLowerCase() : "") + (auto ? " · " + b.name.toLowerCase() + " validée auto" : "")};
+    const i = acquired(p.name);
+    const dots = '<span class="mini-belts" aria-hidden="true">' + belts.map((x, k) =>
+      '<i style="--belt:' + x.color + '" title="' + x.name + '" class="' + (validated(x, p.name) ? "on" : "") + (k === here ? " ici" : "") + '"></i>').join("") + "</span>";
+    let deja = "";
+    if (b && store.get(current, p.name) !== "A" && validated(b, p.name)) {
+      const keys = [b.name].concat(b.sheets.map(sheetKey)).filter(k => store.get(k, p.name) === "A");
+      const l = store.last(keys, p.name);
+      deja = '<span class="deja">✓ ' + b.name + " déjà obtenue" + (l ? " (" + (l.key === b.name ? "auto" : "fiche " + l.key.split("-").pop()) + ")" : "") + "</span>";
+    }
+    return {...p, info: p.group + " · " + (i >= 0 ? "ceinture " + belts[i].name.toLowerCase() : "aucune ceinture") + dots + deja};
   });
 }
 async function startEvals() {
@@ -369,9 +478,10 @@ async function startEvals() {
     panel = new Evals.Panel(evalHost, {store, key: () => shown && sheetKey(shown), pupils, filters: true, pdf: exportPdf, onMark,
       extra: () => '<button type="button" class="btn petit" data-ev="x" aria-pressed="' + autoPrev + '" title="Un A valide aussi les ceintures d’avant pas encore validées">' + (autoPrev ? "✓" : "✗") + " Ceintures d’avant : " + (autoPrev ? "auto" : "non") + "</button>",
       onExtra: () => { autoPrev = !autoPrev; try { localStorage.setItem("calcul-auto-precedentes", autoPrev ? "1" : "0"); } catch {} }});
+    if (shown) { const s = shown; shown = null; show(s); }
   } catch (e) {
     evalHost.innerHTML = '<div class="vers-classe"><span>⚠ Les évaluations n’ont pas pu se charger (base de Classe injoignable).</span><button class="btn petit" type="button" id="retry">↻ Réessayer</button></div>';
-    get("retry").onclick = startEvals;
+    evalHost.querySelector("#retry").onclick = startEvals;
   }
 }
 function exportPdf() {

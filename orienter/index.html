@@ -1,0 +1,576 @@
+<!doctype html>
+<!-- TECHNIQUE
+Fiche d'identité
+  Rôle : aider les enseignants à repérer vers qui orienter un élève, à se former et à préparer le courrier de l'école pour le médecin.
+  Quand : avant ou après une rencontre avec la famille, en conseil de cycle, pour préparer une équipe éducative.
+  Où : ordinateur de l'école ou de la maison, téléphone. Page publique sur GitHub Pages, sans compte.
+  Écran n° 1 : le répertoire des professionnels, avec la prise en charge visible d'un coup d'œil.
+  Ce qu'il ne fait pas : pas de dossier d'élève partagé, pas de diagnostic, pas de compte rendu d'équipe éducative (skill compte-rendu-equipe-educative).
+Version : voir VERSION (une seule constante) et CACHE dans sw.js, à changer ensemble.
+Publié dans le dépôt outils-classe, dossier orienter/ (appli installable, hors ligne).
+Choix techniques :
+  - Deux fichiers : index.html (code) et donnees.js (contenu modifiable sans toucher au code).
+  - Aucune donnée envoyée sur internet. Réglages et brouillon du courrier en localStorage, sur l'appareil seulement.
+  - Le brouillon s'efface automatiquement après N jours (réglable), pour limiter la conservation de données d'élève (RGPD).
+  - Une seule source pour les constats : B.rep[id] ("oui" | "non" | "nsp"). « Questions » et « Courrier » lisent et écrivent la même chose.
+  - Charte Repères v1 (couleur d'outil : --outil-orienter).
+-->
+<html lang="fr"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#B03A48">
+<title>Orienter un élève</title>
+<link rel="manifest" href="manifest.webmanifest"><link rel="icon" href="icon-192.png"><link rel="apple-touch-icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+<style>
+/* Charte Repères v1 */
+:root{--fond:#EDF1F7;--surface:#FFFFFF;--surface-2:#F4F6FA;--encre:#111A2C;--encre-douce:#475166;--trait:#D3DAE5;--action:#2453C7;--action-douce:#E3EBFD;--action-foncee:#173A94;
+--outil-orienter:#B03A48;--entete:#F7E6E9;--entete-ink:#4A1A22;--entete-bd:#E8C7CD;
+--valide:#1F7A45;--attention:#B45309;--danger:#B42318;
+--ok-bg:#E3F2E8;--ok-fg:#1E6B3A;--info-bg:#E3EBFD;--info-fg:#173A94;--warn-bg:#FDF0DC;--warn-fg:#8A4B00;--bad-bg:#FBE4E2;--bad-fg:#9B1C14;
+--police:"Atkinson Hyperlegible",system-ui,sans-serif;--arrondi-s:8px;--arrondi-m:12px;--arrondi-l:16px;--cible:48px}
+:root[data-theme=dark]{--fond:#0F1522;--surface:#172033;--surface-2:#1E2940;--encre:#E9EEF7;--encre-douce:#A3AEC2;--trait:#2C3852;--action:#7EA2FF;--action-douce:#1F2D52;--action-foncee:#C9D7FF;
+--outil-orienter:#F07A88;--entete:#2A1A22;--entete-ink:#F6DDE1;--entete-bd:#4A2A33;--valide:#5CC97F;--attention:#F5A83C;--danger:#F97066;
+--ok-bg:#16351F;--ok-fg:#8FE0A8;--info-bg:#1F2D52;--info-fg:#C9D7FF;--warn-bg:#3A2A10;--warn-fg:#F5C77A;--bad-bg:#3D1A18;--bad-fg:#F9A39C}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]){--fond:#0F1522;--surface:#172033;--surface-2:#1E2940;--encre:#E9EEF7;--encre-douce:#A3AEC2;--trait:#2C3852;--action:#7EA2FF;--action-douce:#1F2D52;--action-foncee:#C9D7FF;
+--outil-orienter:#F07A88;--entete:#2A1A22;--entete-ink:#F6DDE1;--entete-bd:#4A2A33;--valide:#5CC97F;--attention:#F5A83C;--danger:#F97066;
+--ok-bg:#16351F;--ok-fg:#8FE0A8;--info-bg:#1F2D52;--info-fg:#C9D7FF;--warn-bg:#3A2A10;--warn-fg:#F5C77A;--bad-bg:#3D1A18;--bad-fg:#F9A39C}}
+
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--fond);color:var(--encre);font:16px/1.5 var(--police)}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--action);outline-offset:2px}
+svg.i{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.muted{color:var(--encre-douce)}
+h1{font-size:22px;margin:0}
+h2{font-size:20px;margin:0 0 12px}
+h3{font-size:17px;margin:0 0 8px}
+h4{font-size:15px;margin:14px 0 6px}
+a{color:var(--action)}
+
+/* Mise en page */
+.app{display:flex;min-height:100vh}
+.cote{display:none}
+.principal{flex:1;min-width:0;display:flex;flex-direction:column}
+header.entete{position:sticky;top:0;z-index:5;background:var(--entete);color:var(--entete-ink);border-bottom:1px solid var(--entete-bd);padding:10px 16px;display:flex;align-items:center;gap:10px}
+header.entete .titre{flex:1;min-width:0;display:flex;align-items:center;gap:10px}
+header.entete .tuile{background:var(--outil-orienter);color:#fff}
+.contenu{padding:16px 16px 110px;max-width:1180px;width:100%}
+nav.bas{position:fixed;left:0;right:0;bottom:0;z-index:6;display:flex;background:var(--surface);border-top:1px solid var(--trait);padding-bottom:env(safe-area-inset-bottom)}
+nav.bas button{flex:1;min-height:60px;border:0;background:none;color:var(--encre-douce);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:12px;cursor:pointer}
+nav.bas button[aria-current=page]{color:var(--outil-orienter);font-weight:700}
+@media (min-width:1000px){
+  .cote{display:flex;flex-direction:column;gap:4px;width:250px;flex:none;background:var(--surface);border-right:1px solid var(--trait);padding:16px 12px;position:sticky;top:0;height:100vh}
+  .cote .marque{display:flex;align-items:center;gap:10px;padding:4px 8px 16px;font-weight:700;font-size:18px}
+  .cote button{display:flex;align-items:center;gap:12px;min-height:var(--cible);border:0;border-radius:var(--arrondi-m);background:none;padding:0 12px;cursor:pointer;text-align:left;color:var(--encre)}
+  .cote button:hover{background:var(--surface-2)}
+  .cote button[aria-current=page]{background:var(--entete);color:var(--entete-ink);font-weight:700}
+  .cote .bas-cote{margin-top:auto}
+  nav.bas{display:none}
+  .contenu{padding:24px 32px 48px}
+  header.entete{padding:12px 32px}
+}
+.tuile{width:40px;height:40px;border-radius:var(--arrondi-m);display:grid;place-items:center;color:#fff;flex:none}
+.tuile.p{width:32px;height:32px;border-radius:var(--arrondi-s)}
+.tuile svg.i{width:20px;height:20px}
+
+/* Boutons */
+.btn{min-height:var(--cible);padding:0 16px;border-radius:var(--arrondi-m);font-weight:700;display:inline-flex;align-items:center;justify-content:center;gap:8px;border:1px solid var(--trait);background:var(--surface);color:var(--encre);cursor:pointer;text-decoration:none}
+.btn.plein{background:var(--outil-orienter);border-color:var(--outil-orienter);color:#fff}
+.btn.doux{background:var(--action-douce);border-color:transparent;color:var(--action-foncee)}
+.btn.danger{color:var(--danger)}
+.btn:disabled{opacity:.45;cursor:default}
+.btn.petit{min-height:40px;padding:0 12px;font-size:15px}
+.rangee{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.entete .btn{background:var(--surface);border-color:var(--entete-bd)}
+
+/* Puces de filtre */
+.puces{display:flex;gap:8px;overflow-x:auto;padding:2px 0 8px;scrollbar-width:none}
+.puce{min-height:40px;padding:0 14px;border-radius:999px;border:1px solid var(--trait);background:var(--surface);cursor:pointer;white-space:nowrap;display:inline-flex;align-items:center;gap:6px}
+.puce[aria-pressed=true]{background:var(--outil-orienter);border-color:var(--outil-orienter);color:#fff;font-weight:700}
+.recherche{position:relative;margin-bottom:10px}
+.recherche input{width:100%;min-height:var(--cible);border:1px solid var(--trait);border-radius:var(--arrondi-m);padding:0 14px 0 42px;background:var(--surface)}
+.recherche svg{position:absolute;left:12px;top:14px;color:var(--encre-douce)}
+
+/* Pastilles */
+.badge{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:999px;font-size:13px;font-weight:700;white-space:nowrap}
+.badge.ok{background:var(--ok-bg);color:var(--ok-fg)}
+.badge.info{background:var(--info-bg);color:var(--info-fg)}
+.badge.warn{background:var(--warn-bg);color:var(--warn-fg)}
+.badge.bad{background:var(--bad-bg);color:var(--bad-fg)}
+.badge.neutre{background:var(--surface-2);color:var(--encre-douce);border:1px solid var(--trait)}
+
+/* Cartes du répertoire */
+.groupe-titre{display:flex;align-items:center;gap:10px;margin:18px 0 8px;font-weight:700;font-size:17px}
+.cartes{display:grid;gap:10px}
+@media (min-width:1000px){.cartes{grid-template-columns:1fr 1fr;align-items:start}}
+details.carte{background:var(--surface);border:1px solid var(--trait);border-radius:var(--arrondi-l)}
+details.carte[open]{border:2px solid var(--c,var(--outil-orienter))}
+details.carte>summary{list-style:none;cursor:pointer;padding:12px 14px;display:flex;gap:12px;align-items:flex-start}
+details.carte>summary::-webkit-details-marker{display:none}
+.carte .nom{font-weight:700;line-height:1.3}
+.carte .court{color:var(--encre-douce);font-size:14px}
+.carte .badges{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.carte .corps{padding:0 14px 14px;display:grid;gap:12px}
+.bloc h4{margin:0 0 4px;font-size:14px;text-transform:none;color:var(--encre-douce)}
+.bloc p{margin:0}
+.bloc ul,.bloc ol{margin:0;padding-left:20px}
+.prise{border-radius:var(--arrondi-m);padding:10px 12px;display:grid;gap:4px}
+.prise.ok{background:var(--ok-bg);color:var(--ok-fg)}.prise.info{background:var(--info-bg);color:var(--info-fg)}.prise.warn{background:var(--warn-bg);color:var(--warn-fg)}.prise.bad{background:var(--bad-bg);color:var(--bad-fg)}
+.prise b{font-size:16px}
+.contact{background:var(--surface-2);border-radius:var(--arrondi-m);padding:10px 12px}
+.vide{padding:24px;text-align:center;color:var(--encre-douce)}
+
+/* Questions */
+.grille-tuiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.tuile-choix{border:2px solid var(--trait);background:var(--surface);border-radius:var(--arrondi-l);padding:14px;min-height:96px;display:flex;flex-direction:column;align-items:flex-start;gap:8px;cursor:pointer;text-align:left}
+.tuile-choix[aria-pressed=true]{border-color:var(--c,var(--outil-orienter));background:color-mix(in srgb,var(--c,var(--outil-orienter)) 8%,var(--surface))}
+.tuile-choix .nb{font-size:13px;color:var(--encre-douce)}
+.carte-q{background:var(--surface);border:2px solid var(--c,var(--outil-orienter));border-radius:var(--arrondi-l);padding:20px;max-width:720px}
+.carte-q .question{font-size:22px;font-weight:700;line-height:1.35;margin:14px 0 20px}
+.reponses{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+.reponses .btn{min-height:64px;font-size:18px}
+.reponses .btn[aria-pressed=true]{outline:3px solid var(--c,var(--outil-orienter));outline-offset:1px}
+.btn.oui{background:var(--ok-bg);color:var(--ok-fg);border-color:transparent}
+.btn.non{background:var(--surface-2)}
+.progres{height:8px;background:var(--surface-2);border-radius:99px;overflow:hidden;margin-top:12px}
+.progres i{display:block;height:100%;background:var(--c,var(--outil-orienter))}
+.alerte{border-left:6px solid var(--danger);background:var(--bad-bg);color:var(--bad-fg);border-radius:var(--arrondi-m);padding:12px 14px;display:flex;gap:10px;margin-bottom:10px}
+.encadre{background:var(--surface);border:1px solid var(--trait);border-radius:var(--arrondi-l);padding:16px;margin-bottom:12px}
+.piste{display:flex;gap:12px;align-items:flex-start;padding:10px 0;border-top:1px solid var(--trait)}
+.piste:first-of-type{border-top:0}
+.barre{height:6px;border-radius:99px;background:var(--outil-orienter);opacity:.8}
+.note{background:var(--warn-bg);color:var(--warn-fg);border-radius:var(--arrondi-m);padding:10px 12px;font-size:15px}
+ol.etapes{padding-left:22px;margin:0}ol.etapes li{margin-bottom:8px}
+
+/* Courrier */
+.deux{display:grid;gap:16px}
+@media (min-width:1000px){.deux{grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:start}.apercu-col{position:sticky;top:84px}}
+.champ{display:grid;gap:4px;margin-bottom:10px}
+.champ label{font-weight:700;font-size:14px}
+.champ input,.champ textarea,.champ select{width:100%;min-width:0;min-height:44px;border:1px solid var(--trait);border-radius:var(--arrondi-s);padding:8px 10px;background:var(--surface)}
+.champ textarea{min-height:90px;resize:vertical}
+.grille2{display:grid;grid-template-columns:1fr 1fr;gap:0 10px}
+@media (max-width:520px){.grille2{grid-template-columns:1fr}}
+details.sec{background:var(--surface);border:1px solid var(--trait);border-radius:var(--arrondi-l);margin-bottom:10px}
+details.sec[open]{border:2px solid var(--c,var(--outil-orienter))}
+details.sec>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:12px;padding:12px 14px;font-weight:700;font-size:16px}
+details.sec>summary::-webkit-details-marker{display:none}
+details.sec>summary .compte{margin-left:auto}
+details.sec .int{padding:0 14px 14px}
+.coche{display:flex;gap:10px;align-items:flex-start;padding:8px 6px;border-radius:var(--arrondi-s);cursor:pointer}
+.coche:hover{background:var(--surface-2)}
+.coche input{width:22px;height:22px;margin:1px 0 0;flex:none;accent-color:var(--outil-orienter)}
+.papier{background:#fff;color:#111;border:1px solid var(--trait);border-radius:var(--arrondi-m);padding:28px 30px;font:14px/1.5 Arial,sans-serif;box-shadow:0 2px 10px rgba(0,0,0,.06)}
+.papier h3{font-size:15px;margin:14px 0 4px;color:#1F3864}
+.papier ul{margin:0 0 6px;padding-left:20px}
+.papier .ent{display:flex;justify-content:space-between;gap:16px;font-size:13px;color:#333;margin-bottom:18px}
+.papier .obj{font-weight:700;margin:12px 0}
+.papier .sig{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;width:calc(100% - 2px);margin-top:22px;text-align:center;font-size:12.5px}
+.papier .sig div{border:1px solid #9AA9C2;min-height:90px;padding:6px}
+.papier .pied{margin-top:16px;font-size:11.5px;color:#555;text-align:center}
+.bandeau-brouillon{display:flex;gap:10px;align-items:flex-start;background:var(--info-bg);color:var(--info-fg);border-radius:var(--arrondi-m);padding:10px 12px;margin-bottom:12px;font-size:15px}
+
+/* Se former et réglages */
+.outils-sec{display:flex;justify-content:flex-end;gap:8px;margin-bottom:10px}
+.deuxcol{display:grid;gap:12px}@media (min-width:700px){.deuxcol{grid-template-columns:1fr 1fr}}
+.deuxcol h4{margin-top:0}
+table.tab{width:100%;border-collapse:collapse;font-size:15px}
+table.tab td,table.tab th{border-bottom:1px solid var(--trait);padding:8px;text-align:left;vertical-align:top}
+dl.gloss{display:grid;grid-template-columns:max-content 1fr;gap:6px 14px;margin:0}dl.gloss dt{font-weight:700}dl.gloss dd{margin:0}
+.ligne-contact{border:1px solid var(--trait);border-radius:var(--arrondi-m);padding:10px;margin-bottom:10px;background:var(--surface-2)}
+
+#toast{position:fixed;left:50%;bottom:84px;transform:translateX(-50%);background:var(--encre);color:var(--fond);padding:10px 16px;border-radius:var(--arrondi-m);opacity:0;transition:opacity .2s;pointer-events:none;z-index:20;max-width:90vw}
+#impression{display:none}
+
+@media print{
+  @page{size:A4;margin:16mm}
+  body{background:#fff}
+  .app,nav.bas,#toast{display:none!important}
+  #impression{display:block;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  #impression .papier{border:0;box-shadow:none;padding:0}
+}
+/* Fiche famille (impression) */
+.fiche{font:15px/1.5 Arial,sans-serif;color:#111}
+.fiche .ent{font-size:13px;color:#333;margin-bottom:14px}
+.fiche h1{font-size:24px;color:#1F3864;margin:0 0 4px}
+.fiche .pastilles{display:flex;gap:10px;margin:14px 0}
+.fiche .pastilles div{flex:1;border-radius:10px;padding:10px;text-align:center;font-weight:700;font-size:16px}
+.fiche .g{background:#E3F2E8;color:#1E6B3A}.fiche .b{background:#E3EBFD;color:#173A94}.fiche .o{background:#FDF0DC;color:#8A4B00}.fiche .r{background:#FBE4E2;color:#9B1C14}
+.fiche h2{font-size:17px;color:#1F3864;margin:16px 0 6px}
+.fiche .cadre{border-left:5px solid #2E5597;background:#F2F5FA;padding:10px 14px;margin-top:10px}
+</style></head><body>
+<div class="app">
+  <aside class="cote" id="cote"></aside>
+  <div class="principal">
+    <header class="entete" id="entete"></header>
+    <main class="contenu" id="vue"></main>
+  </div>
+</div>
+<nav class="bas" id="nav"></nav>
+<div id="toast" role="status" aria-live="polite"></div>
+<div id="impression"></div>
+<script src="donnees.js"></script>
+<script>
+"use strict";
+const VERSION = "1.0.0";
+const CLE_R = "orienter-reglages", CLE_B = "orienter-brouillon", CLE_SEC = "orienter-sections";
+
+/* ---------- Pictogrammes (style Lucide) ---------- */
+const P = {
+  ecole:'<path d="M3 21h18"/><path d="M5 21V10l7-5 7 5v11"/><path d="M10 21v-5h4v5"/>',
+  sante:'<circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/>',
+  structure:'<rect x="3" y="8" width="18" height="13" rx="2"/><path d="M8 8V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v3"/><path d="M12 12v5M9.5 14.5h5"/>',
+  fichier:'<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/>',
+  bulle:'<path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/>',
+  oreille:'<path d="M6 8.5a6.5 6.5 0 1 1 13 0c0 6-6 6-6 10a3.5 3.5 0 1 1-7 0"/><path d="M15 8.5a2.5 2.5 0 0 0-5 0v1a2 2 0 1 1 0 4"/>',
+  oeil:'<path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/>',
+  livre:'<path d="M2 4h6a4 4 0 0 1 4 4v13a3 3 0 0 0-3-3H2z"/><path d="M22 4h-6a4 4 0 0 0-4 4v13a3 3 0 0 1 3-3h7z"/>',
+  calcul:'<rect x="4" y="2" width="16" height="20" rx="2"/><path d="M8 6h8M8 11h.01M12 11h.01M16 11h.01M8 15h.01M12 15h.01M16 15v3M8 18h.01M12 18h.01"/>',
+  crayon:'<path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>',
+  corps:'<circle cx="12" cy="4.5" r="2"/><path d="M8 22l2-7-3-3 3-4h4l3 4-3 3 2 7"/>',
+  eclair:'<path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/>',
+  coeur:'<path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>',
+  groupe:'<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>',
+  lune:'<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>',
+  boussole:'<circle cx="12" cy="12" r="10"/><path d="m16.24 7.76-2.12 6.36-6.36 2.12 2.12-6.36 6.36-2.12z"/>',
+  annuaire:'<path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/>',
+  former:'<path d="M22 10 12 5 2 10l10 5 10-5Z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/>',
+  reglages:'<path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/>',
+  imprimer:'<path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/>',
+  copier:'<rect x="8" y="8" width="14" height="14" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>',
+  poubelle:'<path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>',
+  chercher:'<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>',
+  alerte:'<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4M12 17h.01"/>',
+  annuler:'<path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/>',
+  telecharger:'<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/>',
+  retour:'<path d="m15 18-6-6 6-6"/>',
+  ok:'<path d="M20 6 9 17l-5-5"/>',
+  plus:'<path d="M12 5v14M5 12h14"/>',
+  info:'<circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/>',
+  lien:'<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>',
+  tel:'<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/>'
+};
+function ic(n){return '<svg class="i" viewBox="0 0 24 24" aria-hidden="true">'+(P[n]||"")+'</svg>'}
+function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
+
+/* ---------- Données de l'appareil ---------- */
+function defautR(){return{v:1,theme:"auto",expire:30,ecole:{nom:"École primaire Andrée Chedid",ville:"Blain",circo:"Circonscription de Blain-Nozay",adresse:"",tel:"",mail:"",directeur:"Xavier Gougaud"},contacts:JSON.parse(JSON.stringify(CONTACTS_DEFAUT))}}
+function defautB(){return{v:1,savedAt:0,eleve:{prenom:"",nom:"",naissance:"",classe:"",enseignant:""},rencontre:"",niveau:"",domaines:[],rep:{},aides:{},autresAides:"",obs:"",persiste:true}}
+function migrerR(d){var r=defautR();if(!d||typeof d!=="object")return r;r.theme=d.theme||r.theme;if(typeof d.expire==="number")r.expire=d.expire;r.ecole=Object.assign(r.ecole,d.ecole||{});if(Array.isArray(d.contacts))r.contacts=d.contacts;return r}
+function migrerB(d){var b=defautB();if(!d||typeof d!=="object")return b;Object.keys(b).forEach(function(k){if(d[k]!==undefined)b[k]=d[k]});b.eleve=Object.assign(defautB().eleve,d.eleve||{});return b}
+function lire(cle,migrer){try{var t=localStorage.getItem(cle);return migrer(t?JSON.parse(t):null)}catch(e){try{localStorage.setItem(cle+"-secours",localStorage.getItem(cle))}catch(x){}return migrer(null)}}
+function ecrire(cle,val){try{localStorage.setItem(cle,JSON.stringify(val))}catch(e){toast("Enregistrement impossible sur cet appareil")}}
+
+const S={vue:"repertoire",filtre:"tous",cherche:"",q:{etape:"niveau",i:0},annul:[],refaire:[]};
+let R=lire(CLE_R,migrerR);
+let B=lire(CLE_B,migrerB);
+let SEC={};try{SEC=JSON.parse(localStorage.getItem(CLE_SEC))||{}}catch(e){SEC={}}
+
+// Effacement automatique du brouillon
+(function(){if(R.expire>0&&B.savedAt&&Date.now()-B.savedAt>R.expire*864e5){B=defautB();try{localStorage.removeItem(CLE_B)}catch(e){}setTimeout(function(){toast("Ancien brouillon effacé automatiquement")},400)}})();
+
+function sauverR(){ecrire(CLE_R,R)}
+function sauverB(){B.savedAt=Date.now();ecrire(CLE_B,B)}
+function brouillonVide(){return !B.eleve.prenom&&!B.eleve.nom&&!Object.keys(B.rep).length&&!Object.keys(B.aides).length&&!B.obs&&!B.autresAides}
+// Annuler / rétablir (Ctrl+Z, Ctrl+Maj+Z) sur le brouillon
+function avant(){S.annul.push(JSON.stringify(B));if(S.annul.length>60)S.annul.shift();S.refaire=[]}
+function annuler(){if(!S.annul.length){toast("Rien à annuler");return}S.refaire.push(JSON.stringify(B));B=migrerB(JSON.parse(S.annul.pop()));sauverB();rendre();toast("Annulé")}
+function refaire(){if(!S.refaire.length)return;S.annul.push(JSON.stringify(B));B=migrerB(JSON.parse(S.refaire.pop()));sauverB();rendre();toast("Rétabli")}
+
+function toast(t){var el=document.getElementById("toast");el.textContent=t;el.style.opacity=1;clearTimeout(el._t);el._t=setTimeout(function(){el.style.opacity=0},2400)}
+function theme(){if(R.theme==="auto")delete document.documentElement.dataset.theme;else document.documentElement.dataset.theme=R.theme}
+
+/* ---------- Outils de calcul ---------- */
+function pro(id){return PROS.find(function(p){return p.id===id})}
+function cat(id){return CATEGORIES.find(function(c){return c.id===id})}
+function tousItems(){var l=[];DOMAINES.forEach(function(d){d.items.forEach(function(it){l.push(Object.assign({dom:d},it))})});return l}
+function itemsNiveau(niv){return tousItems().filter(function(it){return !it.niv||!niv||it.niv===niv})}
+function oui(id){return B.rep[id]==="oui"}
+function ordoCls(o){if(/Sans ordonnance|Accès direct/.test(o))return"ok";if(/Via/.test(o))return"neutre";return"warn"}
+function badges(p){var c=COUTS[p.cout];return '<span class="badge '+c.cls+'">'+esc(c.txt)+'</span><span class="badge '+ordoCls(p.ordo)+'">'+esc(p.ordo)+'</span>'}
+
+/* ---------- Navigation ---------- */
+const ONGLETS=[["repertoire","Répertoire","annuaire"],["questions","Questions","boussole"],["courrier","Courrier","fichier"],["former","Se former","former"],["reglages","Réglages","reglages"]];
+function aller(vue,q){S.vue=vue;if(q)S.q=q;history.pushState({vue:S.vue,q:S.q},"","#"+vue);rendre();window.scrollTo(0,0)}
+addEventListener("popstate",function(e){var st=e.state||{};S.vue=st.vue||"repertoire";if(st.q)S.q=st.q;rendre()});
+
+function rendreCadre(){
+  var t=ONGLETS.find(function(o){return o[0]===S.vue});
+  var annul=(S.vue==="courrier"||S.vue==="questions")?'<button class="btn petit" data-act="annuler" title="Annuler (Ctrl+Z)">'+ic("annuler")+'<span>Annuler</span></button>':"";
+  document.getElementById("entete").innerHTML='<div class="titre"><span class="tuile p">'+ic(t[2])+'</span><div><h1>'+t[1]+'</h1></div></div>'+annul;
+  var cote='<div class="marque"><span class="tuile" style="background:var(--outil-orienter)">'+ic("boussole")+'</span>Orienter un élève</div>';
+  ONGLETS.forEach(function(o,i){cote+=(i===4?'<div class="bas-cote"></div>':"")+'<button data-tab="'+o[0]+'" '+(S.vue===o[0]?'aria-current="page"':"")+'>'+ic(o[2])+'<span>'+o[1]+'</span></button>'});
+  document.getElementById("cote").innerHTML=cote;
+  document.getElementById("nav").innerHTML=ONGLETS.map(function(o){return '<button data-tab="'+o[0]+'" '+(S.vue===o[0]?'aria-current="page"':"")+'>'+ic(o[2])+'<span>'+o[1]+'</span></button>'}).join("");
+}
+
+/* ---------- Répertoire ---------- */
+function contactsDe(id){return R.contacts.filter(function(c){return c.pro===id&&(c.nom||c.tel||c.adresse)})}
+function htmlContact(c){
+  var t='<div class="contact"><b>'+esc(c.nom)+'</b>';
+  if(c.adresse)t+='<br>'+esc(c.adresse);
+  if(c.tel)t+='<br><a href="tel:'+esc(c.tel.replace(/\s/g,""))+'">'+esc(c.tel)+'</a>';
+  if(c.mail)t+='<br><a href="mailto:'+esc(c.mail)+'">'+esc(c.mail)+'</a>';
+  return t+'</div>';
+}
+function carteHTML(p){
+  var c=cat(p.cat),cout=COUTS[p.cout];
+  var h='<details class="carte" style="--c:'+c.couleur+'" data-pro="'+p.id+'"><summary><span class="tuile" style="background:'+c.couleur+'">'+ic(c.picto)+'</span><div><div class="nom">'+esc(p.nom)+'</div><div class="court">'+esc(p.court)+'</div><div class="badges">'+badges(p)+'</div></div></summary><div class="corps">';
+  h+='<div class="bloc"><h4>À quoi ça sert</h4><p>'+esc(p.sert)+'</p></div>';
+  if(p.quand&&p.quand.length)h+='<div class="bloc"><h4>Quand y penser</h4><ul>'+p.quand.map(function(x){return"<li>"+esc(x)+"</li>"}).join("")+'</ul></div>';
+  if(p.acces&&p.acces.length)h+='<div class="bloc"><h4>Comment y aller</h4><ol>'+p.acces.map(function(x){return"<li>"+esc(x)+"</li>"}).join("")+'</ol></div>';
+  h+='<div class="prise '+cout.cls+'"><b>'+esc(cout.txt)+' · '+esc(p.ordo)+'</b><span>'+esc(p.coutTxt)+'</span>'+(p.delai?'<span>Délai : '+esc(p.delai)+'</span>':"")+'</div>';
+  if(p.parler)h+='<div class="bloc"><h4>Pour en parler</h4><p>'+esc(p.parler)+'</p></div>';
+  var cs=contactsDe(p.id);if(cs.length)h+='<div class="bloc"><h4>Près de chez nous</h4>'+cs.map(htmlContact).join("")+'</div>';
+  var act="";
+  if(p.lien)act+='<a class="btn petit" href="'+esc(p.lien.url)+'" target="_blank" rel="noopener">'+ic("lien")+esc(p.lien.txt)+'</a>';
+  if(p.famille)act+='<button class="btn petit doux" data-act="fiche" data-id="'+p.id+'">'+ic("imprimer")+'Fiche pour la famille</button>';
+  if(act)h+='<div class="rangee">'+act+'</div>';
+  return h+'</div></details>';
+}
+function vueRepertoire(){
+  var h='<div class="recherche">'+ic("chercher")+'<input id="cherche" type="search" placeholder="Chercher : orthophoniste, gratuit, écriture…" value="'+esc(S.cherche)+'" aria-label="Chercher"></div>';
+  h+='<div class="puces" role="group" aria-label="Filtrer">'+[["tous","Tous"]].concat(CATEGORIES.map(function(c){return[c.id,c.nom]})).concat([["gratuit","Gratuit"]]).map(function(f){return '<button class="puce" data-filtre="'+f[0]+'" aria-pressed="'+(S.filtre===f[0])+'">'+f[1]+'</button>'}).join("")+'</div>';
+  var q=S.cherche.trim().toLowerCase();
+  var liste=PROS.filter(function(p){
+    if(S.filtre==="gratuit"&&p.cout!=="gratuit")return false;
+    if(S.filtre!=="tous"&&S.filtre!=="gratuit"&&p.cat!==S.filtre)return false;
+    if(!q)return true;
+    var t=(p.nom+" "+p.court+" "+p.sert+" "+(p.quand||[]).join(" ")+" "+COUTS[p.cout].txt+" "+p.ordo).toLowerCase();
+    return q.split(/\s+/).every(function(m){return t.indexOf(m)>=0});
+  });
+  if(!liste.length)return h+'<div class="vide">Aucun résultat. Essaie un autre mot.</div>';
+  CATEGORIES.forEach(function(c){
+    var l=liste.filter(function(p){return p.cat===c.id});if(!l.length)return;
+    h+='<div class="groupe-titre"><span class="tuile p" style="background:'+c.couleur+'">'+ic(c.picto)+'</span>'+c.nom+'</div><div class="cartes">'+l.map(carteHTML).join("")+'</div>';
+  });
+  return h;
+}
+
+/* ---------- Questions ---------- */
+function listeQ(){var dom=B.domaines.length?B.domaines:DOMAINES.map(function(d){return d.id});return itemsNiveau(B.niveau).filter(function(it){return dom.indexOf(it.dom.id)>=0})}
+function vueQuestions(){
+  var e=S.q.etape;
+  if(e==="niveau"){
+    var dejà=Object.keys(B.rep).length;
+    var h='<p class="muted">Réponds à quelques questions sur ce que tu observes. Tu obtiens des pistes pour en parler avec la famille et le médecin, et les constats sont reportés dans le courrier.</p>';
+    if(dejà)h+='<div class="encadre"><div class="rangee"><b style="flex:1">Un questionnaire est en cours ('+dejà+' réponses).</b><button class="btn plein" data-act="q-resultat">Voir les pistes</button><button class="btn" data-act="q-reprendre">Reprendre</button></div></div>';
+    h+='<h2>Dans quelle classe est l\'élève ?</h2><div class="grille-tuiles">';
+    [["mat","Maternelle","PS, MS, GS"],["elem","Élémentaire","CP au CM2"]].forEach(function(n){h+='<button class="tuile-choix" data-act="q-niveau" data-v="'+n[0]+'" aria-pressed="'+(B.niveau===n[0])+'"><span class="tuile" style="background:var(--outil-orienter)">'+ic(n[0]==="mat"?"groupe":"livre")+'</span><b>'+n[1]+'</b><span class="nb">'+n[2]+'</span></button>'});
+    return h+'</div>';
+  }
+  if(e==="domaines"){
+    var h2='<button class="btn petit" data-act="q-etape" data-v="niveau">'+ic("retour")+'Classe</button><h2 style="margin-top:14px">Qu\'est-ce qui t\'inquiète ?</h2><p class="muted">Choisis un ou plusieurs domaines. Sans choix, toutes les questions sont posées.</p><div class="grille-tuiles">';
+    DOMAINES.forEach(function(d){var n=itemsNiveau(B.niveau).filter(function(it){return it.dom.id===d.id}).length;if(!n)return;h2+='<button class="tuile-choix" style="--c:'+d.couleur+'" data-act="q-dom" data-v="'+d.id+'" aria-pressed="'+(B.domaines.indexOf(d.id)>=0)+'"><span class="tuile" style="background:'+d.couleur+'">'+ic(d.picto)+'</span><b>'+d.nom+'</b><span class="nb">'+n+' question'+(n>1?"s":"")+'</span></button>'});
+    return h2+'</div><div class="rangee" style="margin-top:16px"><button class="btn plein" data-act="q-commencer">'+ic("boussole")+'Commencer ('+listeQ().length+' questions)</button></div>';
+  }
+  if(e==="q"){
+    var L=listeQ(),i=Math.min(S.q.i,L.length-1),it=L[i];
+    if(!it)return '<div class="vide">Aucune question.</div>';
+    var r=B.rep[it.id];
+    return '<div class="carte-q" style="--c:'+it.dom.couleur+'"><div class="rangee"><span class="tuile p" style="background:'+it.dom.couleur+'">'+ic(it.dom.picto)+'</span><b>'+it.dom.nom+'</b><span class="muted" style="margin-left:auto">'+(i+1)+' / '+L.length+'</span></div>'+
+      '<div class="progres"><i style="width:'+Math.round((i+1)/L.length*100)+'%"></i></div>'+
+      '<div class="question">'+esc(it.q)+'</div>'+
+      '<div class="reponses"><button class="btn oui" data-act="q-rep" data-v="oui" aria-pressed="'+(r==="oui")+'">Oui</button><button class="btn non" data-act="q-rep" data-v="non" aria-pressed="'+(r==="non")+'">Non</button><button class="btn non" data-act="q-rep" data-v="nsp" aria-pressed="'+(r==="nsp")+'">Je ne sais pas</button></div>'+
+      '<div class="rangee" style="margin-top:16px"><button class="btn petit" data-act="q-prec" '+(i===0?"disabled":"")+'>'+ic("retour")+'Précédente</button><button class="btn petit" data-act="q-resultat" style="margin-left:auto">Voir les pistes</button></div></div>'+
+      '<p class="muted" style="margin-top:12px">Touche O, N ou S au clavier pour répondre plus vite.</p>';
+  }
+  return vueResultat();
+}
+function calculPistes(){
+  var sc={},raisons={},doms={};
+  tousItems().forEach(function(it){if(!oui(it.id))return;doms[it.dom.id]=1;it.sp.forEach(function(s,k){sc[s]=(sc[s]||0)+(k===0?2:1);(raisons[s]=raisons[s]||[]).push(it)})});
+  var nbDom=Object.keys(doms).length;
+  if(nbDom>=3){sc.pco=(sc.pco||0)+3;(raisons.pco=raisons.pco||[]);if(B.niveau==="mat"){sc.camsp=(sc.camsp||0)+2;raisons.camsp=raisons.camsp||[]}sc.cmp=(sc.cmp||0)+2;raisons.cmp=raisons.cmp||[]}
+  var l=Object.keys(sc).filter(function(id){return id!=="medecin"}).map(function(id){return{id:id,score:sc[id],raisons:raisons[id]||[]}}).sort(function(a,b){return b.score-a.score});
+  return{liste:l,nbDom:nbDom,max:l.length?l[0].score:1};
+}
+function vueResultat(){
+  var oi=tousItems().filter(function(it){return oui(it.id)});
+  var h='<div class="rangee" style="margin-bottom:12px"><button class="btn petit" data-act="q-etape" data-v="domaines">'+ic("retour")+'Domaines</button><button class="btn petit" data-act="q-recommencer">Recommencer</button></div>';
+  oi.filter(function(it){return it.alerte}).forEach(function(it){h+='<div class="alerte">'+ic("alerte")+'<div><b>'+esc(it.q)+'</b><br>'+esc(it.alerte)+'</div></div>'});
+  if(!oi.length)return h+'<div class="encadre"><b>Aucun constat retenu.</b><p class="muted">Réponds « Oui » aux questions qui correspondent à ce que tu observes.</p><button class="btn plein" data-act="q-commencer">Répondre aux questions</button></div>';
+  var p=calculPistes();
+  h+='<div class="encadre"><h2>Prochaines étapes</h2><ol class="etapes">';
+  h+='<li><b>En parler avec la psychologue de l\'Éducation nationale</b>'+(oi.some(function(it){return /emo|att|soc/.test(it.dom.id)})?", en priorité ici (émotions, attention ou relations).":" si les difficultés durent malgré les aides.")+'</li>';
+  h+='<li><b>Rencontrer la famille</b> : décrire les constats, écouter ce qu\'elle observe à la maison.</li>';
+  h+='<li><b>Remettre le courrier pour le médecin.</b> C\'est lui qui oriente vers les bilans utiles.</li>';
+  if(p.nbDom>=3)h+='<li><b>Plusieurs domaines sont touchés</b> ('+p.nbDom+') : une structure qui réunit plusieurs professionnels est souvent plus adaptée (PCO, '+(B.niveau==="mat"?"CAMSP, ":"")+'CMP).</li>';
+  h+='</ol><div class="rangee" style="margin-top:12px"><button class="btn plein" data-act="tab-courrier">'+ic("fichier")+'Préparer le courrier ('+oi.filter(function(it){return it.c}).length+' constats)</button></div></div>';
+  h+='<div class="encadre"><h2>Professionnels à évoquer avec la famille et le médecin</h2><div class="note">'+ic("info")+' Ces pistes guident l\'échange oral. Elles ne s\'écrivent pas dans le courrier : c\'est le médecin qui oriente.</div>';
+  p.liste.slice(0,8).forEach(function(x){var pr=pro(x.id);if(!pr)return;var c=cat(pr.cat);
+    h+='<div class="piste"><span class="tuile p" style="background:'+c.couleur+'">'+ic(c.picto)+'</span><div style="flex:1"><div class="rangee"><b>'+esc(pr.nom)+'</b>'+badges(pr)+'</div><div class="barre" style="width:'+Math.max(12,Math.round(x.score/p.max*100))+'%;margin:6px 0"></div><div class="muted" style="font-size:14px">'+(x.raisons.length?"Pourquoi : "+x.raisons.slice(0,3).map(function(it){return esc(it.c||it.q)}).join(" · "):"Plusieurs domaines sont touchés.")+'</div><button class="btn petit" style="margin-top:6px" data-act="voir-pro" data-id="'+pr.id+'">Voir la fiche</button></div></div>'});
+  h+='</div><div class="encadre"><h2>Constats retenus</h2>';
+  DOMAINES.forEach(function(d){var l=d.items.filter(function(it){return oui(it.id)});if(!l.length)return;h+='<h4 style="color:'+d.couleur+'">'+d.nom+'</h4><ul>'+l.map(function(it){return"<li>"+esc(it.c||it.q)+"</li>"}).join("")+'</ul>'});
+  return h+'</div>';
+}
+
+/* ---------- Courrier ---------- */
+function fmtDate(iso){if(!iso)return"";var p=iso.split("-");return p.length===3?p[2]+"/"+p[1]+"/"+p[0]:iso}
+function aujourdhui(){return new Date().toLocaleDateString("fr-FR",{day:"numeric",month:"long",year:"numeric"})}
+function donneesLettre(){
+  var e=B.eleve,prenom=e.prenom||"l'élève";
+  var cons=DOMAINES.map(function(d){return{nom:d.nom,l:d.items.filter(function(it){return it.c&&oui(it.id)}).map(function(it){return it.c})}}).filter(function(x){return x.l.length});
+  var aides=AIDES.filter(function(a,i){return B.aides[i]});
+  if(B.autresAides.trim())B.autresAides.split(/\n+/).forEach(function(l){if(l.trim())aides.push(l.trim())});
+  return{e:e,prenom:prenom,cons:cons,aides:aides};
+}
+function lettreHTML(){
+  var D=donneesLettre(),E=R.ecole,e=D.e,nomComplet=(e.prenom+" "+e.nom).trim()||"[prénom et nom de l'élève]";
+  var h='<div class="ent"><div><b>'+esc(E.nom)+'</b><br>'+esc(E.circo)+(E.adresse?'<br>'+esc(E.adresse):"")+(E.tel?'<br>Tél. '+esc(E.tel):"")+(E.mail?'<br>'+esc(E.mail):"")+'</div><div style="text-align:right">'+esc(E.ville)+', le '+aujourdhui()+'<br><br>À l\'attention du médecin<br>de '+esc(nomComplet)+'</div></div>';
+  h+='<div class="obj">Objet : observations de l\'école concernant '+esc(nomComplet)+(e.naissance?', né(e) le '+esc(fmtDate(e.naissance)):"")+(e.classe?', classe de '+esc(e.classe):"")+'</div>';
+  h+='<p>Madame, Monsieur le Docteur,</p>';
+  h+='<p>Nous accueillons '+esc(D.prenom)+(e.classe?' en classe de '+esc(e.classe):"")+'. L\'équipe pédagogique a fait les observations suivantes, que nous souhaitons porter à votre connaissance.</p>';
+  if(D.cons.length)D.cons.forEach(function(c){h+='<h3>'+esc(c.nom)+'</h3><ul>'+c.l.map(function(x){return"<li>"+esc(x)+"</li>"}).join("")+'</ul>'});
+  else h+='<p><i>[Coche les constats dans la partie « Constats ».]</i></p>';
+  if(D.aides.length)h+='<h3>Ce que l\'école a déjà mis en place</h3><ul>'+D.aides.map(function(x){return"<li>"+esc(x)+"</li>"}).join("")+'</ul>';
+  if(B.obs.trim())h+='<h3>Observations complémentaires</h3>'+B.obs.trim().split(/\n+/).map(function(l){return"<p>"+esc(l)+"</p>"}).join("");
+  if(B.persiste&&D.cons.length)h+='<p>Ces difficultés persistent malgré les aides proposées en classe.</p>';
+  h+='<p>'+(B.rencontre?'Nous avons rencontré la famille le '+esc(fmtDate(B.rencontre))+' et lui avons remis ce courrier. ':'Ce courrier a été remis à la famille. ')+'Nous sollicitons votre avis sur la situation de '+esc(D.prenom)+' et sur l\'opportunité d\'examens ou de bilans complémentaires. Nous restons à votre disposition pour échanger avec vous.</p>';
+  h+='<p>Veuillez agréer, Madame, Monsieur le Docteur, l\'expression de nos salutations distinguées.</p>';
+  h+='<div class="sig"><div>L\'enseignant(e)<br><b>'+esc(e.enseignant)+'</b></div><div>Le directeur<br><b>'+esc(E.directeur)+'</b></div><div>Vu par la famille</div></div>';
+  h+='<div class="pied">Document confidentiel, remis à la famille à l\'attention du médecin.</div>';
+  return h;
+}
+function lettreTexte(){var d=document.createElement("div");d.innerHTML=lettreHTML();d.querySelectorAll("li").forEach(function(li){li.textContent="- "+li.textContent});d.querySelectorAll("p,h3,li,.obj,.ent>div,.sig>div,.pied").forEach(function(x){x.append("\n")});return d.innerText.replace(/\n{3,}/g,"\n\n").trim()}
+function vueCourrier(){
+  var e=B.eleve,ttl=0;
+  var h='<div class="bandeau-brouillon">'+ic("info")+'<div style="flex:1">Brouillon enregistré <b>sur cet appareil seulement</b>, jamais sur internet.'+(R.expire>0?' Il s\'efface tout seul après '+R.expire+' jours.':"")+'</div><button class="btn petit danger" data-act="effacer-b">'+ic("poubelle")+'Effacer</button></div>';
+  h+='<div class="deux"><div>';
+  h+=sec("c-eleve","L'élève","#2453C7","groupe",'<div class="grille2">'+champ("prenom","Prénom",e.prenom)+champ("nom","Nom",e.nom)+champ("naissance","Date de naissance",e.naissance,"date")+champ("classe","Classe",e.classe)+champ("enseignant","Enseignant(e)",e.enseignant)+champ("rencontre","Rencontre avec la famille",B.rencontre,"date")+'</div>',"");
+  DOMAINES.forEach(function(d){var its=itemsNiveau(B.niveau).filter(function(it){return it.dom.id===d.id&&it.c});if(!its.length)return;var n=its.filter(function(it){return oui(it.id)}).length;ttl+=n;
+    h+=sec("c-"+d.id,d.nom,d.couleur,d.picto,its.map(function(it){return '<label class="coche"><input type="checkbox" data-cons="'+it.id+'" '+(oui(it.id)?"checked":"")+'><span>'+esc(it.c)+'</span></label>'}).join(""),n?'<span class="badge info compte">'+n+'</span>':"")});
+  var na=Object.keys(B.aides).filter(function(k){return B.aides[k]}).length;
+  h+=sec("c-aides","Ce que l'école a déjà mis en place","#0F8F6C","ecole",AIDES.map(function(a,i){return '<label class="coche"><input type="checkbox" data-aide="'+i+'" '+(B.aides[i]?"checked":"")+'><span>'+esc(a)+'</span></label>'}).join("")+'<div class="champ" style="margin-top:8px"><label for="autresAides">Autres aides (une par ligne)</label><textarea id="autresAides" data-champ="autresAides">'+esc(B.autresAides)+'</textarea></div>',na?'<span class="badge info compte">'+na+'</span>':"");
+  h+=sec("c-obs","Observations libres","#7C3AED","crayon",'<div class="champ"><label for="obs">Un exemple concret, un résultat (fluence, repères), ce que dit l\'élève</label><textarea id="obs" data-champ="obs" rows="5">'+esc(B.obs)+'</textarea></div><label class="coche"><input type="checkbox" data-act="persiste" '+(B.persiste?"checked":"")+'><span>Ajouter « Ces difficultés persistent malgré les aides proposées en classe. »</span></label>',"");
+  h+='</div><div class="apercu-col"><div class="rangee" style="margin-bottom:10px"><button class="btn plein" data-act="imprimer">'+ic("imprimer")+'Imprimer</button><button class="btn" data-act="word">'+ic("telecharger")+'Word</button><button class="btn" data-act="copier">'+ic("copier")+'Copier</button></div><div class="papier" id="apercu">'+lettreHTML()+'</div><p class="muted" style="font-size:14px">Le courrier ne nomme aucun spécialiste : il décrit et demande l\'avis du médecin.</p></div></div>';
+  return h;
+}
+function champ(k,l,v,type){return '<div class="champ"><label for="f-'+k+'">'+l+'</label><input id="f-'+k+'" type="'+(type||"text")+'" data-eleve="'+k+'" value="'+esc(v)+'" autocomplete="off"></div>'}
+function sec(id,titre,couleur,picto,corps,extra){var ouvert=SEC[id]!==undefined?SEC[id]:(id==="c-eleve"||id==="r-ecole"||id==="f-parcours");return '<details class="sec" data-sec="'+id+'" style="--c:'+couleur+'" '+(ouvert?"open":"")+'><summary><span class="tuile p" style="background:'+couleur+'">'+ic(picto)+'</span>'+titre+(extra||"")+'</summary><div class="int">'+corps+'</div></details>'}
+function majApercu(){var a=document.getElementById("apercu");if(a)a.innerHTML=lettreHTML()}
+
+/* ---------- Se former ---------- */
+function vueFormer(){
+  var h='<div class="outils-sec"><button class="btn petit" data-act="tout" data-v="1">Tout déplier</button><button class="btn petit" data-act="tout" data-v="0">Tout replier</button></div>';
+  FORMATION.forEach(function(f){h+=sec("f-"+f.id,f.titre,f.couleur,"former",f.html,"")});
+  return h;
+}
+
+/* ---------- Réglages ---------- */
+function vueReglages(){
+  var E=R.ecole;
+  var h='<div class="outils-sec"><button class="btn petit" data-act="tout" data-v="1">Tout déplier</button><button class="btn petit" data-act="tout" data-v="0">Tout replier</button></div>';
+  h+=sec("r-ecole","École (en-tête du courrier)","#2453C7","ecole",'<div class="grille2">'+[["nom","Nom de l'école"],["circo","Circonscription"],["ville","Ville"],["directeur","Directeur ou directrice"],["adresse","Adresse"],["tel","Téléphone"],["mail","Courriel"]].map(function(x){return '<div class="champ"><label>'+x[1]+'</label><input data-ecole="'+x[0]+'" value="'+esc(E[x[0]])+'"></div>'}).join("")+'</div>',"");
+  var opts=PROS.filter(function(p){return p.cat!=="dispositif"}).map(function(p){return[p.id,p.nom]});
+  h+=sec("r-contacts","Coordonnées près de chez nous","#7C3AED","tel",'<p class="muted">Elles s\'affichent dans les fiches du répertoire et sur les fiches pour les familles.</p>'+R.contacts.map(function(c,i){return '<div class="ligne-contact"><div class="grille2"><div class="champ"><label>Pour</label><select data-contact="'+i+'" data-k="pro">'+opts.map(function(o){return '<option value="'+o[0]+'" '+(o[0]===c.pro?"selected":"")+'>'+esc(o[1])+'</option>'}).join("")+'</select></div>'+["nom","adresse","tel","mail"].map(function(k){return '<div class="champ"><label>'+{nom:"Nom",adresse:"Adresse",tel:"Téléphone",mail:"Courriel"}[k]+'</label><input data-contact="'+i+'" data-k="'+k+'" value="'+esc(c[k])+'"></div>'}).join("")+'</div><button class="btn petit danger" data-act="suppr-contact" data-i="'+i+'">'+ic("poubelle")+'Supprimer</button></div>'}).join("")+'<button class="btn doux" data-act="ajout-contact">'+ic("plus")+'Ajouter des coordonnées</button>',"");
+  h+=sec("r-brouillon","Brouillon du courrier","#B03A48","fichier",'<div class="champ"><label for="expire">Effacer automatiquement le brouillon après</label><select id="expire">'+[[7,"7 jours"],[30,"30 jours"],[90,"90 jours"],[0,"Jamais"]].map(function(o){return '<option value="'+o[0]+'" '+(R.expire===o[0]?"selected":"")+'>'+o[1]+'</option>'}).join("")+'</select></div><p class="muted">Le brouillon contient des informations sur un élève : le garder le moins longtemps possible.</p><button class="btn danger" data-act="effacer-b">'+ic("poubelle")+'Effacer le brouillon maintenant</button>',"");
+  h+=sec("r-app","Apparence","#64748B","reglages",'<div class="champ"><label for="th">Thème</label><select id="th"><option value="auto">Automatique</option><option value="light">Clair</option><option value="dark">Sombre</option></select></div>',"");
+  h+=sec("r-sauv","Sauvegarde des réglages","#0F8F6C","telecharger",'<p class="muted">Pour copier les réglages (école, coordonnées) sur un autre appareil ou chez un collègue. Le brouillon n\'est pas inclus.</p><div class="rangee"><button class="btn" data-act="export">'+ic("telecharger")+'Exporter</button><label class="btn">'+ic("plus")+'Importer<input type="file" accept=".json" id="imp" hidden></label><button class="btn danger" data-act="reinit">Remettre les réglages d\'origine</button></div>',"");
+  h+=sec("r-info","À propos","#475166","info",'<p>Version '+VERSION+'. Informations vérifiées en novembre 2026 (ameli.fr, sante.fr, monparcourshandicap.gouv.fr, service-public.fr). Les prises en charge peuvent évoluer : en cas de doute, vérifier.</p><p class="muted">Raccourcis : Ctrl+Z annule, Ctrl+Maj+Z rétablit. Dans « Questions » : O, N, S.</p>',"");
+  return h;
+}
+
+/* ---------- Impression ---------- */
+function imprimer(html){var z=document.getElementById("impression");z.innerHTML=html;setTimeout(function(){window.print()},50)}
+function ficheFamille(id){
+  var p=pro(id),E=R.ecole,c=COUTS[p.cout],cls={ok:"g",info:"b",warn:"o",bad:"r"};
+  var oc=ordoCls(p.ordo);oc=oc==="neutre"?"b":cls[oc];
+  var h='<div class="fiche"><div class="ent">'+esc(E.nom)+' · '+esc(E.ville)+'</div><h1>'+esc(p.nom)+'</h1><p style="font-size:17px">'+esc(p.famille)+'</p>';
+  h+='<div class="pastilles"><div class="'+cls[c.cls]+'">'+esc(c.txt)+'</div><div class="'+oc+'">'+esc(p.ordo)+'</div></div>';
+  h+='<p><b>Combien ça coûte ?</b> '+esc(p.coutTxt)+'</p>';
+  if(p.acces&&p.acces.length)h+='<h2>Comment faire ?</h2><ol>'+p.acces.map(function(x){return"<li>"+esc(x)+"</li>"}).join("")+'</ol>';
+  if(p.delai)h+='<p><b>Délai :</b> '+esc(p.delai)+'. Mieux vaut faire les démarches tôt.</p>';
+  var cs=contactsDe(id);if(cs.length)h+='<h2>Coordonnées</h2>'+cs.map(function(x){return '<div class="cadre"><b>'+esc(x.nom)+'</b>'+(x.adresse?'<br>'+esc(x.adresse):"")+(x.tel?'<br>Téléphone : '+esc(x.tel):"")+(x.mail?'<br>'+esc(x.mail):"")+'</div>'}).join("");
+  if(p.lien)h+='<div class="cadre">'+esc(p.lien.txt)+' : '+esc(p.lien.url)+'</div>';
+  return h+'</div>';
+}
+
+/* ---------- Rendu ---------- */
+const VUES={repertoire:vueRepertoire,questions:vueQuestions,courrier:vueCourrier,former:vueFormer,reglages:vueReglages};
+function rendre(){
+  rendreCadre();
+  document.getElementById("vue").innerHTML=VUES[S.vue]();
+  var th=document.getElementById("th");if(th)th.value=R.theme;
+  var ch=document.getElementById("cherche");if(ch){ch.oninput=function(){S.cherche=ch.value;var pos=ch.selectionStart;rendre();var n=document.getElementById("cherche");n.focus();n.setSelectionRange(pos,pos)}}
+}
+
+/* ---------- Événements ---------- */
+document.addEventListener("click",function(ev){
+  var t=ev.target.closest("[data-tab],[data-act],[data-filtre]");if(!t)return;
+  if(t.dataset.tab){aller(t.dataset.tab);return}
+  if(t.dataset.filtre){S.filtre=t.dataset.filtre;rendre();return}
+  var a=t.dataset.act,v=t.dataset.v;
+  if(a==="annuler")annuler();
+  else if(a==="fiche")imprimer(ficheFamille(t.dataset.id));
+  else if(a==="voir-pro"){S.filtre="tous";S.cherche="";aller("repertoire");var d=document.querySelector('[data-pro="'+t.dataset.id+'"]');if(d){d.open=true;d.scrollIntoView({block:"start"})}}
+  else if(a==="q-niveau"){avant();B.niveau=v;sauverB();aller("questions",{etape:"domaines",i:0})}
+  else if(a==="q-etape")aller("questions",{etape:v,i:0});
+  else if(a==="q-dom"){avant();var k=B.domaines.indexOf(v);if(k>=0)B.domaines.splice(k,1);else B.domaines.push(v);sauverB();rendre()}
+  else if(a==="q-commencer")aller("questions",{etape:"q",i:0});
+  else if(a==="q-reprendre"){var L=listeQ(),j=L.findIndex(function(it){return !B.rep[it.id]});aller("questions",{etape:L.length?"q":"domaines",i:j<0?0:j})}
+  else if(a==="q-rep")repondre(v);
+  else if(a==="q-prec")aller("questions",{etape:"q",i:Math.max(0,S.q.i-1)});
+  else if(a==="q-resultat")aller("questions",{etape:"resultat",i:0});
+  else if(a==="q-recommencer"){if(confirm("Effacer toutes les réponses aux questions ? Les constats cochés dans le courrier seront aussi décochés.")){avant();B.rep={};B.domaines=[];sauverB();aller("questions",{etape:"niveau",i:0})}}
+  else if(a==="tab-courrier")aller("courrier");
+  else if(a==="effacer-b"){if(brouillonVide()){toast("Le brouillon est déjà vide");return}if(confirm("Effacer le brouillon du courrier (élève, constats, aides, observations) sur cet appareil ?")){avant();B=defautB();try{localStorage.removeItem(CLE_B)}catch(e){}rendre();toast("Brouillon effacé. Ctrl+Z pour annuler.")}}
+  else if(a==="imprimer")imprimer('<div class="papier">'+lettreHTML()+'</div>');
+  else if(a==="word")telechargerWord();
+  else if(a==="copier")copierTexte();
+  else if(a==="tout"){document.querySelectorAll("details.sec").forEach(function(d){d.open=v==="1";SEC[d.dataset.sec]=v==="1"});try{localStorage.setItem(CLE_SEC,JSON.stringify(SEC))}catch(e){}}
+  else if(a==="ajout-contact"){R.contacts.push({pro:"cmp",nom:"",adresse:"",tel:"",mail:""});sauverR();SEC["r-contacts"]=true;rendre()}
+  else if(a==="suppr-contact"){var c=R.contacts[+t.dataset.i];if(confirm("Supprimer les coordonnées « "+(c.nom||"sans nom")+" » ?")){R.contacts.splice(+t.dataset.i,1);sauverR();rendre()}}
+  else if(a==="export")exporter();
+  else if(a==="reinit"){if(confirm("Remettre l'école et les coordonnées d'origine ? Tes modifications seront perdues.")){R=defautR();sauverR();theme();rendre();toast("Réglages d'origine remis")}}
+});
+document.addEventListener("change",function(ev){
+  var t=ev.target;
+  if(t.dataset.cons){avant();if(t.checked)B.rep[t.dataset.cons]="oui";else delete B.rep[t.dataset.cons];sauverB();var s=t.closest("details");majCompte(s);majApercu()}
+  else if(t.dataset.aide!==undefined){avant();if(t.checked)B.aides[t.dataset.aide]=true;else delete B.aides[t.dataset.aide];sauverB();majCompte(t.closest("details"));majApercu()}
+  else if(t.dataset.act==="persiste"){avant();B.persiste=t.checked;sauverB();majApercu()}
+  else if(t.id==="th"){R.theme=t.value;sauverR();theme()}
+  else if(t.id==="expire"){R.expire=+t.value;sauverR();rendre()}
+  else if(t.dataset.contact!==undefined&&t.tagName==="SELECT"){R.contacts[+t.dataset.contact][t.dataset.k]=t.value;sauverR()}
+  else if(t.id==="imp"&&t.files[0]){t.files[0].text().then(function(x){R=migrerR(JSON.parse(x));sauverR();theme();rendre();toast("Réglages importés")}).catch(function(){toast("Fichier illisible")})}
+});
+var dernierAvant=0;
+document.addEventListener("input",function(ev){
+  var t=ev.target;
+  if(t.dataset.eleve||t.dataset.champ){if(Date.now()-dernierAvant>1500){avant();dernierAvant=Date.now()}
+    if(t.dataset.eleve==="rencontre")B.rencontre=t.value;else if(t.dataset.eleve)B.eleve[t.dataset.eleve]=t.value;else B[t.dataset.champ]=t.value;sauverB();majApercu()}
+  else if(t.dataset.ecole){R.ecole[t.dataset.ecole]=t.value;sauverR()}
+  else if(t.dataset.contact!==undefined){R.contacts[+t.dataset.contact][t.dataset.k]=t.value;sauverR()}
+});
+document.addEventListener("toggle",function(ev){var d=ev.target;if(d.dataset&&d.dataset.sec){SEC[d.dataset.sec]=d.open;try{localStorage.setItem(CLE_SEC,JSON.stringify(SEC))}catch(e){}}},true);
+document.addEventListener("keydown",function(ev){
+  var champ=/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName);
+  if((ev.ctrlKey||ev.metaKey)&&ev.key.toLowerCase()==="z"&&!champ){ev.preventDefault();if(ev.shiftKey)refaire();else annuler();return}
+  if(S.vue==="questions"&&S.q.etape==="q"&&!champ&&!ev.ctrlKey&&!ev.metaKey){var k=ev.key.toLowerCase();if(k==="o")repondre("oui");else if(k==="n")repondre("non");else if(k==="s")repondre("nsp")}
+});
+function majCompte(d){if(!d)return;var n=d.querySelectorAll("input[type=checkbox]:checked").length,s=d.querySelector("summary"),b=s.querySelector(".compte");if(b)b.remove();if(n)s.insertAdjacentHTML("beforeend",'<span class="badge info compte">'+n+'</span>')}
+function repondre(v){var L=listeQ(),it=L[S.q.i];if(!it)return;avant();B.rep[it.id]=v;sauverB();if(S.q.i<L.length-1)aller("questions",{etape:"q",i:S.q.i+1});else aller("questions",{etape:"resultat",i:0})}
+
+/* ---------- Fichiers ---------- */
+function nomFichier(){var e=B.eleve;return("courrier_medecin_"+(e.prenom||"eleve")+(e.nom?"_"+e.nom:"")).replace(/[^\wÀ-ÿ-]+/g,"_")}
+function telechargerWord(){
+  var css="body{font-family:Arial,sans-serif;font-size:11pt}h3{font-size:12pt;color:#1F3864;margin:12pt 0 4pt}.ent{width:100%}.sig td{border:1px solid #9AA9C2;height:70pt;vertical-align:top;text-align:center;width:33%}.pied{font-size:9pt;color:#555;text-align:center}";
+  var d=document.createElement("div");d.innerHTML=lettreHTML();
+  var ent=d.querySelector(".ent");if(ent){var c=ent.children;ent.outerHTML='<table class="ent"><tr><td style="vertical-align:top">'+c[0].innerHTML+'</td><td style="text-align:right;vertical-align:top">'+c[1].innerHTML+'</td></tr></table>'}
+  var sg=d.querySelector(".sig");if(sg){sg.outerHTML='<table class="sig" style="width:100%;border-collapse:collapse;margin-top:18pt"><tr>'+Array.prototype.map.call(sg.children,function(x){return"<td>"+x.innerHTML+"</td>"}).join("")+'</tr></table>'}
+  var html='<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="utf-8"><style>'+css+'</style></head><body>'+d.innerHTML+'</body></html>';
+  var a=document.createElement("a");a.href=URL.createObjectURL(new Blob(["﻿",html],{type:"application/msword"}));a.download=nomFichier()+".doc";document.body.appendChild(a);a.click();setTimeout(function(){URL.revokeObjectURL(a.href);a.remove()},1000);toast("Courrier téléchargé");
+}
+function copierTexte(){var t=lettreTexte();if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(t).then(function(){toast("Texte copié")},function(){repli(t)});else repli(t)}
+function repli(t){var x=document.createElement("textarea");x.value=t;document.body.appendChild(x);x.select();try{document.execCommand("copy");toast("Texte copié")}catch(e){toast("Copie impossible")}x.remove()}
+function exporter(){var a=document.createElement("a");a.href=URL.createObjectURL(new Blob([JSON.stringify(R,null,2)],{type:"application/json"}));a.download="orienter-reglages.json";document.body.appendChild(a);a.click();setTimeout(function(){URL.revokeObjectURL(a.href);a.remove()},1000)}
+
+/* ---------- Démarrage ---------- */
+(function(){var h=location.hash.slice(1);if(VUES[h])S.vue=h})();
+history.replaceState({vue:S.vue,q:S.q},"","#"+S.vue);
+theme();rendre();
+if("serviceWorker" in navigator&&location.protocol==="https:")navigator.serviceWorker.register("sw.js").catch(function(){});
+</script>
+</body></html>

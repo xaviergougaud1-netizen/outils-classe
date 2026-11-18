@@ -6,7 +6,10 @@ Fiche d'identité
   Où : ordinateur de l'école ou de la maison, téléphone. Page publique sur GitHub Pages, sans compte.
   Écran n° 1 : le répertoire des professionnels, avec la prise en charge visible d'un coup d'œil.
   Ce qu'il ne fait pas : pas de dossier d'élève partagé, pas de diagnostic, pas de compte rendu d'équipe éducative (skill compte-rendu-equipe-educative).
-Version : voir VERSION (une seule constante) et CACHE dans sw.js, à changer ensemble.
+Version : voir VERSION (une seule constante)
+Historique :
+  - 1.1.0 (2026-11-18) Fiches à imprimer (familles, enseignants) en PDF et Word, dossier fiches/, en tête du Répertoire (section repliable).
+  - 1.0.0 (2026-11-18) Répertoire, Questions, Courrier, Se former, Réglages. et CACHE dans sw.js, à changer ensemble.
 Publié dans le dépôt outils-classe, dossier orienter/ (appli installable, hors ligne).
 Choix techniques :
   - Deux fichiers : index.html (code) et donnees.js (contenu modifiable sans toucher au code).
@@ -214,7 +217,7 @@ dl.gloss{display:grid;grid-template-columns:max-content 1fr;gap:6px 14px;margin:
 <script src="donnees.js"></script>
 <script>
 "use strict";
-const VERSION = "1.0.0";
+const VERSION = "1.1.0";
 const CLE_R = "orienter-reglages", CLE_B = "orienter-brouillon", CLE_SEC = "orienter-sections";
 
 /* ---------- Pictogrammes (style Lucide) ---------- */
@@ -331,7 +334,11 @@ function carteHTML(p){
   return h+'</div></details>';
 }
 function vueRepertoire(){
-  var h='<div class="recherche">'+ic("chercher")+'<input id="cherche" type="search" placeholder="Chercher : orthophoniste, gratuit, écriture…" value="'+esc(S.cherche)+'" aria-label="Chercher"></div>';
+  var h=sec("r-fiches","Fiches à imprimer","#1F3864","imprimer",
+    '<div class="cartes">'+[["fiche-familles","Pour les familles","Les professionnels qui peuvent aider votre enfant. Mots simples, ordonnance et coût en couleur. 2 pages A4."],
+      ["fiche-enseignants","Pour les enseignants","Tous les professionnels : rôle, quand y penser, comment y aller, prise en charge, délai. Tableau A4 paysage."]].map(function(f){
+      return '<div class="encadre" style="margin:0"><b>'+f[1]+'</b><p class="muted" style="margin:4px 0 10px;font-size:15px">'+f[2]+'</p><div class="rangee"><a class="btn petit plein" href="fiches/'+f[0]+'.pdf" target="_blank" rel="noopener">'+ic("imprimer")+'PDF</a><a class="btn petit" href="fiches/'+f[0]+'.docx" download>'+ic("telecharger")+'Word</a></div></div>'}).join("")+'</div>',"");
+  h+='<div class="recherche">'+ic("chercher")+'<input id="cherche" type="search" placeholder="Chercher : orthophoniste, gratuit, écriture…" value="'+esc(S.cherche)+'" aria-label="Chercher"></div>';
   h+='<div class="puces" role="group" aria-label="Filtrer">'+[["tous","Tous"]].concat(CATEGORIES.map(function(c){return[c.id,c.nom]})).concat([["gratuit","Gratuit"]]).map(function(f){return '<button class="puce" data-filtre="'+f[0]+'" aria-pressed="'+(S.filtre===f[0])+'">'+f[1]+'</button>'}).join("")+'</div>';
   var q=S.cherche.trim().toLowerCase();
   var liste=PROS.filter(function(p){

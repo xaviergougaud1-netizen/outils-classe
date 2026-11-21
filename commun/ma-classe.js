@@ -78,6 +78,37 @@ function encartEvals(el, outil){
     location.reload();
   };
 }
+/* Sauvegarde complète du kit : tout ce que les outils gardent sur l'appareil (élèves, groupes, plans, évaluations, dictées). */
+var JOUR = 864e5;
+function cleSauvee(k){ return /^(kit-|classe-groupes-v1|classe-plan-v1)/.test(k) && !/^kit-ui-|-secours$|^kit-export-|^kit-avant-import/.test(k); }
+function sauvegarde(){
+  var cles = {};
+  try{ for(var i = 0; i < localStorage.length; i++){ var k = localStorage.key(i); if(cleSauvee(k)) cles[k] = localStorage.getItem(k); } }catch(e){}
+  return {outil:'outils-de-classe-partages', format:2, at:Date.now(), eleves:charger().eleves, cles:cles};
+}
+function restaurer(p){
+  if(!p || !p.cles) return false;
+  try{ localStorage.setItem('kit-avant-import', JSON.stringify(sauvegarde())); }catch(e){}
+  try{
+    var vieilles = []; for(var i = 0; i < localStorage.length; i++){ var k = localStorage.key(i); if(cleSauvee(k)) vieilles.push(k); }
+    vieilles.forEach(function(k){ localStorage.removeItem(k); });
+    Object.keys(p.cles).forEach(function(k){ if(cleSauvee(k)) localStorage.setItem(k, p.cles[k]); });
+    return true;
+  }catch(e){ return false; }
+}
+function lsNum(k){ try{ return +localStorage.getItem(k) || 0; }catch(e){ return 0; } }
+function lsPose(k, v){ try{ localStorage.setItem(k, String(v)); }catch(e){} }
+function exportFait(){ lsPose('kit-export-at', Date.now()); }
+/* Rappel « Pense à exporter » : 30 jours après le dernier export (ou après le premier usage), « Plus tard » = 7 jours. */
+function rappelDu(){
+  if(!charger().eleves.length) return false;
+  var now = Date.now(), depuis = lsNum('kit-export-depuis');
+  if(!depuis){ lsPose('kit-export-depuis', now); return false; }
+  return now - Math.max(lsNum('kit-export-at'), depuis) > 30 * JOUR && now > lsNum('kit-export-plustard');
+}
+function plusTard(){ lsPose('kit-export-plustard', Date.now() + 7 * JOUR); }
+function dernierExport(){ var t = lsNum('kit-export-at'); return t ? new Date(t) : null; }
 window.MaClasse = {KEY: KEY, NIVEAUX: NIVEAUX, charger: charger, enregistrer: enregistrer, migrer: migrer, trier: trier,
-  roster: roster, prenomLibre: prenomLibre, nouvelId: nouvelId, renommerEvals: renommerEvals, groupeDe: groupeDe, evalsOn: evalsOn, encartEvals: encartEvals};
+  roster: roster, prenomLibre: prenomLibre, nouvelId: nouvelId, renommerEvals: renommerEvals, groupeDe: groupeDe, evalsOn: evalsOn, encartEvals: encartEvals,
+  sauvegarde: sauvegarde, restaurer: restaurer, exportFait: exportFait, rappelDu: rappelDu, plusTard: plusTard, dernierExport: dernierExport};
 })();

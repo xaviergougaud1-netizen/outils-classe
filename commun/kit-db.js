@@ -2,8 +2,8 @@
    Seulement dans le kit (github.io ou ?mode=app) : imite window.claude.use("db") et use("downloads") avec le stockage du navigateur,
    pour que la même page tourne dans Classe (vraie base) et chez les collègues (rien n'est envoyé).
    - Documents : localStorage « kit-db:<chemin> » (ex. kit-db:lecture/groupes).
-   - « lecture/main » (élèves) n'est pas stocké : il est fabriqué à partir de « Ma classe » (commun/ma-classe.js, à charger avant),
-     au format de Classe {state:{students:[{id, n, g, p}]}} ; on n'y écrit jamais.
+   - « lecture/main » et « maths/core » (élèves) ne sont pas stockés : il est fabriqué à partir de « Ma classe » (commun/ma-classe.js, à charger avant),
+     aux formats de Classe ({state:{students:[{id, n, g}]}} et {students:{groupe:[prénoms]}}) ; on n'y écrit jamais.
    - Téléchargements : lien de téléchargement classique (Blob, texte ou data URL). */
 (function(){
 'use strict';
@@ -14,8 +14,14 @@ function eleves(){
   var d = window.MaClasse ? window.MaClasse.charger() : {eleves:[]};
   return {state:{students: d.eleves.map(function(e){ return {id:e.id, n:e.prenom, g:e.niveau, gr:e.groupe || ''}; })}, kit:true, at:d.at};
 }
+function classeParNiveau(){ /* format de Classe maths/core : {students:{groupe:[prénoms]}} */
+  var d = window.MaClasse ? window.MaClasse.charger() : {eleves:[]}, st = {};
+  d.eleves.forEach(function(e){ var g = e.groupe || e.niveau; (st[g] = st[g] || []).push(e.prenom); });
+  return {students: st, kit: true};
+}
 function lire(chemin){
   if(chemin === 'lecture/main') return eleves();
+  if(chemin === 'maths/core') return classeParNiveau();
   try{ var t = localStorage.getItem(P + chemin); return t ? JSON.parse(t) : undefined; }catch(e){ return undefined; }
 }
 function copie(v){ return v === undefined ? undefined : JSON.parse(JSON.stringify(v)); }
@@ -28,7 +34,7 @@ function prevenir(chemin){
   (ecoutes[chemin] || []).slice().forEach(function(f){ setTimeout(function(){ try{ f(instantane(chemin)); }catch(e){ console.error(e); } }, 0); });
 }
 function ecrire(chemin, v){
-  if(chemin === 'lecture/main') return Promise.resolve();
+  if(chemin === 'lecture/main' || chemin === 'maths/core') return Promise.resolve();
   try{
     if(v === undefined) localStorage.removeItem(P + chemin);
     else localStorage.setItem(P + chemin, JSON.stringify(v));
@@ -93,7 +99,7 @@ var downloads = {save: function(o){
 /* Une autre page du kit a changé la liste d'élèves ou un document (autre onglet) : on prévient les pages abonnées. */
 addEventListener('storage', function(e){
   if(!e.key) return;
-  if(e.key === 'kit-classe') prevenir('lecture/main');
+  if(e.key === 'kit-classe'){ prevenir('lecture/main'); prevenir('maths/core'); }
   else if(e.key.indexOf(P) === 0) prevenir(e.key.slice(P.length));
 });
 window.claude = {use: function(nom){ return Promise.resolve(nom === 'db' ? db : nom === 'downloads' ? downloads : null); }, kit: true};

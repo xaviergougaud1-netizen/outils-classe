@@ -11,6 +11,8 @@ Données : commun/ma-classe.js (localStorage « kit-classe », format décrit en
 Import ONDE : fichier CSV (séparateur ; ou tabulation), encodage UTF-8 ou Windows-1252 ; on ne garde que le prénom et le niveau
   (l'initiale du nom ne sert qu'à départager deux prénoms identiques).
 Historique :
+- 1.1.0 (2026-11-21) « Tout exporter » : un seul fichier avec tout ce que les outils du kit gardent sur l'appareil (MaClasse.sauvegarde / restaurer, format 2) ;
+  rappel « Pense à exporter » 30 jours après le dernier export (Plus tard = 7 jours).
 - 1.0.0 (2026-11-21) première version : un par un, coller une liste, export ONDE, modifier, supprimer, Ctrl+Z, export / import.
 -->
 <html lang="fr">
@@ -77,6 +79,7 @@ footer a{color:var(--encre-douce)}
   <section class="carte flotte" aria-label="Résumé">
     <div class="compteurs" id="compteurs"></div>
     <p class="note">🔒 La liste reste sur cet appareil : elle n’est envoyée nulle part. Seuls les prénoms sont gardés.</p>
+    <div id="rappel"></div>
   </section>
 
   <details class="sec" id="s-ajout" data-sec="ajout">
@@ -125,9 +128,10 @@ footer a{color:var(--encre-douce)}
   <details class="sec" id="s-sauve" data-sec="sauve">
     <summary><span class="tuile-s" aria-hidden="true">💾</span>Sauvegarde et autre appareil</summary>
     <div class="corps">
-      <p class="note">Pour retrouver ta classe sur un autre appareil : exporte le fichier ici, envoie-le-toi (par exemple dans le Nuage de l’Éducation nationale), puis importe-le sur l’autre appareil.</p>
+      <p class="note">Un seul fichier garde <b>tout</b> ce que tes outils ont enregistré sur cet appareil : élèves, groupes, plans de classe, évaluations, dictées. Pour retrouver tout cela sur un autre appareil (ou après un nettoyage du navigateur) : exporte ici, range le fichier (par exemple dans le Nuage de l’Éducation nationale), puis importe-le.</p>
+      <p class="note" id="dernier-export"></p>
       <div class="outils">
-        <button class="btn" type="button" id="b-export">⬇ Exporter ma classe</button>
+        <button class="btn plein" type="button" id="b-export">⬇ Tout exporter</button>
         <label class="btn">⬆ Importer<input type="file" id="import" accept=".json,application/json" hidden></label>
         <button class="btn" type="button" id="b-vider" style="color:var(--danger)">Tout effacer</button>
       </div>
@@ -141,7 +145,7 @@ footer a{color:var(--encre-douce)}
 <div id="toast" class="toast" role="status"></div>
 <script src="../commun/ma-classe.js"></script>
 <script>
-const VERSION = "1.0.0";
+const VERSION = "1.1.0";
 const $ = id => document.getElementById(id);
 const esc = t => String(t).replace(/[&<>"']/g, c => "&#" + c.charCodeAt(0) + ";");
 let D = MaClasse.charger();
@@ -357,21 +361,33 @@ document.addEventListener("keydown", e => {
 });
 
 /* Sauvegarde */
-$("b-export").onclick = () => {
+function toutExporter() {
   const a = document.createElement("a");
-  a.href = URL.createObjectURL(new Blob([JSON.stringify({outil: "ma-classe", version: VERSION, ...D}, null, 2)], {type: "application/json"}));
-  a.download = "ma-classe-" + new Date().toISOString().slice(0, 10) + ".json";
+  a.href = URL.createObjectURL(new Blob([JSON.stringify({...MaClasse.sauvegarde(), version: VERSION})], {type: "application/json"}));
+  a.download = "outils-de-classe-sauvegarde-" + new Date().toISOString().slice(0, 10) + ".json";
   document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
-  toast("Fichier exporté");
-};
+  MaClasse.exportFait(); rendreRappel(); toast("Sauvegarde exportée : range le fichier en lieu sûr");
+}
+$("b-export").onclick = toutExporter;
+function rendreRappel() {
+  const d = MaClasse.dernierExport();
+  $("dernier-export").textContent = d ? "Dernier export sur cet appareil : " + d.toLocaleDateString("fr-FR") + "." : "Aucun export pour l’instant.";
+  $("rappel").innerHTML = MaClasse.rappelDu() ? '<div class="barre-conf"><span>💾 Pense à exporter ta sauvegarde : tes données ne sont que sur cet appareil.</span><button class="btn petit plein" type="button" data-rap="oui">⬇ Exporter</button><button class="btn petit" type="button" data-rap="tard">Plus tard</button></div>' : "";
+}
+$("rappel").onclick = e => { const b = e.target.closest("[data-rap]"); if (!b) return; if (b.dataset.rap === "oui") toutExporter(); else { MaClasse.plusTard(); rendreRappel(); } };
 function barreConf(texte, boutons) {
   $("conf").innerHTML = '<div class="barre-conf"><span>' + texte + "</span>" + boutons.map((b, i) => '<button class="btn petit' + (i === 0 ? " plein" : "") + '" type="button" data-c="' + i + '">' + b[0] + "</button>").join("") + "</div>";
   $("conf").onclick = e => { const b = e.target.closest("[data-c]"); if (!b) return; $("conf").innerHTML = ""; const f = boutons[+b.dataset.c][1]; if (f) f(); };
 }
 $("import").onchange = async () => {
   const f = $("import").files[0]; $("import").value = ""; if (!f) return;
-  let neuf;
-  try { neuf = MaClasse.migrer(JSON.parse(await f.text())); } catch { toast("Fichier illisible"); return; }
+  let neuf, brut;
+  try { brut = JSON.parse(await f.text()); neuf = MaClasse.migrer(brut); } catch { toast("Fichier illisible"); return; }
+  if (brut && brut.format === 2 && brut.cles) {
+    barreConf("Sauvegarde complète du " + new Date(brut.at).toLocaleDateString("fr-FR") + " (" + neuf.eleves.length + " élèves, avec groupes, plans, évaluations et dictées). Tout ce qui est sur cet appareil sera remplacé.",
+      [["Tout restaurer", () => { if (MaClasse.restaurer(brut)) { toast("Sauvegarde restaurée"); setTimeout(() => location.reload(), 600); } else toast("Restauration impossible : stockage plein ?"); }], ["Annuler", null]]);
+    return;
+  }
   if (!neuf.eleves.length) { toast("Ce fichier ne contient aucun élève"); return; }
   const remplacer = () => changer(() => { D.eleves = neuf.eleves; }, neuf.eleves.length + " élèves importés");
   const ajouter = () => changer(() => neuf.eleves.forEach(e => D.eleves.push({...e, id: MaClasse.nouvelId(), prenom: MaClasse.prenomLibre(e.prenom, D.eleves)})), neuf.eleves.length + " élèves ajoutés");
@@ -392,6 +408,7 @@ if (location.hash === "#apercu") history.replaceState(null, "", location.pathnam
 addEventListener("storage", e => { if (e.key === MaClasse.KEY) { D = MaClasse.charger(); rendre(); } });
 ouvrirSections();
 rendre();
+rendreRappel();
 if ("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("../sw.js").catch(() => {});
 </script>
 </body>

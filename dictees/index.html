@@ -1,0 +1,1009 @@
+<!DOCTYPE html>
+<!-- TECHNIQUE
+Page « Dictées adaptées » de Classe (dictees-adaptees.html + dictees-adaptees.json).
+Fiche d'identité
+- Rôle : préparer les dictées adaptées (bandes jaune + verte, Retz « Dictées et histoire des arts ») : mots à apprendre par élève,
+  mots à écrire, mots à choisir, fiches, bandeaux, étiquettes, corrigé, dictée en ligne.
+- Quand : le soir pour préparer et imprimer ; en classe pour la dictée en ligne. Où : ordi maison, ordi de classe, téléphone.
+- Écran n° 1 : la prochaine dictée de l'année (d'après les cycles de Classe), telle que l'élève la verra.
+- Ce qu'il ne fait pas : les dates des cycles (journal de Classe, vue Dictées), les dictées originales (page « Dictées et dictées adaptées »).
+Version : voir VERSION
+- 2.5.0 (21/11/2026) : un seul fichier pour Classe (dictees-adaptees.html) et le kit « Outils de classe partagés » (dépôt outils-classe, dictees/index.html).
+  Dans le kit (MODE_APP) : onglet « Mes dictées » (texte, mots, règle, mots à trous, date : tout facultatif sauf le texte ; S.data.textes),
+  cycle réglable (S.data.cycle : étapes, semaine, jour, devoirs avec {n} {mots} {regle} {titre}), « Aujourd’hui » (copier, projeter, étiquettes à imprimer),
+  partage de dictées par fichier ; pas de fichier Retz, pas de « dictées faites » ni de notions liées aux leçons de Xavier ; réglages localStorage « kit-dictees ».
+- 2.4.0 (16/11/2026) : mots à apprendre au-delà du nombre de mots de la fiche : grisés dans Préparer (aussi pour la fiche sans prénom), trait ✂ de la fiche sans prénom dans la liste,
+  réglage « − N + mots » de la personne choisie juste au-dessus de la liste, message quand un mot ajouté tombe au-delà (il n'était ni dans le bandeau ni effacé sur la fiche).
+  Fiche sans prénom masquée par défaut (data.ficheBase, réglable dans Réglages › Élèves ; toujours là s'il n'y a aucun élève) : pourOk() ramène « pour » sur le 1er élève et « qui » sur Tous.
+  Adresse #i<n° de la dictée>-ban ou -fiche : ouvre Imprimer pour tous les élèves, avec les bandeaux, ou les fiches + le corrigé (boutons « Imprimer » de la page Photocopies, Classe v167).
+- 2.3.2 (15/11/2026) : onglets Dictée / Préparer / Imprimer / Réglages plus visibles : sur ordinateur en tête de la colonne commune (tuiles, data-cnav-page) ; sur téléphone, barre du bas en noir, onglet en cours sur fond rose.
+- 2.3.1 (15/11/2026) : colonne commune de Classe (side-nav.js) à gauche sur ordinateur ≥ 1180 px ; « ← Classe » masqué (data-cnav-hide), barre d'onglets du bas décalée à droite de la colonne.
+- 2.3.0 (14/11/2026) : charte « Repères » : interface en Atkinson Hyperlegible et couleurs de la charte, en-tête rose pâle (couleur de l'outil) ;
+  Lexend gardée pour ce que voit l'élève (dictée en ligne, fiches A4, mots à choisir).
+Choix techniques :
+- dictees-adaptees.json : textes balisés, {faux|*juste}#cat = choix d'origine. Mots repérés par une clé stable : c<i> (i-ème choix du texte) ou w<p>.<j> (j-ème mot du paragraphe p).
+- Réglages : localStorage + base de Classe, document dictees/reglages {maj, data}. La version la plus récente gagne ; si les deux ont changé, une fenêtre demande.
+- État d'un mot (data.ov[n][clé]) : 'g' donné, 'e' à écrire sans l'apprendre, {o:[propositions], k:juste} à choisir. Liste des mots à apprendre : data.mots[n] (ordre = priorité, au-delà de 8 : ⚠).
+- Dictées faites : data.faites (prérempli d'après le livret « Leçons d'orthographe » H1-H17). Numéro dans l'année = rang parmi les dictées faites.
+- Notions : une notion n'est proposée en choix qu'à partir de la dictée où sa leçon a été vue (auto), ou selon le réglage.
+- Lecture seule de journal/main (cycles : numéro, date de la dictée bilan).
+-->
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Dictées adaptées</title>
+<script>/* Kit « Outils de classe partagés » (github.io ou ?mode=app) : élèves de « Ma classe », dictées du collègue, données sur l'appareil (commun/kit-db.js). */
+var MODE_APP=/github\.io$/.test(location.hostname)||/[?&]mode=app/.test(location.search);
+if(MODE_APP)document.write('<link rel="manifest" href="../manifest.webmanifest"><link rel="icon" href="../icon-192.png"><script src="../commun/ma-classe.js"><\/script><script src="../commun/kit-db.js"><\/script>');</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Lexend:wght@400;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+:root{--bg:#EDF1F7;--paper:#fff;--ink:#111A2C;--muted:#475166;--line:#D3DAE5;--blue:#E3EBFD;--blue-b:#2453C7;--on:#fff;--entete:#FBE6EF;--entete-ink:#4A1530;--entete-doux:#7A4560;--entete-ctl:#FFFFFF;--entete-bd:#F0C7D9;--entete-on:#C2417A;--entete-on-ink:#FFFFFF;--yel:#FFF2B3;--yel-b:#C9A400;--or:#FFE3C7;--or-b:#D9730D;--ok:#2F8F4E;--ok-bg:#DDF3E3;--ko:#C2410C;--ko-bg:#FDE4D6;
+ padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]){--bg:#0F1522;--paper:#172033;--ink:#E9EEF7;--muted:#A3AEC2;--line:#2C3852;--blue:#1F2D52;--blue-b:#7EA2FF;--on:#0F1522;--entete:#3A1A2A;--entete-ink:#F8E8EF;--entete-doux:#D9AFC2;--entete-ctl:#46202F;--entete-bd:#6A3550;--entete-on:#E886B0;--entete-on-ink:#1E0C15;--yel:#4A3F12;--yel-b:#E0C040;--or:#4A2E12;--or-b:#F0A060;--ok:#5CC883;--ok-bg:#1C3A27;--ko:#F2915E;--ko-bg:#40261A}}
+:root[data-theme=dark]{--bg:#0F1522;--paper:#172033;--ink:#E9EEF7;--muted:#A3AEC2;--line:#2C3852;--blue:#1F2D52;--blue-b:#7EA2FF;--on:#0F1522;--entete:#3A1A2A;--entete-ink:#F8E8EF;--entete-doux:#D9AFC2;--entete-ctl:#46202F;--entete-bd:#6A3550;--entete-on:#E886B0;--entete-on-ink:#1E0C15;--yel:#4A3F12;--yel-b:#E0C040;--or:#4A2E12;--or-b:#F0A060;--ok:#5CC883;--ok-bg:#1C3A27;--ko:#F2915E;--ko-bg:#40261A}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:17px/1.45 "Atkinson Hyperlegible",Arial,sans-serif}
+.dtext,.ttext,#eleve,.opt,.gap{font-family:"Lexend",Arial,sans-serif} /* ce que lit l'élève reste en Lexend */
+main{max-width:980px;margin:0 auto;padding:12px 14px 96px}
+h1{font-size:22px;margin:0;font-weight:700}
+h2{font-size:19px;margin:20px 0 8px;font-weight:600}
+.muted{color:var(--muted)} .small{font-size:14px}
+a{color:var(--blue-b)}
+header{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;background:var(--entete);color:var(--entete-ink);margin:-12px 0 8px;padding:10px 0;box-shadow:0 0 0 100vmax var(--entete),0 1px 0 100vmax var(--entete-bd);clip-path:inset(0 -100vmax -1px)}
+header h1{color:var(--entete-ink)}
+header .hist{display:flex;gap:6px;margin-left:auto}
+header .back{font-size:15px;padding:6px 4px;color:var(--entete-on);background:none;border-color:transparent;font-weight:700;text-decoration:none}
+#sync{font-size:13px;color:var(--muted)}header #sync{color:var(--entete-doux)}
+.bar{display:flex;gap:8px;align-items:center;margin:10px 0 6px}
+.bar select{flex:1;min-width:0}
+.sub{font-size:14px;color:var(--muted);margin:0 0 12px}
+select,input[type=text],input[type=number]{font:inherit;min-height:46px;padding:6px 10px;border:2px solid var(--line);border-radius:12px;background:var(--paper);color:var(--ink)}
+.btn{font:inherit;font-size:16px;min-height:46px;padding:8px 14px;border-radius:12px;border:2px solid var(--blue-b);background:var(--paper);color:var(--ink);cursor:pointer;display:inline-flex;align-items:center;gap:6px;justify-content:center;text-decoration:none}
+.btn.p{background:var(--blue-b);color:var(--on);font-weight:600}
+.btn.sq{min-width:46px;padding:0}
+.btn.sm{min-height:38px;font-size:14px;padding:4px 10px}
+.btn.danger{border-color:var(--ko);color:var(--ko)}
+.btn:disabled{opacity:.45;cursor:default}
+.btn:focus-visible,select:focus-visible,input:focus-visible,.tk:focus-visible,.chip:focus-visible{outline:3px solid var(--yel-b);outline-offset:2px}
+.card{background:var(--paper);border:1px solid var(--line);border-radius:16px;padding:16px;margin-bottom:14px}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin:6px 0}
+.chip{border:2px solid var(--line);border-radius:999px;padding:6px 14px;min-height:42px;background:var(--paper);color:var(--ink);font:inherit;font-size:15px;cursor:pointer}
+.chip.sm{min-height:36px;font-size:13px;padding:4px 10px}
+.chip[aria-pressed=true]{background:var(--blue-b);border-color:var(--blue-b);color:var(--on);font-weight:600}
+.stat{display:flex;gap:10px;flex-wrap:wrap;margin:8px 0 4px}
+.stat div{flex:1;min-width:110px;background:var(--bg);border-radius:12px;padding:8px 10px;text-align:center;font-size:14px}
+.stat b{display:block;font-size:23px}
+nav#tabs{position:fixed;left:0;right:0;bottom:0;display:flex;background:var(--paper);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px);z-index:5}
+nav#tabs button{flex:1;min-height:60px;margin:4px 3px;border:0;border-radius:12px;background:none;color:var(--ink);font:inherit;font-size:14px;font-weight:700;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;cursor:pointer}
+nav#tabs button:hover{background:var(--bg)}
+nav#tabs button span{font-size:21px}
+nav#tabs button[aria-current=page]{background:var(--entete);color:var(--entete-ink);box-shadow:inset 0 3px 0 var(--entete-on)}
+/* 2.3.2 : sur ordinateur (≥ 1180 px), les onglets passent en tête de la colonne commune de Classe (side-nav.js, data-cnav-page), en tuiles comme les vues de Maths */
+#cnav-pg nav#tabs{position:static;flex-direction:column;gap:2px;background:none;border:0;padding:0}
+#cnav-pg nav#tabs button{flex:none;width:100%;min-height:44px;margin:0;padding:6px 10px;flex-direction:row;justify-content:flex-start;gap:10px;font-size:.95rem;line-height:1.25;text-align:left;box-shadow:none}
+#cnav-pg nav#tabs button span{flex:none;width:34px;height:34px;border-radius:10px;display:inline-flex;align-items:center;justify-content:center;font-size:18px;background:var(--entete);border:1px solid var(--entete-bd)}
+#cnav-pg nav#tabs button:hover{background:#E9EDF4}
+#cnav-pg nav#tabs button[aria-current=page]{background:var(--entete);color:var(--entete-ink)}
+#cnav-pg nav#tabs button[aria-current=page] span{background:var(--entete-on);border-color:var(--entete-on)}
+/* texte de la dictée à l'écran */
+.dtext p{margin:0 0 16px;line-height:2.2}
+.grp{display:inline-flex;flex-direction:column;gap:4px;vertical-align:middle;margin:3px 4px}
+.opt{font:inherit;font-size:inherit;line-height:1.25;min-height:42px;min-width:52px;padding:4px 12px;border:2px solid var(--blue-b);background:var(--blue);color:var(--ink);border-radius:10px;text-align:center}
+button.opt{cursor:pointer}
+.opt[aria-pressed=true]{background:var(--blue-b);color:var(--on);font-weight:600}
+.gap{font:inherit;font-size:inherit;height:46px;margin:3px 4px;padding:2px 8px;vertical-align:middle;background:var(--yel);color:var(--ink);border:2px solid transparent;border-bottom:3px solid var(--yel-b);border-radius:8px;text-align:center}
+.gap.e,.gap.d,.gap.p{background:var(--or);border-bottom-color:var(--or-b)}
+span.gap{display:inline-block;line-height:40px}
+.nw{white-space:nowrap}
+.done .opt.good{background:var(--ok-bg);border-color:var(--ok);color:var(--ink)}
+.done .opt.good[aria-pressed=true]{background:var(--ok);color:#fff}
+.done .opt.bad{background:var(--ko);border-color:var(--ko);color:#fff;text-decoration:line-through}
+.done .grp.miss{outline:3px dashed var(--ko);border-radius:12px}
+.done .gap.good{background:var(--ok-bg);border-bottom-color:var(--ok)}
+.done .gap.bad{background:var(--ko-bg);border-bottom-color:var(--ko);text-decoration:line-through}
+.gw{display:inline-flex;flex-direction:column;align-items:center;vertical-align:middle}
+.gw small{font-size:15px;color:var(--ok);font-weight:600;line-height:1.1}
+/* onglet Mots : pinceaux et texte */
+.brushes{position:sticky;top:0;z-index:4;background:var(--bg);font-family:"Atkinson Hyperlegible",Arial,sans-serif;padding:8px 0;display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.brush{font:inherit;font-size:14px;min-height:56px;border-radius:12px;border:2px solid var(--line);background:var(--paper);color:var(--ink);cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;line-height:1.15;padding:4px}
+.brush b{font-size:20px}
+.brush[aria-pressed=true]{border-width:3px;font-weight:600}
+.brush.L[aria-pressed=true]{border-color:var(--yel-b);background:var(--yel)}
+.brush.E[aria-pressed=true]{border-color:var(--or-b);background:var(--or)}
+.brush.C[aria-pressed=true]{border-color:var(--blue-b);background:var(--blue)}
+.brush.G[aria-pressed=true]{border-color:var(--muted);background:var(--bg)}
+.ttext{line-height:2.25}
+.tk{font:inherit;border:2px solid transparent;background:none;color:var(--ink);border-radius:8px;padding:0 3px;cursor:pointer;min-height:36px;position:relative}
+.tk.gras{font-weight:600}
+.tk.L{background:var(--yel);border-color:var(--yel-b)}
+.tk.L.off{background:none;border-style:dashed}
+.tk.E{background:var(--or);border-color:var(--or-b)}
+.tk.C{border-color:transparent;border-bottom:3px solid var(--blue-b);border-radius:0;background:var(--blue)}
+.tk.Cx{opacity:.55;border-bottom:3px dotted var(--blue-b);border-radius:0}
+.tk.D,.tk.P{background:var(--or);border:2px dashed var(--or-b);opacity:.8}
+.cg{display:inline;background:var(--blue);border-bottom:3px solid var(--blue-b);border-radius:6px 6px 0 0;padding:2px 2px;margin:0 2px;white-space:normal}
+.cg .sl{font-style:normal;color:var(--muted);margin:0 1px}
+.co{font:inherit;border:0;background:none;color:var(--ink);padding:0 2px;cursor:pointer;min-height:34px;border-radius:6px}
+.co.ok{font-weight:600;text-decoration:underline;text-decoration-thickness:2px}
+.cg.ed{outline:3px solid var(--blue-b);outline-offset:2px;border-radius:6px}
+.cg.ed .co:hover{background:var(--paper)}
+.ox,.oa{font:inherit;font-size:14px;border:1.5px solid var(--blue-b);background:var(--paper);color:var(--blue-b);border-radius:999px;min-width:26px;min-height:26px;padding:0 6px;margin:0 2px;cursor:pointer;vertical-align:middle}
+.ox{border-color:var(--ko);color:var(--ko);font-size:13px;min-width:22px;min-height:22px;padding:0 4px;vertical-align:super}
+.tk .rk{font-size:11px;vertical-align:super;color:var(--yel-b);font-weight:600;margin-left:2px}
+.tk .rk.w{color:var(--ko)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:13px;color:var(--muted);margin:4px 0 10px}
+.legend i{display:inline-block;width:16px;height:12px;border-radius:3px;vertical-align:-1px;margin-right:4px}
+.mlist{list-style:none;margin:0;padding:0}
+.mlist li{display:flex;align-items:center;gap:6px;padding:5px 0;border-bottom:1px solid var(--line)}
+.mlist li .n{width:28px;height:28px;border-radius:50%;background:var(--yel);border:2px solid var(--yel-b);display:inline-flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;flex:none}
+.mlist li.over .n{background:var(--ko-bg);border-color:var(--ko)}
+.mlist li.hors .w{color:var(--muted);text-decoration:line-through dashed}.mlist li.hors .n{opacity:.5}
+.mlist li .w{flex:1;font-size:19px}
+.mlist li.cut{border-bottom:none;padding:2px 0}
+.mlist li.cut div{flex:1;font-size:13px;color:var(--muted);border-top:2px dashed var(--yel-b);padding-top:2px}
+.mlist li.cut.w8 div{border-top-color:var(--ko);color:var(--ko)}
+/* réglages */
+.el{display:flex;gap:8px;align-items:center;margin:6px 0}
+.el input[type=text]{flex:1;min-width:0}
+.step{display:inline-flex;align-items:center;gap:4px}
+.step b{min-width:30px;text-align:center;font-size:20px}
+.hrow{display:flex;gap:10px;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--line)}
+.hrow select{max-width:58%}
+.drow{display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid var(--line)}
+.drow .h{font-weight:600;color:var(--blue-b);min-width:44px}
+.drow.off .h,.drow.off .t{color:var(--muted)}
+.drow .t small{display:block;color:var(--muted);font-size:13px}
+.tog{font:inherit;font-size:14px;min-height:40px;padding:4px 12px;border-radius:999px;border:2px solid var(--ok);background:var(--ok-bg);color:var(--ink);cursor:pointer}
+.tog.off{border-color:var(--line);background:var(--paper);color:var(--muted)}
+/* fenêtres */
+.ov{position:fixed;inset:0;background:rgba(10,20,30,.55);display:none;align-items:center;justify-content:center;z-index:20;padding:12px}
+.ov.on{display:flex}
+.dlg{background:var(--paper);color:var(--ink);border-radius:16px;max-width:560px;width:100%;padding:18px;max-height:92vh;overflow:auto}
+.dlg .row.end{justify-content:flex-end;margin-top:14px}
+.prow{display:flex;gap:8px;align-items:center;margin:6px 0}
+.prow input[type=text]{flex:1;min-width:0}
+.prow label{display:flex;align-items:center;gap:4px;font-size:14px;white-space:nowrap}
+.prow input[type=radio]{width:22px;height:22px}
+#msg{position:fixed;left:50%;bottom:calc(76px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--paper);padding:10px 16px;border-radius:12px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:30;max-width:92vw;text-align:center}
+/* mode élève */
+#eleve{position:fixed;inset:0;background:var(--bg);z-index:15;overflow:auto;display:none;font-size:22px}
+#eleve.on{display:block}
+#eleve .wrap{max-width:980px;margin:0 auto;padding:16px 16px 40px}
+#eleve .sheet{background:var(--paper);border-radius:18px;padding:20px 22px;border:1px solid var(--line)}
+#eleve h1{font-size:26px}
+.help{display:grid;grid-template-columns:auto 1fr;gap:8px 12px;align-items:center;background:var(--bg);border-radius:14px;padding:10px 14px;font-size:17px;margin:12px 0 18px}
+.help .d{display:inline-flex;flex-direction:column;gap:3px}.help .d span{padding:1px 10px;border:2px solid var(--blue-b);background:var(--blue);border-radius:8px;text-align:center;font-size:16px}.help .d span.on{background:var(--blue-b);color:var(--on)}
+.help .g{display:inline-block;width:100px;height:34px;background:var(--yel);border-bottom:3px solid var(--yel-b);border-radius:6px}
+.score{margin-top:16px;padding:14px 18px;border-radius:14px;background:var(--bg);font-size:20px}
+.score strong{font-size:26px}
+#quit{position:relative;overflow:hidden}
+#quit i{position:absolute;left:0;bottom:0;height:4px;background:var(--ko);width:0}
+#quit.hold i{width:100%;transition:width 1.5s linear}
+@media (max-width:600px){#eleve{font-size:19px}.dtext p{line-height:2}.brush{font-size:12px}}
+/* aperçu et pages A4 */
+#prev .imgs{display:flex;flex-direction:column;gap:12px;background:#e9edf2;padding:10px;border-radius:12px}
+#prev img{width:100%;box-shadow:0 1px 4px rgba(0,0,0,.2);background:#fff}
+#printzone{position:absolute;left:-10000px;top:0}
+.page{width:794px;height:1123px;padding:44px 52px 40px;background:#fff;color:#1F2A37;font-family:"Lexend",Arial,sans-serif;display:flex;flex-direction:column;overflow:hidden}
+.page .ph{display:flex;justify-content:space-between;align-items:baseline;border-bottom:2px solid #2E6DB4;padding-bottom:6px;margin-bottom:10px}
+.page .ph b{font-size:22px;color:#2E6DB4}
+.page .ph span{font-size:15px;color:#5B6878}
+.page .who{display:flex;gap:40px;font-size:17px;margin:4px 0 10px}
+.page .cons{font-size:14px;color:#5B6878;margin-bottom:10px;display:flex;gap:16px;align-items:center}
+.page .cons .d{display:inline-flex;flex-direction:column;gap:2px}.page .cons .d i{font-style:normal;border:1.5px solid #2E6DB4;background:#EAF3FD;border-radius:6px;padding:0 6px;font-size:12px;text-align:center}
+.page .cons .g{display:inline-block;width:60px;height:22px;background:#FFF6CC;border-bottom:2px solid #C9A400;border-radius:4px;vertical-align:middle}
+.page .pt{flex:1;overflow:hidden;font-size:var(--fs,21px)}
+.page .pt p{margin:0 0 .55em;line-height:2.15}
+.page .pg{display:inline-flex;flex-direction:column;gap:2px;vertical-align:middle;margin:1px 3px}
+.page .pg i{font-style:normal;border:1.5px solid #2E6DB4;background:#EAF3FD;border-radius:7px;padding:0 7px;font-size:.8em;line-height:1.3;text-align:center}
+.page .pz{display:inline-block;height:1.45em;vertical-align:-.4em;background:#FFF6CC;border-bottom:2.5px solid #C9A400;border-radius:4px;margin:0 3px}
+.page .psc{display:flex;gap:10px;margin-top:10px}
+.page .psc div{flex:1;border:2px solid #2E6DB4;border-radius:12px;padding:8px 10px;font-size:16px;text-align:center}
+.page .psc b{font-size:22px}
+.page .foot{font-size:11px;color:#8A96A5;margin-top:6px;text-align:right}
+.page .ban{border:3px solid #C9A400;border-radius:18px;padding:14px 18px;height:245px;margin-bottom:14px;display:flex;flex-direction:column}
+.page .ban .bh{display:flex;justify-content:space-between;font-size:15px;color:#5B6878;margin-bottom:8px}
+.page .ban .bh b{color:#1F2A37;font-size:17px}
+.page .ban .bw{display:flex;flex-wrap:wrap;gap:10px 14px;align-content:flex-start;flex:1}
+.page .ban .bw span{font-size:28px;background:#FFF6CC;border-radius:10px;padding:2px 14px}
+.page .eti{display:grid;grid-template-columns:1fr 1fr;gap:14px;flex:1;align-content:start}
+.page .eti div{border:3px dashed #C9A400;border-radius:16px;height:200px;display:flex;align-items:center;justify-content:center;font-size:46px;text-align:center;padding:8px}
+.page table{border-collapse:collapse;width:100%}
+.page td,.page th{border:1.5px solid #CBD5E1;padding:6px 8px;text-align:left;vertical-align:top}
+.page th{background:#EAF3FD}
+.page .cor{columns:3;font-size:13px;line-height:1.45;margin:0;padding-left:22px}
+.page .cor li{break-inside:avoid}
+.page .bar2{font-size:12px}.page .bar2 td{padding:2px 4px;text-align:center}
+#kprint{display:none}
+@media print{body.kprint>*:not(#kprint){display:none!important}#kprint{display:block}.kgrid{display:grid;grid-template-columns:1fr 1fr;gap:4mm}.klab{border:1px dashed #999;border-radius:3mm;padding:3mm 4mm;font:13pt/1.3 Lexend,Arial,sans-serif;break-inside:avoid}}
+</style>
+</head>
+<body>
+<main id="app"><p class="muted">Chargement des dictées…</p></main>
+<nav id="tabs" aria-label="Onglets" data-cnav-page="Dictées adaptées"></nav>
+<div id="eleve" aria-live="polite"></div>
+<div class="ov" id="ov"><div class="dlg" id="dlg" role="dialog" aria-modal="true"></div></div>
+<div id="printzone" aria-hidden="true"></div>
+<div id="msg" role="status"></div>
+<script>
+var VERSION="2.5.0", KEY="classe-dictees-adaptees", DBPATH="dictees/reglages";
+/* Programme de l'année (livret « Leçons d'orthographe », règles H1 à H17) : dictées Retz faites, dans l'ordre */
+var PROGRAMME=[1,2,3,4,7,8,10,11,12,13,14,18,19,20,23,24,26];
+/* Notions proposées en choix : t = dictée Retz où la leçon est vue (auto) ; def = réglage par défaut */
+var NOTIONS=[
+ ["gn","Accord dans le groupe nominal (pluriel, féminin)",[1],"auto"],
+ ["verbe","Accord du verbe avec son sujet",[26],1],
+ ["a/à","a / à",[2],"auto"],
+ ["et/est","et / est",[3],"auto"],
+ ["ou/où","ou / où",[7],"auto"],
+ ["son/sont","son / sont",[10],"auto"],
+ ["on/ont","on / ont",[11],"auto"],
+ ["ce/se","ce / se",[20],"auto"],
+ ["ces/ses","ces / ses (leçon pas au programme cette année)",[],0],
+ ["c’est/s’est","c’est / s’est (leçon pas au programme cette année)",[],0],
+ ["é/er","-é / -er à la fin d'un verbe",[23],"auto"],
+ ["ppa","Accord du participe passé",[24],"auto"],
+ ["fem","Féminin des noms",[15],"auto"]
+];
+var CATS={gn:"accord GN",verbe:"accord sujet-verbe",ppa:"participe passé",pp:"-é / -er",fem:"féminin",perso:"choix ajouté"};
+var WL=new Set(["jusqu’à","aujourd’hui","d’abord","c’est-à-dire","quelqu’un","presqu’île"]);
+var D=[], CYC={}, ELEVES_CLASSE=null;
+/* Kit : pas de programme ni de notions liés aux leçons de Xavier ; réglages rangés à part sur l'appareil */
+if(MODE_APP){ KEY="kit-dictees"; PROGRAMME=[]; NOTIONS.forEach(function(x){x[2]=[];x[3]=0}); }
+function $(s){return document.querySelector(s)}
+function esc(t){return String(t).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/"/g,"&quot;")}
+function txt(t){return esc(t).replace(/\^(\w+)/g,"<sup>$1</sup>")}
+function toast(t){var m=$("#msg");m.textContent=t;m.style.opacity=1;clearTimeout(m._t);m._t=setTimeout(function(){m.style.opacity=0},3200)}
+
+/* ---------- données et migration ---------- */
+function defaut(){var f={};PROGRAMME.forEach(function(n){f[n]=true});var no={};NOTIONS.forEach(function(x){no[x[0]]=x[3]});
+  return {v:2,maj:"",detBase:true,proBase:true,faites:f,notions:no,eleves:[],ficheBase:false,nbDefaut:8,mots:{},ov:{},periodes:[1,4,8,11,15],copies:4,theme:"auto",tout:false}}
+function borne(n,mx){return Math.max(1,Math.min(mx||12,Math.round(n)))}
+function migrer(d){
+  var b=defaut(); d=(d&&typeof d==="object")?d:{};
+  var r=Object.assign(b,d);
+  r.faites=(d.faites&&typeof d.faites==="object")?d.faites:b.faites;
+  r.notions=Object.assign(defaut().notions,(d.notions&&typeof d.notions==="object")?d.notions:{});
+  r.eleves=Array.isArray(d.eleves)?d.eleves.filter(function(e){return e&&e.id}).map(function(e){return {id:String(e.id),prenom:String(e.prenom||""),nb:borne(+e.nb||8),det:e.det!==false,pro:e.pro!==false}}):[];
+  r.mots=(d.mots&&typeof d.mots==="object")?d.mots:{};
+  r.ov=(d.ov&&typeof d.ov==="object")?d.ov:{};
+  r.periodes=Array.isArray(d.periodes)&&d.periodes.length===5?d.periodes.map(function(x){return +x||1}):b.periodes;
+  r.ficheBase=d.ficheBase===true; /* 2.4.0 : fiche sans prénom masquée par défaut (réglable) */
+  r.nbDefaut=borne(+r.nbDefaut||8); r.copies=Math.max(1,Math.min(8,+r.copies||4)); r.v=2; delete r.homos;
+  return r;
+}
+function lireLocal(){
+  try{var raw=localStorage.getItem(KEY); if(!raw) return {data:migrer(defaut()),dirty:false,base:"",ui:{}};
+    var o=JSON.parse(raw); return {data:migrer(o.data),dirty:!!o.dirty,base:o.base||"",ui:o.ui||{}};}
+  catch(e){ try{localStorage.setItem(KEY+"-secours",localStorage.getItem(KEY))}catch(x){} return {data:migrer(defaut()),dirty:false,base:"",ui:{},abime:true}; }
+}
+var L=lireLocal(); var S={data:L.data,ui:Object.assign({cur:0,tab:"dictee",pour:"base",rep:{},brush:"L"},L.ui)};
+function sauverLocal(){try{localStorage.setItem(KEY,JSON.stringify({data:S.data,dirty:L.dirty,base:L.base,ui:S.ui}))}catch(e){}}
+/* annuler / rétablir : HIST.last = état avant la prochaine modification */
+var HIST={u:[],r:[],last:null};
+function histReset(){HIST.u=[];HIST.r=[];HIST.last=JSON.stringify(S.data);majBoutonsHist();}
+function modifier(){
+  var avant=HIST.last; if(avant&&avant!==JSON.stringify(S.data)){HIST.u.push(avant); if(HIST.u.length>60)HIST.u.shift(); HIST.r=[];}
+  S.data.maj=new Date().toISOString(); L.dirty=true; HIST.last=JSON.stringify(S.data); sauverLocal(); planifierEnvoi(); afficherSync(); majBoutonsHist();}
+function appliquerHist(de,vers,msg){ if(!de.length){toast(msg[1]);return}
+  vers.push(JSON.stringify(S.data)); S.data=migrer(JSON.parse(de.pop())); S.data.maj=new Date().toISOString(); L.dirty=true; HIST.last=JSON.stringify(S.data);
+  sauverLocal(); planifierEnvoi(); appliquerTheme(); rendre.garder=true; rendre(); toast(msg[0]); }
+function annuler(){appliquerHist(HIST.u,HIST.r,["↶ Modification annulée","Rien à annuler"])}
+function refaire(){appliquerHist(HIST.r,HIST.u,["↷ Modification rétablie","Rien à rétablir"])}
+function majBoutonsHist(){var a=$("#bU"),b=$("#bR"); if(a)a.disabled=!HIST.u.length; if(b)b.disabled=!HIST.r.length;}
+
+/* ---------- synchronisation par la base de Classe ---------- */
+var db=null, syncEtat="attente", envoiT=null, envoiEnCours=false, conflitOuvert=false;
+function fdate(iso){if(!iso)return "jamais";var d=new Date(iso);return d.toLocaleDateString("fr-FR")+" à "+d.toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"})}
+function afficherSync(){var el=$("#sync"); if(!el)return;
+  el.textContent= syncEtat==="ok"?(L.dirty?"⟳ Enregistrement…":(MODE_APP?"✓ Sur cet appareil · ":"✓ Synchronisé · ")+fdate(S.data.maj)) : syncEtat==="lent"?"⏳ Base lente : tes changements restent sur cet appareil" : syncEtat==="hors"?"Enregistré sur cet appareil seulement" : syncEtat==="conflit"?"⚠ Deux versions à départager" : "⟳ Connexion à la base…";}
+async function initSync(){
+  try{ db=window.claude&&window.claude.use?await window.claude.use("db"):null; }catch(e){db=null}
+  if(!db){syncEtat="hors";afficherSync();return}
+  lireClasse();
+  var t=setTimeout(function(){syncEtat="lent";afficherSync()},10000);
+  try{
+    var snap=await db.doc(DBPATH).get(); clearTimeout(t);
+    var remote=snap.exists?snap.data():null;
+    if(!remote||!remote.data){ syncEtat="ok"; if(!L.abime) await pousser(); else afficherSync(); return; }
+    var r=migrer(JSON.parse(JSON.stringify(remote.data))); r.maj=remote.maj||r.maj||"";
+    syncEtat="ok";
+    if(!L.dirty){ if(r.maj!==S.data.maj){S.data=r;L.base=r.maj;sauverLocal();histReset();appliquerTheme();rendre();} else {L.base=r.maj;sauverLocal()} afficherSync(); }
+    else if(L.base===r.maj||!r.maj){ await pousser(); }
+    else conflit(r);
+  }catch(e){clearTimeout(t);syncEtat="hors";afficherSync();}
+}
+function planifierEnvoi(){ if(!db||syncEtat!=="ok"||conflitOuvert)return; clearTimeout(envoiT); envoiT=setTimeout(pousser,1200); }
+async function pousser(){
+  if(!db||conflitOuvert)return; if(envoiEnCours){planifierEnvoi();return}
+  envoiEnCours=true; var maj=S.data.maj||new Date().toISOString(); if(!S.data.maj)S.data.maj=maj;
+  try{ await db.doc(DBPATH).set({maj:maj,data:JSON.parse(JSON.stringify(S.data))});
+    if(S.data.maj===maj){L.dirty=false;L.base=maj;} sauverLocal(); syncEtat="ok";
+  }catch(e){ syncEtat=(e&&e.code==="unavailable")?"lent":"hors"; if(e&&e.code==="unavailable")setTimeout(planifierEnvoi,4000); }
+  envoiEnCours=false; afficherSync();
+}
+function conflit(r){
+  conflitOuvert=true; syncEtat="conflit"; afficherSync();
+  ouvrir('<h2 style="margin-top:0">Deux versions différentes</h2><p>Tes réglages de dictées ont changé sur cet appareil <b>et</b> dans la base (sur un autre appareil).</p>'
+   +'<p>Sur cet appareil : <b>'+fdate(S.data.maj)+'</b><br>Dans la base : <b>'+fdate(r.maj)+'</b></p><p class="muted small">La version non choisie est gardée en copie de secours sur cet appareil.</p>'
+   +'<div class="row end"><button class="btn" id="cfB">Garder la base</button><button class="btn p" id="cfL">Garder cet appareil</button></div>',true);
+  $("#cfB").onclick=function(){try{localStorage.setItem(KEY+"-secours",JSON.stringify(S.data))}catch(e){} S.data=r;L.dirty=false;L.base=r.maj;conflitOuvert=false;syncEtat="ok";sauverLocal();histReset();fermer();appliquerTheme();rendre();afficherSync();toast("Version de la base gardée")};
+  $("#cfL").onclick=async function(){try{localStorage.setItem(KEY+"-secours",JSON.stringify(r))}catch(e){} conflitOuvert=false;syncEtat="ok";S.data.maj=new Date().toISOString();fermer();await pousser();toast("Version de cet appareil gardée")};
+}
+document.addEventListener("visibilitychange",function(){ if(document.visibilityState==="visible"&&db&&!L.dirty&&!conflitOuvert&&syncEtat==="ok") recharger(); });
+async function recharger(){ try{var snap=await db.doc(DBPATH).get(); var remote=snap.exists?snap.data():null;
+  if(remote&&remote.data&&remote.maj&&remote.maj!==S.data.maj&&!L.dirty){S.data=migrer(JSON.parse(JSON.stringify(remote.data)));S.data.maj=remote.maj;L.base=remote.maj;sauverLocal();histReset();appliquerTheme();rendre();toast("Réglages mis à jour depuis un autre appareil")}}catch(e){} }
+/* lecture seule : dates des cycles du journal et prénoms de la classe */
+async function lireClasse(){
+  if(!MODE_APP) try{ var s=await db.doc("journal/main").get(); if(s.exists){ var d=s.data()||{}; var st=d.cycles?d:(d.state&&d.state.cycles?d.state:(d.main&&d.main.cycles?d.main:null));
+      if(st){ CYC={}; st.cycles.forEach(function(c){var n=parseInt(c.num,10); if(n>0&&(c.dictee||c.mots))CYC[n]={dictee:c.dictee||"",mots:c.mots||"",regle:c.regle||""}});
+        if(!S.ui.choisi){var k=prochaine(); if(k){S.ui.cur=k-1;}} rendre(); } } }catch(e){}
+  try{ var m=await db.doc("maths/core").get(); if(m.exists){ var st2=(m.data()||{}).students; if(st2&&typeof st2==="object"){ ELEVES_CLASSE=[]; Object.keys(st2).forEach(function(g){(st2[g]||[]).forEach(function(p){ELEVES_CLASSE.push({p:p,g:g})})}); if(S.ui.tab==="reglages")rendre(); } } }catch(e){}
+}
+function aujourdhui(){var d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")}
+function prochaine(){ /* numéro Retz de la prochaine dictée bilan d'après les cycles de Classe */
+  var t=aujourdhui(), best=null; Object.keys(CYC).forEach(function(k){var c=CYC[k]; if(c.dictee&&c.dictee>=t&&(!best||c.dictee<CYC[best].dictee))best=k});
+  if(!best)return null; var f=faites(); return f[best-1]||null; }
+function fcourt(iso){if(!iso)return "";var p=iso.split("-");var d=new Date(+p[0],+p[1]-1,+p[2]);return d.toLocaleDateString("fr-FR",{weekday:"short",day:"numeric",month:"short"})}
+
+/* ---------- dictées faites, numéros de l'année, notions ---------- */
+function faites(){if(MODE_APP)return D.map(function(d){return d.n});return D.filter(function(d){return !!S.data.faites[d.n]}).map(function(d){return d.n})}
+function rang(n){ var f=faites(), i=f.indexOf(n); if(i>=0)return i+1; return f.filter(function(x){return x<n}).length+0.5; } /* dictée non faite : entre deux */
+function etiquette(n){ var r=rang(n); if(MODE_APP)return "Dictée "+r; return r%1?"hors programme":"Dictée "+r+" · H"+r; }
+function debutNotion(key){ var nt=NOTIONS.find(function(x){return x[0]===key}); if(!nt)return 1; var v=S.data.notions[key];
+  if(v==="auto"){ var f=faites(), idx=nt[2].map(function(n){return f.indexOf(n)}).filter(function(i){return i>=0}); return idx.length?Math.min.apply(null,idx)+1:0; }
+  return +v||0; }
+function notionActive(key,n){ var s=debutNotion(key); return s>0&&rang(n)>=s; }
+function notionDe(it){ if(it.cat==="homo")return homoKey(it.opts); if(it.cat==="pp")return "é/er"; if(it.cat==="perso")return null; return it.cat in {gn:1,verbe:1,ppa:1,fem:1}?it.cat:null; }
+var HOMO_MOTS={"ces":["ces/ses",["ces","ses"]],"ses":["ces/ses",["ces","ses"]],"c’est":["c’est/s’est",["c’est","s’est"]],"s’est":["c’est/s’est",["c’est","s’est"]]};
+function homoAuto(n,p){ if(p.t!=='w')return null; var full=(p.pre||"")+p.w, h=HOMO_MOTS[cle(full)]; if(!h||!notionActive(h[0],n))return null;
+  var maj=/^\p{Lu}/u.test(full), o=h[1].map(function(x){return maj?x.charAt(0).toUpperCase()+x.slice(1):x}); return {o:o,k:o.indexOf(maj?cle(full).charAt(0).toUpperCase()+cle(full).slice(1):cle(full)),notion:h[0],full:full}; }
+function homoKey(opts){var o=opts.map(function(x){return x.toLowerCase().replace(/^(jusqu|qu)[’']/,"")});var ks=["a/à","et/est","on/ont","son/sont","ou/où","ce/se"];for(var i=0;i<ks.length;i++){var ab=ks[i].split("/");if(o.indexOf(ab[0])>=0&&o.indexOf(ab[1])>=0)return ks[i];}return null}
+
+/* ---------- découpage du texte en morceaux repérés ---------- */
+function motDe(tok){var t=tok;while(t.indexOf("’")>=0){if(WL.has(t.toLowerCase()))return t;var r=t.slice(t.indexOf("’")+1);if(!r)return null;t=r}return t}
+var PCACHE={};
+function parse(n){ /* [[{t:'x',v}|{t:'c',key,opts,ok,cat}|{t:'w',key,pre,w,raw}]] */
+  if(PCACHE[n])return PCACHE[n]; var ci=0;
+  var paras=D[n-1].src.split(" ¶ ").map(function(p,pi){var out=[],re=/\{([^}]*)\}#(\w+)/g,last=0,m,wi=0;
+    function texte(s){ s.replace(/[\p{L}\p{M}’\-]+|[^\p{L}\p{M}’\-]+/gu,function(tok){
+        if(!/\p{L}/u.test(tok)){out.push({t:'x',v:tok});return tok}
+        var w=motDe(tok); if(!w){out.push({t:'x',v:tok});return tok}
+        out.push({t:'w',key:"w"+pi+"."+(wi++),pre:tok.slice(0,tok.length-w.length),w:w,first:out.filter(function(o){return o.t!=='x'}).length===0}); return tok;}); }
+    while((m=re.exec(p))){ if(m.index>last)texte(p.slice(last,m.index));
+      var raw=m[1].split("|");
+      if(raw.length<2){ var w1=raw[0].replace("*",""); out.push({t:'w',key:"c"+(ci++),pre:"",w:w1,first:out.filter(function(o){return o.t!=='x'}).length===0}); last=re.lastIndex; continue; }
+      out.push({t:'c',key:"c"+(ci++),opts:raw.map(function(o){return o.replace("*","")}),ok:raw.findIndex(function(o){return o.charAt(0)==="*"}),cat:m[2]}); last=re.lastIndex;}
+    if(last<p.length)texte(p.slice(last)); return out;});
+  return PCACHE[n]=paras;
+}
+function motsDe(n){var m=S.data.mots[n]; return Array.isArray(m)?m:D[n-1].mots.slice()}
+function ovDe(n){return S.data.ov[n]||{}}
+var DET=new Set(["le","la","les","un","une","des","du","au","aux","ce","cet","cette","ces","mon","ton","son","ma","ta","sa","mes","tes","ses","notre","votre","nos","vos","leur","leurs"]);
+var PRO=new Set(["je","tu","il","elle","on","nous","vous","ils","elles"]);
+function profil(pour){ var e=pour&&pour!=="base"?S.data.eleves.find(function(x){return x.id===pour}):null;
+  return e?{nb:e.nb,det:e.det!==false,pro:e.pro!==false}:{nb:S.data.nbDefaut,det:S.data.detBase!==false,pro:S.data.proBase!==false}; }
+function nbPour(pour){ if(pour==="base")return S.data.nbDefaut; var e=S.data.eleves.find(function(x){return x.id===pour}); return e?e.nb:S.data.nbDefaut }
+function nomPour(pour){ var e=S.data.eleves.find(function(x){return x.id===pour}); return e?e.prenom:"" }
+function cle(w){return String(w).toLowerCase().replace(/'/g,"’")}
+/* état final d'un mot : {etat:'g'|'L'|'E'|'C', ...} */
+function construire(n,nb,opt){
+  if(typeof nb==="object"){opt=nb;nb=opt.nb;} opt=opt||{det:S.data.detBase!==false,pro:S.data.proBase!==false};
+  var mots=motsDe(n), app=mots.slice(0,nb).map(cle), ov=ovDe(n), items=[];
+  var paras=parse(n).map(function(parts){var out=[];function X(v){var l=out[out.length-1]; if(l&&l.t==='x')l.v+=v; else out.push({t:'x',v:v})}
+    parts.forEach(function(p){
+      if(p.t==='x'){X(p.v);return}
+      var o=ov[p.key], w=p.t==='w'?p.w:p.opts[p.ok], pre=p.t==='w'?p.pre:"";
+      if(o&&typeof o==="object"&&Array.isArray(o.o)){ if(!(pre&&o.o.some(function(x){return cle(x).indexOf(cle(pre))===0})))X(pre); items.push({type:'c',opts:o.o,ok:o.k,cat:'perso',key:p.key}); out.push({t:'i',i:items.length-1}); return; }
+      if(o==='e'){ X(pre); items.push({type:'b',ok:w,src:'e',key:p.key}); out.push({t:'i',i:items.length-1}); return; }
+      if(p.t==='c'&&o!=='g'){ var nk=notionDe(p);
+        if(!nk||notionActive(nk,n)){ items.push({type:'c',opts:p.opts,ok:p.ok,cat:p.cat,notion:nk,key:p.key}); out.push({t:'i',i:items.length-1}); return; } }
+      if(o==='g'){ X(pre+w); return; }
+      var r=app.indexOf(cle(w));
+      if(r>=0){ X(pre); items.push({type:'b',ok:w,src:'L',rang:r+1,key:p.key}); out.push({t:'i',i:items.length-1}); return; }
+      var ha=homoAuto(n,p);
+      if(ha){ items.push({type:'c',opts:ha.o,ok:ha.k,cat:'homo',notion:ha.notion,key:p.key}); out.push({t:'i',i:items.length-1}); return; }
+      var lw=cle(w), auto=(opt.det&&DET.has(lw))?'d':(opt.pro&&PRO.has(lw))?'p':null;
+      if(auto&&!pre){ items.push({type:'b',ok:w,src:auto,key:p.key}); out.push({t:'i',i:items.length-1}); return; }
+      X(pre+w);
+    }); return out;});
+  var nC=items.filter(function(i){return i.type==='c'}).length, nL=items.filter(function(i){return i.src==='L'}).length, nE=items.filter(function(i){return i.src==='e'||i.src==='d'||i.src==='p'}).length;
+  return {paras:paras,items:items,nC:nC,nL:nL,nE:nE,nB:nL+nE,total:items.length,mots:mots.slice(0,nb)};
+}
+function htmlParas(c,el){return c.paras.map(function(parts){var s="";parts.forEach(function(p,k){
+  if(p.t==='x'){s+=txt(p.v);return}
+  var h=el(c.items[p.i],p.i), nx=parts[k+1];
+  if(nx&&nx.t==='x'){var mm=nx.v.match(/^\s*[.,:;!?]/);if(mm){h='<span class="nw">'+h+esc(mm[0].trim())+'</span>';nx.v=nx.v.slice(mm[0].length)}}
+  s+=h;});return "<p>"+s+"</p>"}).join("")}
+function clone(c){return Object.assign({},c,{paras:c.paras.map(function(ps){return ps.map(function(p){return Object.assign({},p)})})})}
+
+/* ---------- propositions automatiques pour un mot à choisir ---------- */
+var PAIRES=[["a","à"],["et","est"],["on","ont"],["son","sont"],["ou","où"],["ce","se"],["ces","ses"],["la","là"],["leur","leurs"],["c’est","s’est"],["qu’on","qu’ont"],["peu","peut","peux"],["mes","mais"],["sans","s’en"],["ni","n’y"],["quand","quant"]];
+function proposer(w){ /* formes qui se prononcent pareil : l'élève doit réfléchir à l'orthographe, pas à l'oreille */
+  var lw=w.toLowerCase(), maj=/^\p{Lu}/u.test(w), cap=function(s){return maj?s.charAt(0).toUpperCase()+s.slice(1):s};
+  for(var i=0;i<PAIRES.length;i++){var pr=PAIRES[i]; if(pr.indexOf(lw)>=0){var o1=pr.map(cap);return melanger(o1,cap(lw))}}
+  var pre="", m=lw.match(/^(se |s’|l’|d’|n’)(.+)$/); if(m){pre=m[1];lw=m[2];}
+  var o=[]; function add(x){if(x&&x.length>1&&o.indexOf(x)<0)o.push(x)}
+  function genre4(ms){ /* masculin, masculin pluriel, féminin, féminin pluriel, quand ils se prononcent pareil */
+    var f=/el$|eil$/.test(ms)?ms+"le":ms+"e"; add(ms);add(ms+"s");add(f);add(f+"s"); }
+  var b;
+  if(/aient$/.test(lw)){b=lw.slice(0,-5);add(b+"ait");add(b+"ais");add(b+"aient")}
+  else if(/ai[st]$/.test(lw)&&lw.length>4){b=lw.slice(0,-3);add(b+"ait");add(b+"ais");add(b+"aient")}
+  else if(/(é|ée|és|ées)$/.test(lw)){b=lw.replace(/(é|ée|és|ées)$/,"");genre4(b+"é");if(/é$/.test(lw)){add(b+"er")}}
+  else if(/er$/.test(lw)&&lw.length>3){b=lw.slice(0,-2);add(b+"er");add(b+"é");add(b+"ez")}
+  else if(/eaux$/.test(lw)){b=lw.slice(0,-4);add(b+"eau");add(b+"eaux");add(b+"eaus")}
+  else if(/eau$/.test(lw)){add(lw);add(lw+"x");add(lw+"s")}
+  else if(/aux$/.test(lw)){b=lw.slice(0,-3);add(b+"aux");add(b+"aus");add(b+"eaux")}
+  else if(/[^aeiouyé]ent$/.test(lw)&&lw.length>5){b=lw.slice(0,-3);add(b+"e");add(b+"es");add(b+"ent")}
+  else if(/(ante?|ente?|ique|ible|able|aire|ile|ive|euse|ouge|ange)s?$/.test(lw)){b=lw.replace(/s$/,"");add(b);add(b+"s")}
+  else if(/(i|u|ie|ue|is|us|ies|ues)$/.test(lw)&&!/[qg]ue?s?$/.test(lw)){b=lw.replace(/(e?s?)$/,"");genre4(b)}
+  else if(/(el|eil|al|ir|our|oir|eur|ul)(le|e)?s?$/.test(lw)&&!/eur(se|e)?s?$/.test(lw)){b=lw.replace(/s$/,"").replace(/(el)le$/,"$1").replace(/e$/,"");genre4(b)}
+  else if(/[^e]e$/.test(lw)){add(lw);add(lw+"s");add(lw+"nt")}
+  else if(/es$/.test(lw)){add(lw.slice(0,-1));add(lw);add(lw.slice(0,-1)+"nt")}
+  else if(/t$/.test(lw)){add(lw);add(lw.slice(0,-1)+"s")}
+  else if(/d$/.test(lw)){add(lw);add(lw+"s")}
+  else if(/[sx]$/.test(lw)){add(lw.slice(0,-1));add(lw)}
+  else {add(lw);add(lw+"s")}
+  if(o.indexOf(lw)<0)o.unshift(lw);
+  return melanger(o.map(function(x){return cap(pre+x)}),cap(pre+lw));
+}
+function melanger(o,juste){ var h=0; for(var i=0;i<juste.length;i++)h=(h*31+juste.charCodeAt(i))>>>0; var r=o.filter(function(x){return x!==juste}); r.splice(h%(r.length+1),0,juste); return {o:r,k:r.indexOf(juste)}; }
+/* ---------- interface ---------- */
+var ONGLETS=[["dictee","📝","Dictée"],["mots","🖌️","Préparer"],["imprimer","🖨️","Imprimer"],["reglages","⚙️","Réglages"]];
+if(MODE_APP)ONGLETS.unshift(["textes","📚","Mes dictées"]);
+var skipPop=0;
+function aller(t){if(t===S.ui.tab)return;S.ui.tab=t;sauverLocal();history.pushState({tab:t},"","#"+t);rendre();window.scrollTo(0,0)}
+addEventListener("popstate",function(e){ if(skipPop){skipPop--;return} if($("#eleve").classList.contains("on")){fermerEleve(true);return} if($("#ov").classList.contains("on")){$("#ov").classList.remove("on");return} S.ui.tab=(e.state&&e.state.tab)||"dictee";rendre()});
+function appliquerTheme(){var t=S.data.theme;if(t==="auto")delete document.documentElement.dataset.theme;else document.documentElement.dataset.theme=t}
+function listeDictees(){ return (MODE_APP||S.data.tout)?D:D.filter(function(d){return S.data.faites[d.n]}); }
+function selDictee(){var n=S.ui.cur+1, L2=listeDictees(); if(!L2.some(function(d){return d.n===n})&&L2.length){S.ui.cur=L2[0].n-1;n=S.ui.cur+1}
+  return '<div class="bar"><button class="btn sq" data-act="prev" aria-label="Dictée précédente">◀</button><select id="pick" aria-label="Choisir la dictée">'
+   +L2.map(function(d){var c=CYC[rang(d.n)];return '<option value="'+(d.n-1)+'" '+(d.n===n?"selected":"")+'>'+(MODE_APP?esc(etiquette(d.n)):esc(etiquette(d.n).replace(" · "," ("))+(rang(d.n)%1?"":")"))+' : '+esc(d.t)+(c&&c.dictee&&!(rang(d.n)%1)?" · "+fcourt(c.dictee):"")+'</option>'}).join("")
+   +'</select><button class="btn sq" data-act="next" aria-label="Dictée suivante">▶</button></div>'}
+function sousTitre(n){var d=D[n-1], r=rang(n), c=CYC[r]; if(MODE_APP)return '<p class="sub">'+(d.notion?esc(d.notion)+' · ':'')+(c&&c.dictee?'dictée bilan '+esc(fcourt(c.dictee)):'sans date')+' · <a href="#textes" data-tab="textes">✎ modifier</a></p>'; return '<p class="sub">'+esc(d.notion)+' · Retz n° '+n+(r%1?' · <b>dictée non faite cette année</b>':'')+(c&&c.dictee&&!(r%1)?' · dictée bilan '+esc(fcourt(c.dictee)):'')+'</p>'}
+/* 2.4.0 : la fiche sans prénom n'existe que si elle est activée dans Réglages (ou s'il n'y a aucun élève) */
+function baseOn(){return S.data.ficheBase===true||!S.data.eleves.length}
+function pourOk(){ var el=S.data.eleves, ok=function(id){return el.some(function(e){return e.id===id})};
+  if(S.ui.pour!=="base"&&!ok(S.ui.pour))S.ui.pour="base"; if(S.ui.pour==="base"&&!baseOn())S.ui.pour=el[0].id;
+  var q=S.ui.qui||"base"; if(q!=="base"&&q!=="tous"&&!ok(q))q="base"; if(q==="tous"&&!el.length)q="base"; if(q==="base"&&!baseOn())q="tous"; S.ui.qui=q; }
+function choixPour(){ var el=S.data.eleves; if(!el.length)return "";
+  return '<div class="chips" role="group" aria-label="Pour quel élève">'+(baseOn()?'<button class="chip" data-pour="base" aria-pressed="'+(S.ui.pour==="base")+'">Fiche de base ('+S.data.nbDefaut+' mots)</button>':'')+el.map(function(e){return '<button class="chip" data-pour="'+e.id+'" aria-pressed="'+(S.ui.pour===e.id)+'">'+esc(e.prenom||"Sans prénom")+' · '+e.nb+'</button>'}).join("")+'</div>'}
+function notionsActives(n){return NOTIONS.filter(function(x){return notionActive(x[0],n)}).map(function(x){return x[1].split(" (")[0]})}
+function vueDictee(){
+  var n=S.ui.cur+1; if(S.ui.pour!=="base"&&!S.data.eleves.some(function(e){return e.id===S.ui.pour}))S.ui.pour="base";
+  var pf=profil(S.ui.pour), nb=pf.nb, c=construire(n,pf), na=notionsActives(n);
+  return selDictee()+sousTitre(n)+'<div class="card">'+choixPour()
+   +'<div class="stat"><div><b>'+c.total+'</b>mots à écrire ou à choisir</div><div><b>'+c.nL+'</b>à écrire, appris</div><div><b>'+c.nE+'</b>à écrire, non appris</div><div><b>'+c.nC+'</b>à choisir</div></div>'
+   +'<p class="small muted">Notions proposées : '+(na.length?esc(na.join(", ")):"aucune")+'.</p>'
+   +'<div class="row"><button class="btn p" data-act="enligne">▶ Faire la dictée en ligne</button><button class="btn" data-tab="imprimer">🖨️ Imprimer</button><button class="btn" data-tab="mots">🖌️ Préparer les mots</button></div></div>'
+   +'<div class="card dtext">'+htmlParas(clone(c),function(it){return it.type==='c'?'<span class="grp">'+it.opts.map(function(o,j){return '<span class="opt" '+(j===it.ok?'style="font-weight:600"':"")+'>'+esc(o)+'</span>'}).join("")+'</span>':'<span class="gap'+(it.src!=='L'?' e':'')+'" style="min-width:'+Math.max(3.5,it.ok.length*.62+1.2)+'em">'+(S.ui.voir?esc(it.ok):"")+'</span>'})
+   +'<label class="small"><input type="checkbox" id="voir" '+(S.ui.voir?"checked":"")+'> Afficher les mots dans les cadres</label> <span class="small muted">· jaune : mot appris · orange : mot à écrire non appris</span></div>';
+}
+var BR=[["L","📘","À apprendre"],["E","✍️","À écrire"],["C","🔵","À choisir"],["G","▫️","Donné"]];
+function choixDe(n,p){ /* propositions affichées : réglage personnel ou choix d'origine */
+  var o=ovDe(n)[p.key]; if(o&&typeof o==="object")return {o:o.o.slice(),k:o.k}; if(p.t==='c')return {o:p.opts.slice(),k:p.ok}; var ha=homoAuto(n,p); return ha?{o:ha.o,k:ha.k}:null; }
+function etatMot(n,p,app,pf){ /* état dans Préparer : L (appris, rang), E, D/P (déterminant/pronom à écrire), C (choix), Cx (choix pas encore vu), G */
+  var o=ovDe(n)[p.key], w=p.t==='w'?p.w:p.opts[p.ok]; pf=pf||profil(S.ui.pour);
+  if(o&&typeof o==="object")return {e:"C"};
+  if(o==='e')return {e:"E"};
+  if(p.t==='c'&&o!=='g'){var nk=notionDe(p); if(!nk||notionActive(nk,n))return {e:"C"}; return {e:"Cx",nk:nk}}
+  if(o==='g')return {e:"G",force:1};
+  var r=app.indexOf(cle(w)); if(r>=0)return {e:"L",r:r+1};
+  if(homoAuto(n,p))return {e:"C"};
+  var lw=cle(w); if(!p.pre&&pf.det&&DET.has(lw))return {e:"D"}; if(!p.pre&&pf.pro&&PRO.has(lw))return {e:"P"};
+  return {e:"G"};
+}
+function vueMots(){
+  var n=S.ui.cur+1,d=D[n-1],mots=motsDe(n),app=mots.map(cle),gras=new Set(d.gras.map(function(w){return w.toLowerCase()}));
+  var par={};if(baseOn())(par[S.data.nbDefaut]=[]).push("fiche sans prénom");S.data.eleves.forEach(function(e){(par[e.nb]=par[e.nb]||[]).push(e.prenom||"?")});
+  var nbC=profil(S.ui.pour).nb, nomC=S.ui.pour==="base"?"la fiche sans prénom":(nomPour(S.ui.pour)||"cet élève"), ficheC=S.ui.pour==="base"?"la fiche sans prénom":"la fiche de "+nomC;
+  var li="";mots.forEach(function(w,i){li+='<li class="'+(i>=8?"over":"")+(i>=nbC?" hors":"")+'"'+(i>=nbC?' title="Pas sur '+esc(ficheC)+' : écrit dans le texte"':'')+'><span class="n">'+(i>=8?"⚠":i+1)+'</span><span class="w">'+esc(w)+'</span>'
+    +'<button class="btn sq" data-up="'+i+'" aria-label="Monter '+esc(w)+'" '+(i?"":"disabled")+'>▲</button><button class="btn sq" data-down="'+i+'" aria-label="Descendre '+esc(w)+'" '+(i<mots.length-1?"":"disabled")+'>▼</button><button class="btn sq danger" data-del="'+i+'" aria-label="Retirer '+esc(w)+'">✕</button></li>';
+    if(i===7&&mots.length>8)li+='<li class="cut w8"><div>⚠ au-delà de 8 mots : '+(mots.length-8)+' de plus'+(par[8]?' · ✂ jusqu’ici pour : '+par[8].map(esc).join(", "):'')+'</div></li>';
+    else if(par[i+1]&&i<mots.length-1)li+='<li class="cut"><div>✂ jusqu’ici pour : '+par[i+1].map(esc).join(", ")+' ('+(i+1)+' mot'+(i?"s":"")+')</div></li>';});
+  var pf=profil(S.ui.pour), modeC=S.ui.brush==="C";
+  var tt=parse(n).map(function(parts){var s="";parts.forEach(function(p){
+    if(p.t==='x'){s+=txt(p.v);return}
+    var st=etatMot(n,p,app,pf), w=p.t==='w'?p.w:p.opts[p.ok];
+    if(st.e==="C"){ var ch=choixDe(n,p)||{o:[w],k:0}; if(p.pre&&ch.o.some(function(x){return cle(x).indexOf(cle(p.pre))===0}))p={t:p.t,key:p.key,pre:"",w:w};
+      var sel=modeC&&S.ui.selC===p.key;
+      s+=(p.pre?esc(p.pre):"")+'<span class="cg'+(sel?' ed':'')+'" data-k="'+p.key+'" title="à choisir">'+ch.o.map(function(x,j){
+        return '<button class="co'+(j===ch.k?' ok':'')+'" data-k="'+p.key+'" data-oi="'+j+'" aria-label="'+esc(x)+(j===ch.k?' (juste)':'')+'">'+esc(x)+'</button>'+(sel&&j!==ch.k&&ch.o.length>2?'<button class="ox" data-k="'+p.key+'" data-ox="'+j+'" aria-label="Retirer '+esc(x)+'">×</button>':'')}).join('<i class="sl">/</i>')
+        +(sel?'<button class="oa" data-k="'+p.key+'" data-oadd="1" aria-label="Ajouter une proposition">＋</button><button class="oa" data-k="'+p.key+'" data-oed="1" aria-label="Modifier les propositions">✎</button>':'')+'</span>';
+      return; }
+    var horsF=st.e==="L"&&st.r>pf.nb, cls="tk "+(horsF?"L off":st.e);
+    if(p.t==='w'&&gras.has(w.toLowerCase()))cls+=" gras";
+    var lab=st.e==="Cx"?"choix non proposé : notion pas encore vue":st.e==="E"?"à écrire":st.e==="D"?"déterminant à écrire":st.e==="P"?"pronom à écrire":st.e==="L"?"à apprendre n° "+st.r+(horsF?" · pas sur la fiche (au-delà de "+pf.nb+" mots) : écrit dans le texte":""):"donné";
+    s+=(p.pre?esc(p.pre):"")+'<button class="'+cls+'" data-k="'+p.key+'" title="'+esc(lab)+'">'+esc(w)+(st.e==="L"?'<span class="rk'+(st.r>8?' w':'')+'">'+(st.r>8?"⚠":st.r)+'</span>':'')+'</button>';});
+    return "<p>"+s+"</p>"}).join("");
+  var c=construire(n,profil(S.ui.pour));
+  return selDictee()+sousTitre(n)
+   +'<div class="brushes" role="toolbar" aria-label="Pinceaux">'+BR.map(function(b){return '<button class="brush '+b[0]+'" data-brush="'+b[0]+'" aria-pressed="'+(S.ui.brush===b[0])+'"><b aria-hidden="true">'+b[1]+'</b>'+b[2]+'</button>'}).join("")+'</div>'
+   +'<div class="card"><p class="small muted" style="margin-top:0">Choisis un pinceau, puis touche les mots du texte. '+(S.ui.brush==="C"?"Touche un mot pour en faire un choix. Touche un choix pour le sélectionner, puis une proposition pour la rendre juste, × pour la retirer, ＋ pour en ajouter, ✎ pour tout modifier.":S.ui.brush==="L"?"Un mot ajouté au-delà de 8 est gardé, avec ⚠.":S.ui.brush==="E"?"Le mot est à écrire par l'élève, sans être dans sa liste à apprendre.":"Le mot redevient écrit dans le texte (ou son choix d'origine revient).")+'</p>'
+   +choixPour()
+   +'<div class="legend"><span><i style="background:var(--yel);border:1px solid var(--yel-b)"></i>à apprendre</span><span><i style="background:var(--or);border:1px solid var(--or-b)"></i>à écrire, non appris</span><span><i style="background:var(--or);border:1px dashed var(--or-b);opacity:.7"></i>déterminant ou pronom à écrire</span><span><i style="background:var(--blue);border-bottom:3px solid var(--blue-b)"></i>à choisir</span><span><i style="border-bottom:3px dotted var(--blue-b)"></i>choix pas encore vu</span><span><b>gras</b> : mots du livre</span></div>'
+   +'<div class="ttext">'+tt+'</div>'
+   +'<p class="small muted">Pour '+(S.ui.pour==="base"?"la fiche de base":esc(nomPour(S.ui.pour)))+' : '+c.total+' mots ('+c.nL+' appris, '+c.nE+' à écrire, '+c.nC+' à choisir).</p>'
+   +'<div class="row"><button class="btn sm" data-act="rétablir" '+(S.data.mots[n]||Object.keys(ovDe(n)).length?"":"disabled")+'>↺ Revenir à la dictée proposée</button></div></div>'
+   +'<div class="card"><h2 style="margin-top:0">Mots à apprendre · '+mots.length+(mots.length>8?' <span style="color:var(--ko)">⚠ plus de 8</span>':'/8')+'</h2>'
+   +'<p class="small muted">L’ordre compte : un élève qui apprend 5 mots reçoit les 5 premiers. Monte les mots les plus utiles. Les mots grisés ne sont pas sur '+esc(ficheC)+' : ils restent écrits dans le texte.</p>'
+   +'<div class="hrow" style="border:0"><span>Nombre de mots pour <b>'+esc(nomC)+'</b>'+(mots.length>nbC?' <span style="color:var(--ko)">· '+(mots.length-nbC)+' mot'+(mots.length-nbC>1?'s':'')+' en dehors</span>':'')+'</span><span class="step"><button class="btn sq" data-nb="'+esc(S.ui.pour)+'" data-d="-1" aria-label="Un mot de moins">−</button><b>'+nbC+'</b><button class="btn sq" data-nb="'+esc(S.ui.pour)+'" data-d="1" aria-label="Un mot de plus">+</button></span></div>'
+   +'<ul class="mlist">'+(li||'<li class="muted">Aucun mot : avec le pinceau 📘, touche des mots du texte.</li>')+'</ul></div>';
+}
+function vueImprimer(){
+  var n=S.ui.cur+1, docs=S.ui.docs||{fiche:true,ban:true,eti:false,cor:true}, el=S.data.eleves, qui=S.ui.qui||"base";
+  return selDictee()+sousTitre(n)+'<div class="card"><h2 style="margin-top:0">Pour qui ?</h2><div class="chips" role="group" aria-label="Pour qui">'
+   +(baseOn()?'<button class="chip" data-qui="base" aria-pressed="'+(qui==="base")+'">Fiche sans prénom ('+S.data.nbDefaut+' mots)</button>':'')
+   +(el.length?'<button class="chip" data-qui="tous" aria-pressed="'+(qui==="tous")+'">Tous les élèves ('+el.length+')</button>':"")
+   +el.map(function(e){return '<button class="chip" data-qui="'+e.id+'" aria-pressed="'+(qui===e.id)+'">'+esc(e.prenom||"Sans prénom")+' · '+e.nb+'</button>'}).join("")+'</div>'
+   +(el.length?"":'<p class="small muted">Ajoute tes élèves dans Réglages pour régler leur nombre de mots et imprimer à leur prénom.</p>')
+   +'<h2>Documents</h2><div class="chips" role="group" aria-label="Documents">'
+   +[["fiche","📝 Fiche de dictée"],["ban","📏 Bandeau des mots"],["eti","🏷️ Étiquettes-mots"],["cor","✅ Corrigé et barème"]].map(function(x){return '<button class="chip" data-doc="'+x[0]+'" aria-pressed="'+!!docs[x[0]]+'">'+x[1]+'</button>'}).join("")
+   +'</div><div class="row" style="margin-top:12px"><button class="btn p" data-act="pdf">Préparer le PDF</button></div></div>'
+   +'<div class="card"><h2 style="margin-top:0">Mots d’une période</h2><p class="small muted">Tous les mots à apprendre de la période, pour la personne choisie plus haut.</p>'
+   +'<div class="row"><select id="per" aria-label="Période">'+[1,2,3,4,5].map(function(k){var ds=dicteesPeriode(k);return '<option value="'+k+'" '+(k===periodeDe(n)?"selected":"")+'>Période '+k+' · '+(ds.length?"dictées "+rang(ds[0].n)+" à "+rang(ds[ds.length-1].n):"aucune dictée")+'</option>'}).join("")+'</select>'
+   +'<button class="btn p" data-act="pdfper">Préparer le PDF</button></div></div>';
+}
+function periodeDe(n){var p=S.data.periodes,r=Math.floor(rang(n)),k=0;for(var i=0;i<5;i++)if(r>=p[i])k=i;return k+1}
+function dicteesPeriode(k){var p=S.data.periodes,a=p[k-1],b=k<5?p[k]-1:99;return D.filter(function(d){var r=rang(d.n);return !(r%1)&&r>=a&&r<=b})}
+function vueReglages(){
+  var d=S.data;
+  var ext=ELEVES_CLASSE&&ELEVES_CLASSE.filter(function(x){return !d.eleves.some(function(e){return e.prenom===x.p})});
+  var rows=D.map(function(x){var on=!!d.faites[x.n], r=rang(x.n), c=CYC[r]; return '<div class="drow'+(on?"":" off")+'"><span class="h">'+(on?"H"+r:"—")+'</span><span class="t">'+esc(x.t)+'<small>Retz n° '+x.n+' · '+esc(x.notion)+(on&&c&&c.dictee?' · '+esc(fcourt(c.dictee)):'')+'</small></span><button class="tog'+(on?"":" off")+'" data-fait="'+x.n+'" aria-pressed="'+on+'">'+(on?"✓ Faite":"Pas faite")+'</button></div>'}).join("");
+  var no=NOTIONS.map(function(x){var v=d.notions[x[0]], s=debutNotion(x[0]);
+    var opts='<option value="auto" '+(v==="auto"?"selected":"")+'>Auto · '+(x[2].length?x[2].map(function(n){return d.faites[n]?"dictée "+rang(n):"leçon non faite"}).join(", "):"pas de dictée dédiée (jamais)")+'</option><option value="0" '+(v===0||v==="0"?"selected":"")+'>Jamais</option>'
+      +faites().map(function(f,i){return '<option value="'+(i+1)+'" '+(+v===i+1&&v!=="auto"?"selected":"")+'>Dès la dictée '+(i+1)+'</option>'}).join("");
+    return '<div class="hrow"><span>'+esc(x[1])+'<br><small class="muted">'+(s?"proposé à partir de la dictée "+s:"jamais proposé")+'</small></span><select data-notion="'+x[0]+'" aria-label="'+esc(x[1])+'">'+opts+'</select></div>'}).join("");
+  return (MODE_APP?'':'<div class="card"><h2 style="margin-top:0">Dictées faites cette année</h2><p class="small muted">Prérempli d’après ton livret de leçons (règles H1 à H17). Une dictée « pas faite » disparaît de la liste, et sa notion n’est pas proposée dans les suivantes.</p>'
+   +rows+'<div class="row" style="margin-top:10px"><button class="btn sm" data-act="progdef">↺ Revenir au programme de l’année</button><label class="small"><input type="checkbox" id="tout" '+(d.tout?"checked":"")+'> Montrer aussi les dictées pas faites</label></div></div>')
+   +'<div class="card"><h2 style="margin-top:0">Notions proposées en choix</h2><p class="small muted">« Auto » : la notion arrive dans les dictées à partir de celle où tu fais sa leçon. Avant, le mot est écrit dans le texte.</p>'+no
+   +'<div class="row" style="margin-top:8px"><button class="btn sm" data-act="notdef">↺ Tout en automatique</button></div></div>'
+   +'<div class="card"><h2 style="margin-top:0">Élèves et nombre de mots à apprendre</h2><p class="small muted">Prénom ou initiales. '+(MODE_APP?'Ces réglages restent sur cet appareil.':'Ces réglages restent dans Classe, privés.')+'</p>'
+   +d.eleves.map(function(e){return '<div class="el"><input type="text" value="'+esc(e.prenom)+'" data-pre="'+e.id+'" aria-label="Prénom" placeholder="Prénom"><span class="step"><button class="btn sq" data-nb="'+e.id+'" data-d="-1" aria-label="Un mot de moins">−</button><b>'+e.nb+'</b><button class="btn sq" data-nb="'+e.id+'" data-d="1" aria-label="Un mot de plus">+</button></span><button class="btn sq danger" data-delel="'+e.id+'" aria-label="Supprimer">🗑</button></div>'
+     +'<div class="chips" style="margin:0 0 8px 4px"><button class="chip sm" data-opt="det" data-el="'+e.id+'" aria-pressed="'+(e.det!==false)+'">Déterminants à écrire</button><button class="chip sm" data-opt="pro" data-el="'+e.id+'" aria-pressed="'+(e.pro!==false)+'">Pronoms sujets à écrire</button></div>'}).join("")
+   +'<div class="row" style="margin-top:8px"><button class="btn" data-act="addel">＋ Ajouter un élève</button></div>'
+   +(ext&&ext.length?'<p class="small muted" style="margin:12px 0 4px">Ajouter depuis la classe :</p><div class="chips">'+ext.map(function(x){return '<button class="chip" data-addp="'+esc(x.p)+'">＋ '+esc(x.p)+' <small class="muted">'+esc(x.g)+'</small></button>'}).join("")+'</div>':"")
+   +'<div class="hrow" style="margin-top:10px"><span>Fiche sans prénom<br><small class="muted">pour un élève qui n’est pas dans la liste</small></span><button class="tog'+(d.ficheBase?'':' off')+'" data-act="fbase" aria-pressed="'+!!d.ficheBase+'">'+(d.ficheBase?'✓ Affichée':'Masquée')+'</button></div>'
+   +(d.ficheBase?'<div class="hrow"><span>Nombre de mots de la fiche sans prénom</span><span class="step"><button class="btn sq" data-nb="base" data-d="-1" aria-label="Un mot de moins">−</button><b>'+d.nbDefaut+'</b><button class="btn sq" data-nb="base" data-d="1" aria-label="Un mot de plus">+</button></span></div>'
+   +'<div class="chips" style="margin:6px 0 0 4px"><button class="chip sm" data-opt="det" data-el="base" aria-pressed="'+(d.detBase!==false)+'">Déterminants à écrire</button><button class="chip sm" data-opt="pro" data-el="base" aria-pressed="'+(d.proBase!==false)+'">Pronoms sujets à écrire</button></div>':'')
+   +'<p class="small muted" style="margin:8px 0 0">Déterminants : le, la, les, un, une, des, du, au, aux, ce, cet, cette, ces, mon, ton, son… nos, vos, leur, leurs. Les déterminants difficiles (plusieurs, certains, chaque, quelques…) ne sont à écrire que s’ils sont dans la liste à apprendre. Pronoms sujets : je, tu, il, elle, on, nous, vous, ils, elles.</p></div>'
+   +'<div class="card"><h2 style="margin-top:0">Périodes</h2>'+[0,1,2,3,4].map(function(i){return '<div class="hrow"><span>Période '+(i+1)+' : à partir de la dictée</span><input type="number" min="1" max="30" value="'+d.periodes[i]+'" data-per="'+i+'" style="width:90px" aria-label="Début de la période '+(i+1)+'"></div>'}).join("")+'</div>'
+   +'<div class="card"><h2 style="margin-top:0">Impression</h2><div class="hrow"><span>Bandeaux par page pour un seul élève</span><span class="step"><button class="btn sq" data-cop="-1" aria-label="Moins">−</button><b>'+d.copies+'</b><button class="btn sq" data-cop="1" aria-label="Plus">+</button></span></div></div>'
+   +'<div class="card"><h2 style="margin-top:0">Affichage et sauvegarde</h2><div class="hrow"><span>Thème</span><select id="th" aria-label="Thème"><option value="auto">Automatique</option><option value="light">Clair</option><option value="dark">Sombre</option></select></div>'
+   +'<div class="row" style="margin-top:10px"><button class="btn" data-act="export">⬇ Exporter les réglages</button><label class="btn">⬆ Importer<input type="file" accept=".json,application/json" id="imp" hidden></label></div>'
+   +'<p class="small muted">Raccourcis clavier : <b>Ctrl+Z</b> annuler · <b>Ctrl+Maj+Z</b> ou <b>Ctrl+Y</b> rétablir · <b>← →</b> dictée précédente / suivante · <b>1 à 4</b> pinceaux (Préparer) · <b>D P I R</b> onglets · <b>Échap</b> fermer une fenêtre. Sur téléphone, la touche Retour revient à l’écran précédent.</p>'
+   +'<p class="small muted">Dictées adaptées · version '+VERSION+' · <span id="sync2"></span></p></div>';
+}
+/* ---------- Kit « Outils de classe partagés » : mes dictées et cycle (seulement si MODE_APP) ----------
+   S.data.textes = [{id, t (titre), notion (règle), src (texte, paragraphes séparés par « ¶ »), mots:[], trous:[], date (dictée bilan, AAAA-MM-JJ)}]
+   D (moteur) = S.data.textes avec n = rang + 1 ; S.data.mots[n] et S.data.ov[n] sont décalés quand on supprime ou déplace une dictée.
+   S.data.cycle = {rythme:1|2 (semaines), etapes:[{id, on, nom, sem:-1|0|1, jour:1..5, devoir, bilan}]} */
+var JOURS=["","lundi","mardi","mercredi","jeudi","vendredi"];
+function cycleDefaut(){return {rythme:1,etapes:[
+  {id:"mots",on:true,nom:"Découverte des mots",sem:0,jour:1,devoir:"Apprendre les mots de la dictée {n} : {mots}"},
+  {id:"regle",on:true,nom:"Leçon : {regle}",sem:0,jour:2,devoir:"Revoir la règle : {regle}"},
+  {id:"entr",on:true,nom:"Dictée d’entraînement",sem:0,jour:4,devoir:"Revoir les mots et la règle de la dictée {n}"},
+  {id:"bilan",on:true,nom:"Dictée bilan n° {n}",sem:0,jour:5,devoir:"",bilan:true},
+  {id:"corr",on:true,nom:"Correction de la dictée {n}",sem:1,jour:1,devoir:""}]}}
+function kitPrep(){
+  if(!Array.isArray(S.data.textes))S.data.textes=[];
+  var c=S.data.cycle; if(!c||!Array.isArray(c.etapes))S.data.cycle=cycleDefaut();
+  D=S.data.textes.map(function(x,i){return {n:i+1,t:x.t||("Dictée "+(i+1)),notion:x.notion||"",src:x.src||"",mots:Array.isArray(x.mots)?x.mots:[],gras:[]}});
+  CYC={}; S.data.textes.forEach(function(x,i){ if(x.date) CYC[i+1]={dictee:x.date,mots:etapeDate(x.date,"mots")||"",regle:x.notion||""}; });
+  PCACHE={};
+}
+function iso(d){return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")}
+function deIso(s){var p=String(s).split("-");return new Date(+p[0],+p[1]-1,+p[2])}
+function lundiDe(s){var d=deIso(s),j=(d.getDay()+6)%7;d.setDate(d.getDate()-j);return d}
+function dateEtape(dBilan,e){var d=lundiDe(dBilan);d.setDate(d.getDate()+e.sem*7+(e.jour-1));return iso(d)}
+function etapeDate(dBilan,id){var e=S.data.cycle.etapes.find(function(x){return x.id===id&&x.on});return e?dateEtape(dBilan,e):""}
+function remplir(t,i){var x=S.data.textes[i], n=i+1, mots=(Array.isArray(S.data.mots[n])?S.data.mots[n]:x.mots||[]).slice(0,S.data.nbDefaut);
+  return String(t||"").replace(/\{n\}/g,n).replace(/\{titre\}/g,x.t||"").replace(/\{regle\}/g,x.notion||"…").replace(/\{mots\}/g,mots.join(", ")||"…").replace(/\s+:\s*…$/,"");}
+function etapesDu(jour){var out=[];S.data.textes.forEach(function(x,i){if(!x.date)return;S.data.cycle.etapes.forEach(function(e){if(e.on&&dateEtape(x.date,e)===jour)out.push({i:i,e:e,nom:remplir(e.nom,i),devoir:remplir(e.devoir,i)})})});return out}
+function prochaineDate(){var T=S.data.textes, last=null; T.forEach(function(x){if(x.date&&(!last||x.date>last))last=x.date});
+  var b=S.data.cycle.etapes.find(function(e){return e.bilan})||{jour:5,sem:0};
+  if(last){var d=deIso(last);d.setDate(d.getDate()+7*(S.data.cycle.rythme||1));return iso(d)}
+  var d2=new Date(), j=(d2.getDay()+6)%7+1; d2.setDate(d2.getDate()+((b.jour-j+7)%7||7)); return iso(d2);}
+function nettoyer(s){return String(s||"").replace(/[{}#¶]/g,"").replace(/\r/g,"")}
+function listeMots(s){return String(s||"").split(/[\n,;]+/).map(function(w){return w.trim()}).filter(Boolean)}
+/* Décale mots et ov quand l'ordre des dictées change : ordre = anciens numéros dans le nouvel ordre */
+function renumeroter(ordre){var m={},o={};ordre.forEach(function(ancien,k){if(ancien&&S.data.mots[ancien])m[k+1]=S.data.mots[ancien];if(ancien&&S.data.ov[ancien])o[k+1]=S.data.ov[ancien]});S.data.mots=m;S.data.ov=o;}
+/* Mots à trous saisis dans l'éditeur → mots « à écrire sans l'apprendre » (état 'e') dans Préparer */
+function appliquerTrous(n,trous,anciens){PCACHE={}; var set=new Set(trous.map(cle)), vieux=new Set((anciens||[]).map(cle)), o=Object.assign({},S.data.ov[n]||{});
+  parse(n).forEach(function(ps){ps.forEach(function(p){if(p.t!=='w')return;var k=cle(p.w);if(set.has(k)){if(!o[p.key])o[p.key]='e'}else if(vieux.has(k)&&o[p.key]==='e')delete o[p.key]})});
+  if(Object.keys(o).length)S.data.ov[n]=o;else delete S.data.ov[n];}
+function vueTextes(){
+  var T=S.data.textes, c=S.data.cycle, auj=aujourdhui(), ce=etapesDu(auj), h='';
+  h+='<div class="card"><h2 style="margin-top:0">📅 Aujourd’hui</h2>';
+  if(!T.length) h+='<p>Commence par ajouter ta première dictée : un texte, des mots à apprendre, une règle… ce que tu as déjà. Tout est facultatif sauf le texte.</p>';
+  else if(!ce.length) h+='<p class="muted">Rien de prévu aujourd’hui pour les dictées.</p>';
+  else { h+=ce.map(function(x){return '<p style="margin:6px 0"><b>'+esc(x.nom)+'</b>'+(x.devoir?'<br><span class="muted">Devoirs : </span>'+esc(x.devoir):'')+'</p>'}).join("");
+    var dv=ce.filter(function(x){return x.devoir});
+    if(dv.length) h+='<div class="row"><button class="btn" data-ka="copier">📋 Copier les devoirs</button><button class="btn" data-ka="projeter">⛶ Projeter</button><button class="btn" data-ka="etiq">🏷️ Étiquettes</button></div>'; }
+  var futur=[]; for(var k=1;k<=14;k++){var d=new Date();d.setDate(d.getDate()+k);var j=iso(d);etapesDu(j).forEach(function(x){futur.push({j:j,x:x})})}
+  if(futur.length) h+='<details style="margin-top:8px"><summary class="small" style="cursor:pointer;font-weight:700">Les 2 prochaines semaines ('+futur.length+')</summary>'+futur.map(function(f){return '<p class="small" style="margin:4px 0">'+esc(fcourt(f.j))+' · <b>'+esc(f.x.nom)+'</b>'+(f.x.devoir?' · '+esc(f.x.devoir):'')+'</p>'}).join("")+'</details>';
+  h+='</div><div class="card"><h2 style="margin-top:0">📚 Mes dictées <span class="muted small">· '+T.length+'</span></h2>';
+  h+=T.map(function(x,i){return '<div class="drow"><span class="h">'+(i+1)+'</span><span class="t">'+esc(x.t||"Sans titre")+'<small>'+(x.notion?esc(x.notion)+' · ':'')+(x.mots&&x.mots.length?x.mots.length+' mots · ':'')+(x.date?'bilan '+esc(fcourt(x.date)):'sans date')+'</small></span>'
+    +'<span class="row" style="gap:4px;flex-wrap:nowrap"><button class="btn sq sm" data-ka="haut" data-ki="'+i+'" aria-label="Monter" '+(i?'':'disabled')+'>↑</button><button class="btn sm" data-ka="edit" data-ki="'+i+'">✎ Modifier</button><button class="btn sm" data-ka="voir" data-ki="'+i+'">▶</button></span></div>'}).join("");
+  h+='<div class="row" style="margin-top:10px"><button class="btn p" data-ka="ajout">＋ Ajouter une dictée</button></div>';
+  h+='<details style="margin-top:12px"><summary class="small" style="cursor:pointer;font-weight:700">📤 Partager avec des collègues</summary><p class="small muted">Crée un fichier avec tes textes, mots et règles (sans élèves ni réglages), qu’un collègue importe ici. Ne partage que des textes que tu as le droit de diffuser.</p>'
+    +'<div class="row"><button class="btn" data-ka="partager">📤 Créer le fichier</button><label class="btn">📥 Importer des dictées<input type="file" id="kimp" accept=".json,application/json" hidden></label></div></details></div>';
+  var cycO=S.ui.cycOuvert===undefined?!T.length:S.ui.cycOuvert;
+  h+='<details class="card" id="kcyc" '+(cycO?'open':'')+'><summary style="cursor:pointer;list-style:none"><h2 style="display:inline;margin:0">🔁 Mon cycle de dictée</h2> <span class="muted small">'+c.etapes.filter(function(e){return e.on}).length+' étapes · '+(c.rythme==2?'toutes les 2 semaines':'chaque semaine')+' ›</span></summary><p class="small muted">Coche tes étapes et place-les dans la semaine. {n} = numéro de la dictée, {mots} = mots à apprendre, {regle} = règle, {titre} = titre.</p>'
+    +'<div class="hrow"><span>Une dictée bilan</span><select data-kc="rythme"><option value="1" '+(c.rythme==1?"selected":"")+'>chaque semaine</option><option value="2" '+(c.rythme==2?"selected":"")+'>toutes les 2 semaines</option></select></div>'
+    +c.etapes.map(function(e,k){return '<div class="kstep" style="border-top:1px solid var(--line);padding:8px 0"><div class="row"><label><input type="checkbox" data-kc="on" data-ke="'+k+'" '+(e.on?"checked":"")+'> </label><input type="text" value="'+esc(e.nom)+'" data-kc="nom" data-ke="'+k+'" style="flex:1;min-width:160px" aria-label="Nom de l’étape"></div>'
+      +'<div class="row" style="margin-top:6px"><select data-kc="sem" data-ke="'+k+'" aria-label="Semaine">'+[[-1,"semaine d’avant"],[0,"semaine de la dictée"],[1,"semaine d’après"]].map(function(o){return '<option value="'+o[0]+'" '+(e.sem==o[0]?"selected":"")+'>'+o[1]+'</option>'}).join("")+'</select>'
+      +'<select data-kc="jour" data-ke="'+k+'" aria-label="Jour">'+[1,2,3,4,5].map(function(j){return '<option value="'+j+'" '+(e.jour==j?"selected":"")+'>'+JOURS[j]+'</option>'}).join("")+'</select>'+(e.bilan?'<small class="muted">← jour de la dictée bilan</small>':'<button class="btn sq sm danger" data-ka="delstep" data-ki="'+k+'" aria-label="Supprimer l’étape">🗑</button>')+'</div>'
+      +(e.bilan?'':'<input type="text" value="'+esc(e.devoir)+'" data-kc="devoir" data-ke="'+k+'" placeholder="Devoirs ce jour-là (facultatif)" style="width:100%;margin-top:6px" aria-label="Devoirs">')+'</div>'}).join("")
+    +'<div class="row" style="margin-top:8px"><button class="btn sm" data-ka="addstep">＋ Une étape</button><button class="btn sm" data-ka="cycdef">↺ Cycle proposé</button></div></details>';
+  return h;
+}
+function editer(i){
+  var nouveau=i<0, x=nouveau?{t:"",notion:"",src:"",mots:[],trous:[],date:prochaineDate()}:S.data.textes[i];
+  ouvrir('<h2 style="margin-top:0">'+(nouveau?"Nouvelle dictée":"Modifier la dictée "+(i+1))+'</h2>'
+   +'<label class="small">Titre<input type="text" id="kT" value="'+esc(x.t)+'" style="width:100%" placeholder="Ex. Le château fort"></label>'
+   +'<div class="row" style="margin-top:8px"><label class="small" style="flex:1">Règle travaillée (facultatif)<input type="text" id="kN" value="'+esc(x.notion)+'" style="width:100%" placeholder="Ex. a / à"></label><label class="small">Dictée bilan le<input type="date" id="kD" value="'+esc(x.date||"")+'"></label></div>'
+   +'<label class="small" style="display:block;margin-top:8px">Texte de la dictée (une ligne vide = nouveau paragraphe)<textarea id="kS" rows="7" style="width:100%;font:inherit;border:2px solid var(--line);border-radius:12px;padding:8px" placeholder="Colle ou tape le texte">'+esc(String(x.src).split(" ¶ ").join("\n\n"))+'</textarea></label>'
+   +'<div class="row" style="margin-top:8px;align-items:stretch"><label class="small" style="flex:1;min-width:180px">Mots à apprendre (un par ligne, ou séparés par des virgules)<textarea id="kM" rows="4" style="width:100%;font:inherit;border:2px solid var(--line);border-radius:12px;padding:8px">'+esc((x.mots||[]).join("\n"))+'</textarea></label>'
+   +'<label class="small" style="flex:1;min-width:180px">Mots à trous, à écrire sans les apprendre (facultatif)<textarea id="kR" rows="4" style="width:100%;font:inherit;border:2px solid var(--line);border-radius:12px;padding:8px">'+esc((x.trous||[]).join("\n"))+'</textarea></label></div>'
+   +'<p class="small muted">Ensuite, dans « Préparer », touche les mots du texte pour choisir ce que chaque élève écrit, apprend ou choisit. '+(nouveau?'':'Si tu changes le texte, les mots touchés dans « Préparer » pour cette dictée sont remis à zéro.')+'</p>'
+   +'<div class="row end">'+(nouveau?'':'<button class="btn danger" id="kDel">🗑 Supprimer</button>')+'<button class="btn" id="kA">Annuler</button><button class="btn p" id="kO">Enregistrer</button></div>');
+  $("#kA").onclick=fermer;
+  if(!nouveau)$("#kDel").onclick=function(){fermer();setTimeout(function(){confirmer("Supprimer la dictée « "+(x.t||(i+1))+" » et les mots préparés pour elle ?","Supprimer",function(){
+    var ordre=S.data.textes.map(function(_,k){return k+1}); ordre.splice(i,1); S.data.textes.splice(i,1); renumeroter(ordre); kitPrep(); S.ui.cur=Math.max(0,Math.min(S.ui.cur,S.data.textes.length-1)); modifier(); rendre(); toast("Dictée supprimée · Ctrl+Z pour annuler")})},60)};
+  $("#kO").onclick=function(){
+    var src=nettoyer($("#kS").value).split(/\n\s*\n/).map(function(p){return p.replace(/\s*\n\s*/g," ").trim()}).filter(Boolean).join(" ¶ ");
+    if(!src){toast("Écris ou colle le texte de la dictée");$("#kS").focus();return}
+    var neuf={id:x.id||("d"+Date.now().toString(36)),t:nettoyer($("#kT").value).trim(),notion:nettoyer($("#kN").value).trim(),src:src,mots:listeMots($("#kM").value),trous:listeMots($("#kR").value),date:$("#kD").value||""};
+    var n=nouveau?S.data.textes.length+1:i+1;
+    if(nouveau)S.data.textes.push(neuf); else { if(neuf.src!==x.src)delete S.data.ov[n]; if(JSON.stringify(neuf.mots)!==JSON.stringify(x.mots))delete S.data.mots[n]; S.data.textes[i]=neuf; }
+    kitPrep(); appliquerTrous(n,neuf.trous,nouveau||neuf.src!==x.src?[]:x.trous);
+    if(nouveau)S.ui.cur=n-1; fermer(); modifier(); rendre(); toast(nouveau?"Dictée ajoutée":"Dictée enregistrée");
+  };
+  setTimeout(function(){var f=$("#kT");if(f)f.focus()},50);
+}
+function devoirsTexte(){var j=aujourdhui();return etapesDu(j).filter(function(x){return x.devoir}).map(function(x){return x.devoir}).join("\n")}
+function projeter(){var t=devoirsTexte(); var el=document.createElement("div"); el.id="kproj";
+  el.style.cssText="position:fixed;inset:0;z-index:40;background:#fff;color:#111A2C;display:flex;flex-direction:column;justify-content:center;padding:5vw;font:600 clamp(28px,5vw,72px)/1.35 Lexend,Arial,sans-serif;cursor:pointer";
+  el.innerHTML='<div style="font-size:.5em;color:#475166;margin-bottom:.6em">Devoirs · '+esc(fcourt(j0()))+'</div>'+t.split("\n").map(function(l){return '<p style="margin:0 0 .5em">'+esc(l)+'</p>'}).join("")+'<div style="font-size:.3em;color:#8A96A5;margin-top:1em">Touche ou Échap pour fermer</div>';
+  function fin(){el.remove();document.removeEventListener("keydown",esc1);if(document.fullscreenElement)document.exitFullscreen().catch(function(){})}
+  function esc1(e){if(e.key==="Escape")fin()}
+  el.onclick=fin; document.addEventListener("keydown",esc1); document.body.append(el); if(el.requestFullscreen)el.requestFullscreen().catch(function(){});}
+function j0(){return aujourdhui()}
+function etiquettes(){
+  var prenoms=(window.MaClasse?MaClasse.charger().eleves.map(function(e){return e.prenom}):[]);
+  ouvrir('<h2 style="margin-top:0">🏷️ Étiquettes de devoirs</h2><p class="small muted">Une étiquette par élève, à coller dans le cahier de textes (planche A4, 2 colonnes).</p>'
+   +'<div class="hrow"><span>Nombre d’étiquettes</span><input type="number" id="kNb" min="1" max="60" value="'+(prenoms.length||24)+'" style="width:90px"></div>'
+   +(prenoms.length?'<label class="small"><input type="checkbox" id="kPr"> Écrire le prénom de chaque élève (Ma classe)</label>':'')
+   +'<div class="row end" style="margin-top:10px"><button class="btn" id="kA2">Annuler</button><button class="btn p" id="kGo">🖨️ Imprimer</button></div>');
+  $("#kA2").onclick=fermer;
+  $("#kGo").onclick=function(){var nb=Math.max(1,Math.min(60,+$("#kNb").value||1)), avec=$("#kPr")&&$("#kPr").checked, t=devoirsTexte();
+    var noms=avec?prenoms:Array(nb).fill(""); var z=document.getElementById("kprint")||document.body.appendChild(Object.assign(document.createElement("div"),{id:"kprint"}));
+    z.innerHTML='<div class="kgrid">'+noms.slice(0,avec?prenoms.length:nb).map(function(p){return '<div class="klab">'+(p?'<b>'+esc(p)+'</b><br>':'')+'<small>'+esc(fcourt(aujourdhui()))+'</small><br>'+esc(t).replace(/\n/g,"<br>")+'</div>'}).join("")+'</div>';
+    fermer(); document.body.classList.add("kprint"); addEventListener("afterprint",function(){document.body.classList.remove("kprint")},{once:true}); setTimeout(function(){window.print()},150);};
+}
+document.addEventListener("click",function(e){
+  if(!MODE_APP)return; var b=e.target.closest("[data-ka]"); if(!b)return; var a=b.dataset.ka, i=+b.dataset.ki;
+  if(a==="ajout")editer(-1);
+  else if(a==="edit")editer(i);
+  else if(a==="voir"){S.ui.cur=i;S.ui.choisi=1;sauverLocal();aller("dictee");}
+  else if(a==="haut"&&i>0){var T=S.data.textes,ordre=T.map(function(_,k){return k+1});var t=T[i];T[i]=T[i-1];T[i-1]=t;var o=ordre[i];ordre[i]=ordre[i-1];ordre[i-1]=o;renumeroter(ordre);kitPrep();modifier();rafraichir();}
+  else if(a==="copier"){var t2=devoirsTexte();(navigator.clipboard?navigator.clipboard.writeText(t2):Promise.reject()).then(function(){toast("Devoirs copiés : colle-les dans l’ENT ou le cahier de textes")}).catch(function(){ouvrir('<p style="margin-top:0">Sélectionne et copie :</p><textarea style="width:100%" rows="5">'+esc(t2)+'</textarea><div class="row end"><button class="btn" onclick="fermer()">Fermer</button></div>')});}
+  else if(a==="projeter")projeter();
+  else if(a==="etiq")etiquettes();
+  else if(a==="addstep"){S.data.cycle.etapes.push({id:"s"+Date.now().toString(36),on:true,nom:"Nouvelle étape",sem:0,jour:3,devoir:""});modifier();rafraichir();}
+  else if(a==="delstep"){S.data.cycle.etapes.splice(i,1);modifier();rafraichir();}
+  else if(a==="cycdef")confirmer("Revenir au cycle proposé (tes étapes seront remplacées) ?","Revenir",function(){S.data.cycle=cycleDefaut();modifier();rendre()});
+  else if(a==="partager"){var paquet={outil:"dictees-kit",version:VERSION,dictees:S.data.textes.map(function(x){return {t:x.t,notion:x.notion,src:x.src,mots:x.mots,trous:x.trous}})};
+    enregistrer("mes-dictees.json",new Blob([JSON.stringify(paquet,null,1)],{type:"application/json"}));}
+});
+document.addEventListener("toggle",function(e){if(MODE_APP&&e.target.id==="kcyc"){S.ui.cycOuvert=e.target.open;sauverLocal()}},true);
+document.addEventListener("change",function(e){
+  if(!MODE_APP)return; var s=e.target;
+  if(s.id==="kimp"&&s.files[0]){s.files[0].text().then(function(t){var p=JSON.parse(t),L3=(p&&Array.isArray(p.dictees))?p.dictees:[]; if(!L3.length){toast("Ce fichier ne contient pas de dictées");return}
+      L3.forEach(function(x){S.data.textes.push({id:"d"+Date.now().toString(36)+Math.random().toString(36).slice(2,5),t:nettoyer(x.t),notion:nettoyer(x.notion),src:nettoyer(String(x.src||"").split(" ¶ ").join("\n\n")).split(/\n\s*\n/).join(" ¶ "),mots:(x.mots||[]).map(String),trous:(x.trous||[]).map(String),date:""}); kitPrep(); var n=S.data.textes.length; appliquerTrous(n,(x.trous||[]).map(String),[]);});
+      modifier();rendre();toast(L3.length+" dictée"+(L3.length>1?"s importées":" importée")+" · ajoute leurs dates");}).catch(function(){toast("Fichier illisible")});s.value="";return}
+  var k=s.dataset.kc; if(!k)return;
+  if(k==="rythme"){S.data.cycle.rythme=+s.value;modifier();return}
+  var st=S.data.cycle.etapes[+s.dataset.ke]; if(!st)return;
+  if(k==="on")st.on=s.checked; else if(k==="sem"||k==="jour")st[k]=+s.value; else st[k]=s.value;
+  modifier(); if(k!=="nom"&&k!=="devoir")rafraichir();
+});
+
+var VUES={dictee:vueDictee,mots:vueMots,imprimer:vueImprimer,reglages:vueReglages};
+if(MODE_APP)VUES.textes=vueTextes;
+function rendre(){
+  if(MODE_APP){ kitPrep(); if(!D.length)S.ui.tab="textes"; }
+  else if(!D.length)return;
+  pourOk(); var t=VUES[S.ui.tab]?S.ui.tab:"dictee", y=window.scrollY;
+  $("#app").innerHTML='<header>'+(MODE_APP?'<a class="back" href="../">← Outils</a>':'<a class="back" href="index.html" data-cnav-hide>← Classe</a>')+'<h1>Dictées adaptées</h1><span class="hist"><button class="btn sq" id="bU" data-act="undo" title="Annuler (Ctrl+Z)" aria-label="Annuler la dernière modification">↶</button><button class="btn sq" id="bR" data-act="redo" title="Rétablir (Ctrl+Maj+Z)" aria-label="Rétablir">↷</button></span><div id="sync" style="width:100%;text-align:right"></div></header>'+VUES[t]();
+  $("#tabs").innerHTML=ONGLETS.filter(function(o){return D.length||o[0]==="textes"||o[0]==="reglages"}).map(function(o){return '<button data-tab="'+o[0]+'" '+(t===o[0]?'aria-current="page"':"")+'><span aria-hidden="true">'+o[1]+'</span>'+o[2]+'</button>'}).join("");
+  afficherSync(); majBoutonsHist(); var s2=$("#sync2"); if(s2)s2.textContent=$("#sync").textContent;
+  var pk=$("#pick"); if(pk)pk.onchange=function(){S.ui.cur=+pk.value;S.ui.choisi=1;sauverLocal();rendre()};
+  var th=$("#th"); if(th){th.value=S.data.theme;th.onchange=function(){S.data.theme=th.value;modifier();appliquerTheme()}}
+  var imp=$("#imp"); if(imp)imp.onchange=function(){if(imp.files[0])importer(imp.files[0])};
+  var vo=$("#voir"); if(vo)vo.onchange=function(){S.ui.voir=vo.checked;sauverLocal();rendre()};
+  var to=$("#tout"); if(to)to.onchange=function(){S.data.tout=to.checked;modifier();rendre()};
+  document.querySelectorAll("[data-pre]").forEach(function(i){i.onchange=function(){var e=S.data.eleves.find(function(x){return x.id===i.dataset.pre});if(e){e.prenom=i.value.trim();modifier()}}});
+  document.querySelectorAll("[data-notion]").forEach(function(s){s.onchange=function(){S.data.notions[s.dataset.notion]=s.value==="auto"?"auto":+s.value;modifier();rendre()}});
+  document.querySelectorAll("[data-per]").forEach(function(s){s.onchange=function(){var v=Math.max(1,Math.min(30,+s.value||1));S.data.periodes[+s.dataset.per]=v;S.data.periodes.sort(function(a,b){return a-b});modifier();rendre()}});
+  if(Math.abs(window.scrollY-y)>2&&rendre.garder)window.scrollTo(0,y); rendre.garder=false;
+}
+
+/* ---------- actions ---------- */
+function rafraichir(){rendre.garder=true;rendre()}
+document.addEventListener("click",function(e){
+  var b=e.target.closest("button,[data-tab]"); if(!b||b.closest("#eleve")||b.closest("#dlg"))return;
+  var ds=b.dataset, n=S.ui.cur+1;
+  if(ds.tab){aller(ds.tab);return}
+  if(ds.pour){S.ui.pour=ds.pour;sauverLocal();rafraichir();return}
+  if(ds.qui){S.ui.qui=ds.qui;sauverLocal();rafraichir();return}
+  if(ds.brush){S.ui.brush=ds.brush;sauverLocal();rafraichir();return}
+  if(ds.doc){var dd=S.ui.docs||{fiche:true,ban:true,eti:false,cor:true};dd[ds.doc]=!dd[ds.doc];S.ui.docs=dd;sauverLocal();rafraichir();return}
+  if(ds.k&&S.ui.tab==="mots"&&S.ui.brush==="C"&&(ds.oi!==undefined||ds.ox!==undefined||ds.oadd||ds.oed)){
+    if(ds.oi!==undefined){ if(S.ui.selC!==ds.k){S.ui.selC=ds.k;sauverLocal();rafraichir();return} modifierChoix(n,ds.k,function(ch){ch.k=+ds.oi}); }
+    else if(ds.ox!==undefined) modifierChoix(n,ds.k,function(ch){var j=+ds.ox;ch.o.splice(j,1);if(ch.k>j)ch.k--;});
+    else if(ds.oadd) ajouterProposition(n,ds.k);
+    else editerChoix(n,trouverPart(n,ds.k));
+    return; }
+  if(ds.k){peindre(n,ds.k);return}
+  if(ds.fait){var k=+ds.fait; S.data.faites[k]=!S.data.faites[k]; modifier(); rafraichir(); return}
+  if(ds.opt){ if(ds.el==="base"){var kb=ds.opt==="det"?"detBase":"proBase"; S.data[kb]=S.data[kb]===false;} else {var eo=S.data.eleves.find(function(x){return x.id===ds.el}); if(eo)eo[ds.opt]=eo[ds.opt]===false;} modifier(); rafraichir(); return; }
+  if(ds.addp){S.data.eleves.push({id:"e"+Date.now().toString(36),prenom:ds.addp,nb:S.data.nbDefaut});modifier();rafraichir();return}
+  if(ds.up!==undefined||ds.down!==undefined||ds.del!==undefined){ var m=motsDe(n).slice();
+    if(ds.del!==undefined)m.splice(+ds.del,1); else {var i=+(ds.up!==undefined?ds.up:ds.down),j=ds.up!==undefined?i-1:i+1,tmp=m[i];m[i]=m[j];m[j]=tmp;}
+    S.data.mots[n]=m; modifier(); rafraichir(); return; }
+  if(ds.nb){ var dl=+ds.d; if(ds.nb==="base")S.data.nbDefaut=borne(S.data.nbDefaut+dl); else {var el=S.data.eleves.find(function(x){return x.id===ds.nb}); if(el)el.nb=borne(el.nb+dl);} modifier(); rafraichir(); return; }
+  if(ds.cop){S.data.copies=Math.max(1,Math.min(8,S.data.copies+(+ds.cop)));modifier();rafraichir();return}
+  if(ds.delel){var el2=S.data.eleves.find(function(x){return x.id===ds.delel}); confirmer("Retirer "+(el2&&el2.prenom?el2.prenom:"cet élève")+" de la liste des dictées adaptées ? Ses réponses en ligne sur cet appareil seront aussi effacées.","Retirer",function(){S.data.eleves=S.data.eleves.filter(function(x){return x.id!==ds.delel});Object.keys(S.ui.rep).forEach(function(k2){if(k2.split(":")[1]===ds.delel)delete S.ui.rep[k2]});if(S.ui.pour===ds.delel)S.ui.pour="base";if(S.ui.qui===ds.delel)S.ui.qui="base";modifier();rendre()});return}
+  var L2=listeDictees(), pos=L2.findIndex(function(d){return d.n===n});
+  switch(ds.act){
+    case "prev": if(pos>0){S.ui.cur=L2[pos-1].n-1;S.ui.choisi=1;sauverLocal();rendre()} break;
+    case "next": if(pos<L2.length-1){S.ui.cur=L2[pos+1].n-1;S.ui.choisi=1;sauverLocal();rendre()} break;
+    case "rétablir": confirmer("Revenir à la dictée proposée ? Ta liste de mots et les mots que tu as peints pour cette dictée seront remplacés.","Revenir",function(){delete S.data.mots[n];delete S.data.ov[n];modifier();rendre()}); break;
+    case "addel": S.data.eleves.push({id:"e"+Date.now().toString(36),prenom:"",nb:S.data.nbDefaut}); modifier(); rafraichir(); (function(){var ins=document.querySelectorAll("[data-pre]"); if(ins.length)ins[ins.length-1].focus();})(); break;
+    case "progdef": confirmer("Revenir au programme de l’année (règles H1 à H17) pour la liste des dictées faites ?","Revenir",function(){S.data.faites=defaut().faites;modifier();rendre()}); break;
+    case "fbase": S.data.ficheBase=!S.data.ficheBase; modifier(); rafraichir(); toast(S.data.ficheBase?"Fiche sans prénom affichée":"Fiche sans prénom masquée"); break;
+    case "notdef": S.data.notions=defaut().notions; modifier(); rafraichir(); toast("Notions remises en automatique"); break;
+    case "enligne": ouvrirEleve(); break;
+    case "undo": annuler(); break;
+    case "redo": refaire(); break;
+    case "pdf": pdfDictee(); break;
+    case "pdfper": pdfPeriode(+$("#per").value); break;
+    case "export": exporter(); break;
+  }
+});
+function trouverPart(n,key){var ps=parse(n);for(var i=0;i<ps.length;i++)for(var j=0;j<ps[i].length;j++)if(ps[i][j].key===key)return ps[i][j];return null}
+function setOv(n,key,v){var o=Object.assign({},ovDe(n)); if(v===undefined)delete o[key]; else o[key]=v; if(Object.keys(o).length)S.data.ov[n]=o; else delete S.data.ov[n];}
+function peindre(n,key){
+  var p=trouverPart(n,key); if(!p)return; var w=p.t==='w'?p.w:p.opts[p.ok], br=S.ui.brush, mots=motsDe(n).slice(), i=mots.map(cle).indexOf(cle(w)), st=etatMot(n,p,mots.map(cle));
+  /* mot proprement dit, en minuscule sauf nom propre */
+  var mot=(p.t==='w'&&!p.first&&/^\p{Lu}/u.test(w))?w:w.toLowerCase();
+  if(br==="L"){
+    if(st.e==="L"){mots.splice(i,1);S.data.mots[n]=mots;}
+    else { setOv(n,key, p.t==='c'?'g':undefined); if(i<0){mots.push(mot);S.data.mots[n]=mots; var pnb=profil(S.ui.pour).nb; if(mots.length>pnb)toast("« "+mot+" » est le mot n° "+mots.length+" : "+(S.ui.pour==="base"?"la fiche sans prénom":nomPour(S.ui.pour)||"cet élève")+" n’en apprend que "+pnb+". Monte-le avec ▲ ou touche + au-dessus de la liste."); else if(mots.length>8)toast("⚠ "+mots.length+" mots : plus de 8");} }
+  } else if(br==="E"){
+    setOv(n,key, st.e==="E"?(p.t==='c'?'g':undefined):'e');
+  } else if(br==="C"){
+    if(st.e==="C"){ editerChoix(n,p); return; }
+    var pr=p.t==='c'?{o:p.opts.slice(),k:p.ok}:proposer(w);
+    if(pr.o.length<2){ editerChoix(n,p); return; }
+    setOv(n,key,{o:pr.o,k:pr.k}); S.ui.selC=key;
+  }
+  else { /* Donné : le mot est écrit dans le texte */
+    if(i>=0&&st.e==="L"){mots.splice(i,1);S.data.mots[n]=mots;}
+    if(p.t==='c') setOv(n,key, ovDe(n)[key]==='g'?undefined:'g');
+    else setOv(n,key, st.e==="D"||st.e==="P"?'g':(ovDe(n)[key]==='g'?undefined:(st.e==="G"?undefined:undefined)));
+    if(p.t==='w'&&st.force) setOv(n,key,undefined);
+  }
+  modifier(); rafraichir();
+}
+function modifierChoix(n,key,fn){ /* retouche directe des propositions d'un choix */
+  var p=trouverPart(n,key); if(!p)return; var ch=choixDe(n,p); if(!ch)return; fn(ch);
+  var o2=[],k2=-1; ch.o.forEach(function(x,j){x=String(x||"").trim(); if(x&&o2.indexOf(x)<0){if(j===ch.k)k2=o2.length;o2.push(x)}});
+  if(o2.length<2||k2<0){toast("Il faut au moins deux propositions, dont la juste");return}
+  setOv(n,key,{o:o2,k:k2}); modifier(); rafraichir();
+}
+function ajouterProposition(n,key){
+  ouvrir('<h2 style="margin-top:0">Ajouter une proposition</h2><p class="small muted" style="margin-top:0">Une forme qui se prononce pareil, pour que l’élève réfléchisse à l’orthographe.</p><div class="prow"><input type="text" id="aP" aria-label="Nouvelle proposition" autocomplete="off" autocapitalize="off" spellcheck="false"></div><div class="row end"><button class="btn" id="aN">Annuler</button><button class="btn p" id="aO">Ajouter</button></div>');
+  var inp=$("#aP"); setTimeout(function(){inp.focus()},50);
+  function ok(){var v=inp.value.trim(); if(!v)return; fermer(); modifierChoix(n,key,function(ch){ch.o.push(v)});}
+  $("#aN").onclick=fermer; $("#aO").onclick=ok; inp.onkeydown=function(e){if(e.key==="Enter")ok()};
+}
+function editerChoix(n,p){
+  var o=ovDe(n)[p.key], w=p.t==='w'?p.w:p.opts[p.ok];
+  var pr=(o&&typeof o==="object")?{o:o.o.slice(),k:o.k}:(p.t==='c'?{o:p.opts.slice(),k:p.ok}:proposer(w));
+  function dessiner(){
+    $("#dlg").innerHTML='<h2 style="margin-top:0">Mot à choisir : « '+esc(w)+' »</h2><p class="small muted" style="margin-top:0">Coche la bonne réponse. Modifie, ajoute ou retire des propositions.</p>'
+     +pr.o.map(function(x,j){return '<div class="prow"><label><input type="radio" name="okc" value="'+j+'" '+(j===pr.k?"checked":"")+'> juste</label><input type="text" value="'+esc(x)+'" data-pi="'+j+'" aria-label="Proposition '+(j+1)+'"><button class="btn sq danger" data-px="'+j+'" aria-label="Retirer" '+(pr.o.length<3?"disabled":"")+'>✕</button></div>'}).join("")
+     +'<div class="row"><button class="btn sm" id="pAdd">＋ Une proposition</button><button class="btn sm" id="pAuto">✨ Propositions automatiques</button></div>'
+     +'<div class="row end"><button class="btn danger" id="pDel">'+(p.t==='c'?"Choix d’origine":"Plus de choix")+'</button><button class="btn" id="pAn">Annuler</button><button class="btn p" id="pOk">Enregistrer</button></div>';
+    $("#dlg").querySelectorAll("[data-pi]").forEach(function(inp){inp.oninput=function(){pr.o[+inp.dataset.pi]=inp.value}});
+    $("#dlg").querySelectorAll("input[name=okc]").forEach(function(r){r.onchange=function(){pr.k=+r.value}});
+    $("#dlg").querySelectorAll("[data-px]").forEach(function(bx){bx.onclick=function(){var j=+bx.dataset.px;pr.o.splice(j,1);if(pr.k===j)pr.k=0;else if(pr.k>j)pr.k--;dessiner()}});
+    $("#pAdd").onclick=function(){pr.o.push("");dessiner();var ins=$("#dlg").querySelectorAll("[data-pi]");ins[ins.length-1].focus()};
+    $("#pAuto").onclick=function(){pr=proposer(w);dessiner()};
+    $("#pAn").onclick=fermer;
+    $("#pDel").onclick=function(){fermer(); setOv(n,p.key, undefined); modifier(); rafraichir();};
+    $("#pOk").onclick=function(){
+      var o2=[],k2=-1; pr.o.forEach(function(x,j){x=String(x||"").trim(); if(x&&o2.indexOf(x)<0){if(j===pr.k)k2=o2.length;o2.push(x)}});
+      if(o2.length<2){toast("Il faut au moins deux propositions");return} if(k2<0){toast("Coche la bonne réponse");return}
+      fermer(); setOv(n,p.key,{o:o2,k:k2}); modifier(); rafraichir(); };
+  }
+  ouvrir(""); dessiner();
+}
+function ouvrir(html,bloquant){$("#dlg").innerHTML=html;$("#ov").classList.add("on");$("#ov").dataset.b=bloquant?"1":"";history.pushState({dlg:1},"")}
+function fermer(){if(!$("#ov").classList.contains("on"))return;$("#ov").classList.remove("on");$("#dlg").style.maxWidth="";if(history.state&&history.state.dlg){skipPop++;history.back()}}
+$("#ov").addEventListener("click",function(e){if(e.target===$("#ov")&&!$("#ov").dataset.b)fermer()});
+function confirmer(t,ok,fn){ouvrir('<p style="margin-top:0">'+esc(t)+'</p><div class="row end"><button class="btn" id="cA">Annuler</button><button class="btn p" id="cO">'+esc(ok)+'</button></div>');$("#cA").onclick=fermer;$("#cO").onclick=function(){fermer();fn()}}
+
+/* ---------- téléchargements ---------- */
+var dlP=null; function getDl(){return dlP||(dlP=(window.claude&&window.claude.use)?window.claude.use("downloads").catch(function(){return null}):Promise.resolve(null))}
+async function enregistrer(filename,blob){ var dl=await getDl(); if(!dl){toast("Le téléchargement n’est pas disponible ici : ouvre Classe dans Claude.");return false}
+  try{await dl.save({filename:filename,data:blob});return true}catch(e){toast(e&&e.code==="declined"?"Téléchargement annulé.":"Le téléchargement n’a pas abouti. Réessaie.");return false} }
+function exporter(){enregistrer("dictees-adaptees-reglages.json",new Blob([JSON.stringify(S.data,null,1)],{type:"application/json"}))}
+function importer(f){f.text().then(function(t){var d=JSON.parse(t);confirmer("Remplacer tous tes réglages de dictées (élèves, listes de mots, dictées faites, notions) par ceux du fichier ?","Remplacer",function(){S.data=migrer(d);modifier();appliquerTheme();rendre();toast("Réglages restaurés")})}).catch(function(){toast("Fichier illisible")})}
+
+/* ---------- mode élève (en ligne) ---------- */
+var EV=null;
+function ouvrirEleve(){
+  var n=S.ui.cur+1,pour=S.ui.pour, c=construire(n,profil(pour)), k=n+":"+pour;
+  var st=S.ui.rep[k]; if(!st||st.sig!==c.items.length+"|"+c.items.map(function(i){return i.key}).join(","))st={c:{},b:{},done:false,sig:c.items.length+"|"+c.items.map(function(i){return i.key}).join(",")};
+  EV={n:n,pour:pour,c:c,k:k,st:st};
+  $("#eleve").classList.add("on"); document.body.style.overflow="hidden"; history.pushState({eleve:1},""); dessinerEleve(); $("#eleve").scrollTop=0;
+}
+function dessinerEleve(){
+  var n=EV.n,c=EV.c,st=EV.st,d=D[n-1],nom=nomPour(EV.pour),r=rang(n);
+  $("#eleve").innerHTML='<div class="wrap"><div class="row" style="justify-content:space-between;margin-bottom:10px"><span class="muted small">'+(r%1?"Dictée":"Dictée "+r)+(nom?" · "+esc(nom):"")+'</span><button class="btn" id="quit"><i></i>✕ Quitter (enseignant : garde appuyé)</button></div>'
+   +'<div class="sheet '+(st.done?"done":"")+'"><h1>'+(r%1?"":"Dictée "+r+" – ")+esc(d.t)+'</h1>'
+   +'<div class="help"><span class="d" aria-hidden="true"><span>an</span><span class="on">ans</span></span><span>Je touche le mot bien écrit. Il devient bleu foncé.</span><span class="g" aria-hidden="true"></span><span>J’écris le mot dans le cadre.</span></div>'
+   +'<div class="dtext">'+htmlParas(clone(c),function(it,i){return it.type==='c'
+      ?'<span class="grp" role="group" aria-label="Choix" data-i="'+i+'">'+it.opts.map(function(o,j){return '<button type="button" class="opt" data-i="'+i+'" data-j="'+j+'" aria-pressed="'+(st.c[i]===j)+'">'+esc(o)+'</button>'}).join("")+'</span>'
+      :'<span class="gw"><input class="gap'+(it.src!=='L'?' e':'')+'" data-i="'+i+'" style="width:'+Math.max(4,it.ok.length*.7+1.6)+'em" aria-label="Mot à écrire" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" value="'+esc(st.b[i]||"")+'"><small></small></span>'})+'</div>'
+   +'<div class="row"><button class="btn p" id="fin" '+(st.done?"hidden":"")+'>J’ai terminé</button><button class="btn" id="raz">Recommencer</button><span id="emsg" class="small" style="color:var(--ko)"></span></div>'
+   +'<div class="score" id="score" '+(st.done?"":"hidden")+'></div></div></div>';
+  document.querySelectorAll("#eleve .opt").forEach(function(b){b.onclick=function(){if(EV.st.done)return;var i=+b.dataset.i,j=+b.dataset.j;EV.st.c[i]=j;garderEleve();document.querySelectorAll('#eleve .opt[data-i="'+i+'"]').forEach(function(o){o.setAttribute("aria-pressed",+o.dataset.j===j)})}});
+  document.querySelectorAll("#eleve .gap").forEach(function(g){g.readOnly=st.done;g.oninput=function(){EV.st.b[g.dataset.i]=g.value;garderEleve()}});
+  $("#fin").onclick=terminer;
+  $("#raz").onclick=function(){ouvrir('<p style="margin-top:0">Effacer toutes les réponses de cette dictée ?</p><div class="row end"><button class="btn" id="cA">Non</button><button class="btn p" id="cO">Oui, effacer</button></div>');$("#cA").onclick=fermer;$("#cO").onclick=function(){fermer();EV.st={c:{},b:{},done:false,sig:EV.st.sig};garderEleve();dessinerEleve()}};
+  var q=$("#quit"),t=null;
+  q.onpointerdown=function(){q.classList.add("hold");t=setTimeout(function(){fermerEleve()},1500)};
+  function stop(){q.classList.remove("hold");clearTimeout(t)} q.onpointerup=stop;q.onpointerleave=stop;q.onpointercancel=stop;
+  q.onclick=function(e){e.preventDefault(); $("#emsg").textContent="Pour quitter, l’enseignant garde le doigt appuyé sur « Quitter »."};
+  q.onkeydown=function(e){if(e.key==="Enter"&&e.shiftKey)fermerEleve()};
+  if(st.done)corriger();
+}
+function garderEleve(){S.ui.rep[EV.k]=EV.st;sauverLocal()}
+function norm(s){return (s||"").trim().replace(/'/g,"’").replace(/\s+/g," ")}
+function terminer(){
+  var vides=EV.c.items.filter(function(it,i){return it.type==='c'?EV.st.c[i]===undefined:!norm(EV.st.b[i])}).length;
+  if(vides&&!EV.prev){$("#emsg").textContent="Il reste "+vides+" case"+(vides>1?"s":"")+" vide"+(vides>1?"s":"")+". Relis, puis touche encore « J’ai terminé ».";EV.prev=1;return}
+  EV.prev=0; EV.st.done=true; garderEleve(); dessinerEleve(); $("#score").scrollIntoView({behavior:"smooth",block:"nearest"});
+}
+function corriger(){
+  var ok=0,tot=EV.c.items.length;
+  EV.c.items.forEach(function(it,i){
+    if(it.type==='c'){var sel=EV.st.c[i]; if(sel===it.ok)ok++; if(sel===undefined)document.querySelector('#eleve .grp[data-i="'+i+'"]').classList.add("miss");
+      document.querySelectorAll('#eleve .opt[data-i="'+i+'"]').forEach(function(o){var j=+o.dataset.j;o.classList.toggle("good",j===it.ok);o.classList.toggle("bad",j===sel&&j!==it.ok);o.disabled=true});}
+    else {var g=document.querySelector('#eleve .gap[data-i="'+i+'"]'),good=norm(EV.st.b[i])===norm(it.ok);if(good)ok++;g.classList.toggle("good",good);g.classList.toggle("bad",!good);g.nextElementSibling.textContent=good?"":it.ok;}
+  });
+  var pc=tot?Math.round(ok*100/tot):0;
+  $("#score").innerHTML='<strong>Mots réussis : '+ok+' / '+tot+'</strong><br>Réussite : <strong>'+pc+' %</strong><br><span class="small muted">'+tot+' mots à écrire ou à choisir : '+EV.c.nB+' à écrire, '+EV.c.nC+' à choisir.</span>';
+}
+function fermerEleve(viaRetour){ $("#eleve").classList.remove("on");$("#eleve").innerHTML="";document.body.style.overflow="";EV=null; if(!viaRetour&&history.state&&history.state.eleve){skipPop++;history.back()} }
+
+/* ---------- pages A4 ---------- */
+function titreDictee(n){var r=rang(n);return (r%1?"":"Dictée "+r+" – ")+D[n-1].t}
+function tete(n,droite){return '<div class="ph"><b>'+esc(titreDictee(n))+'</b><span>'+(droite||"")+'</span></div>'}
+function pageFiche(n,pour){
+  var c=construire(n,profil(pour)), nom=nomPour(pour);
+  var corps=htmlParas(clone(c),function(it){return it.type==='c'?'<span class="pg">'+it.opts.map(function(o){return '<i>'+esc(o)+'</i>'}).join("")+'</span>':'<span class="pz" style="width:'+Math.max(3.2,it.ok.length*.6+1)+'em"></span>'});
+  return '<div class="page fiche">'+tete(n,"Dictée adaptée")
+   +'<div class="who"><span>Prénom : '+(nom?'<b>'+esc(nom)+'</b>':"……………………………")+'</span><span>Date : ………………………</span></div>'
+   +'<div class="cons"><span class="d"><i>an</i><i>ans</i></span><span>J’entoure le mot bien écrit.</span><span class="g"></span><span>J’écris le mot dans le cadre.</span><span>À la fin, je relis chaque phrase.</span></div>'
+   +'<div class="pt">'+corps+'</div>'
+   +'<div class="psc"><div>Mots à écrire ou à choisir<br><b>'+c.total+'</b></div><div>Mots réussis<br><b>…… / '+c.total+'</b></div><div>Réussite<br><b>…… %</b></div></div>'
+   +'<div class="foot">'+(MODE_APP?'Dictée adaptée · Outils de classe partagés':'D’après « Dictées et histoire des arts », © Retz 2018 · usage de la classe')+'</div></div>';
+}
+function pagesBandeaux(n,qui){
+  var liste=qui==="tous"?S.data.eleves.map(function(e){return e.id}):Array(S.data.copies).fill(qui);
+  function ban(p){var m=motsDe(n).slice(0,nbPour(p)),nom=nomPour(p);return '<div class="ban"><div class="bh"><span><b>Mes mots à apprendre</b> · '+esc(titreDictee(n))+'</span><span>'+(nom?esc(nom):"")+'</span></div><div class="bw">'+m.map(function(w){return '<span>'+esc(w)+'</span>'}).join("")+'</div></div>'}
+  var pages=[];for(var i=0;i<liste.length;i+=4)pages.push('<div class="page">'+liste.slice(i,i+4).map(ban).join("")+'</div>');return pages;
+}
+function pagesEtiquettes(n,pour){var m=motsDe(n).slice(0,nbPour(pour)),nom=nomPour(pour),pages=[];
+  for(var i=0;i<m.length;i+=8)pages.push('<div class="page">'+tete(n,nom?esc(nom):"Étiquettes-mots")+'<div class="eti">'+m.slice(i,i+8).map(function(w){return '<div>'+esc(w)+'</div>'}).join("")+'</div></div>');return pages}
+function pageCorrige(n){
+  var tous=motsDe(n), c=construire(n,{nb:tous.length,det:true,pro:true});
+  var lis=c.items.map(function(it){return it.type==='c'?'<li><b>'+esc(it.opts[it.ok])+'</b> <span style="color:#5B6878">('+(it.cat==='homo'&&it.notion?it.notion:CATS[it.cat]||it.cat)+')</span></li>':'<li><b>'+esc(it.ok)+'</b> <span style="color:'+(it.src==='L'?'#9A7B00':'#B45309')+'">('+({e:"à écrire",d:"déterminant",p:"pronom"}[it.src]||"mot appris n° "+it.rang)+')</span></li>'}).join("");
+  var groupes=(baseOn()?[["Fiche sans prénom",profil("base")]]:[]).concat(S.data.eleves.map(function(e){return [e.prenom||"?",profil(e.id)]}));
+  var totaux=[]; groupes.forEach(function(g){var T=construire(n,g[1]).total; if(totaux.indexOf(T)<0)totaux.push(T)}); totaux.sort(function(a,b){return a-b});
+  var tab=totaux.map(function(T){var rows=[],cells=[];for(var k=0;k<=T;k++)cells.push(k);for(var i=0;i<cells.length;i+=14)rows.push(cells.slice(i,i+14));
+    return '<p style="margin:10px 0 4px;font-size:14px"><b>Sur '+T+'</b> :</p><table class="bar2">'+rows.map(function(r){return '<tr>'+r.map(function(k){return '<td><b>'+k+'</b><br>'+Math.round(k*100/T)+' %</td>'}).join("")+'</tr>'}).join("")+'</table>'}).join("");
+  return '<div class="page">'+tete(n,"Corrigé et barème · enseignant")
+   +'<p style="font-size:14px;margin:0 0 6px">Dicter les bandes jaune et verte en entier. 1 point par mot juste. Un élève qui apprend moins de mots a les suivants écrits sur sa fiche ; de même pour les déterminants et les pronoms si l’option est retirée. Réponses dans l’ordre du texte, avec toutes les options :</p>'
+   +'<ol class="cor">'+lis+'</ol>'
+   +'<table style="font-size:14px;margin-top:10px"><tr><th>Pour</th><th>Mots appris</th><th>Total</th></tr>'+groupes.map(function(g){return '<tr><td>'+esc(g[0])+'</td><td>'+g[1].nb+' : '+esc(tous.slice(0,g[1].nb).join(", "))+(g[1].det||g[1].pro?'<br><small>+ '+[g[1].det?"déterminants":"",g[1].pro?"pronoms sujets":""].filter(Boolean).join(" et ")+' à écrire</small>':'')+'</td><td>'+construire(n,g[1]).total+'</td></tr>'}).join("")+'</table>'+tab+'</div>';
+}
+function pagesPeriode(k,qui){
+  var ds=dicteesPeriode(k), pers=qui==="tous"?S.data.eleves.map(function(e){return e.id}):[qui];
+  return pers.map(function(p){var nom=nomPour(p),nb=nbPour(p);
+    return '<div class="page"><div class="ph"><b>Mes mots à apprendre · Période '+k+'</b><span>'+(nom?esc(nom):"")+'</span></div><table style="font-size:20px">'
+     +ds.map(function(d){return '<tr><td style="width:36%;font-size:15px;color:#5B6878">Dictée '+rang(d.n)+'<br>'+esc(d.t)+'</td><td style="line-height:1.9">'+motsDe(d.n).slice(0,nb).map(function(w){return '<span style="background:#FFF6CC;border-radius:8px;padding:1px 8px;margin-right:6px;white-space:nowrap">'+esc(w)+'</span>'}).join(" ")+'</td></tr>'}).join("")+'</table></div>'});
+}
+async function versPdf(pages,filename){
+  if(!pages.length){toast("Rien à imprimer");return}
+  if(!window.html2canvas||!window.jspdf){toast("Les outils PDF ne se sont pas chargés. Vérifie la connexion puis réessaie.");return}
+  ouvrir('<h2 style="margin-top:0">Préparation du PDF…</h2><p class="muted" id="pp">0 / '+pages.length+'</p>',true);
+  try{ await document.fonts.ready; }catch(e){}
+  var zone=$("#printzone"), jsPDF=window.jspdf.jsPDF, pdf=new jsPDF({unit:"mm",format:"a4"}), imgs=[];
+  try{
+    for(var i=0;i<pages.length;i++){
+      zone.innerHTML=pages[i]; var pg=zone.firstElementChild; ajuster(pg);
+      var cv=await html2canvas(pg,{scale:2,backgroundColor:"#ffffff",width:794,height:1123,windowWidth:900});
+      var url=cv.toDataURL("image/jpeg",.85); if(i)pdf.addPage(); pdf.addImage(url,"JPEG",0,0,210,297); imgs.push(url);
+      var pp=$("#pp"); if(pp)pp.textContent=(i+1)+" / "+pages.length;
+    }
+  }catch(e){ zone.innerHTML=""; $("#dlg").innerHTML='<p style="margin-top:0">Le PDF n’a pas pu être préparé.</p><div class="row end"><button class="btn" id="cA">Fermer</button><button class="btn p" id="cR">Réessayer</button></div>';$("#ov").dataset.b="";$("#cA").onclick=fermer;$("#cR").onclick=function(){fermer();versPdf(pages,filename)};return }
+  zone.innerHTML="";
+  var blob=pdf.output("blob"); $("#ov").dataset.b="";
+  $("#dlg").style.maxWidth="820px";
+  $("#dlg").innerHTML='<div class="row" style="justify-content:space-between;margin:0 0 10px"><b>'+pages.length+' page'+(pages.length>1?"s":"")+'</b><span class="row" style="margin:0"><button class="btn" id="pF">Fermer</button><button class="btn p" id="pD">⬇ Télécharger le PDF</button></span></div><div id="prev"><div class="imgs">'+imgs.map(function(u,i){return '<img src="'+u+'" alt="Page '+(i+1)+'">'}).join("")+'</div></div>';
+  $("#pF").onclick=fermer;
+  $("#pD").onclick=async function(){if(await enregistrer(filename,blob))toast("PDF enregistré")};
+}
+function ajuster(pg){ var pt=pg.querySelector(".pt"); if(!pt)return; var fs=22; pt.style.setProperty("--fs",fs+"px");
+  while(pt.scrollHeight>pt.clientHeight+1&&fs>13){fs-=.5;pt.style.setProperty("--fs",fs+"px")} }
+function slug(t){return t.normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^A-Za-z0-9]+/g,"_").replace(/^_|_$/g,"")}
+function quiValide(){pourOk();return S.ui.qui}
+function pdfDictee(){
+  var n=S.ui.cur+1, qui=quiValide(), docs=S.ui.docs||{fiche:true,ban:true,eti:false,cor:true};
+  if(!docs.fiche&&!docs.ban&&!docs.eti&&!docs.cor){toast("Choisis au moins un document");return}
+  var pers=qui==="tous"?S.data.eleves.map(function(e){return e.id}):[qui], pages=[];
+  if(docs.fiche)pers.forEach(function(p){pages.push(pageFiche(n,p))});
+  if(docs.ban)pages=pages.concat(pagesBandeaux(n,qui));
+  if(docs.eti)pers.forEach(function(p){pages=pages.concat(pagesEtiquettes(n,p))});
+  if(docs.cor)pages.push(pageCorrige(n));
+  var qn=qui==="tous"?"classe":qui==="base"?"base":slug(nomPour(qui)||"eleve"), r=rang(n);
+  versPdf(pages,"Dictee"+(r%1?"_n"+n:String(r).padStart(2,"0"))+"_"+slug(D[n-1].t)+"_"+qn+".pdf");
+}
+function pdfPeriode(k){var qui=quiValide(); versPdf(pagesPeriode(k,qui),"Mots_periode"+k+"_"+(qui==="tous"?"classe":qui==="base"?"base":slug(nomPour(qui)||"eleve"))+".pdf")}
+
+/* ---------- démarrage ---------- */
+async function demarrer(){
+  if(MODE_APP){ kitPrep(); } else
+  try{ var r=await fetch("dictees-adaptees.json"); if(!r.ok)throw 0; var j=await r.json(); D=j.dictees; }
+  catch(e){ $("#app").innerHTML='<div class="card"><p>Les dictées n’ont pas pu être chargées.</p><button class="btn p" onclick="location.reload()">Réessayer</button> <a class="btn" href="index.html">← Classe</a></div>'; return; }
+  S.ui.cur=Math.max(0,Math.min(D.length-1,+S.ui.cur||0)); S.ui.choisi=0;
+  var h=location.hash.slice(1), m=h.match(/^([di])(\d+)(?:-(\w+))?$/);
+  if(m){var f=faites(), n=f[+m[2]-1]; if(n){S.ui.cur=n-1;S.ui.choisi=1;} S.ui.tab=m[1]==="i"?"imprimer":"dictee";
+    if(m[1]==="i"){S.ui.qui="tous"; S.ui.docs=m[3]==="ban"?{ban:true}:{fiche:true,cor:true};} sauverLocal();}
+  else if(VUES[h])S.ui.tab=h;
+  if(MODE_APP&&!D.length)S.ui.tab="textes";
+  history.replaceState({tab:S.ui.tab},"","#"+S.ui.tab);
+  HIST.last=JSON.stringify(S.data); appliquerTheme(); rendre(); if(L.abime)toast("Réglages illisibles sur cet appareil : copie de secours gardée");
+  initSync();
+}
+document.addEventListener("keydown",function(e){
+  if($("#eleve").classList.contains("on"))return;
+  var t=e.target, saisie=t&&(t.tagName==="INPUT"||t.tagName==="TEXTAREA"||t.tagName==="SELECT"||t.isContentEditable), ctrl=e.ctrlKey||e.metaKey, k=e.key.toLowerCase();
+  if(e.key==="Escape"&&$("#ov").classList.contains("on")&&!$("#ov").dataset.b){e.preventDefault();fermer();return}
+  if(saisie||$("#ov").classList.contains("on")||document.getElementById("kproj"))return;
+  if(ctrl&&k==="z"&&!e.shiftKey){e.preventDefault();annuler();return}
+  if(ctrl&&(k==="y"||(k==="z"&&e.shiftKey))){e.preventDefault();refaire();return}
+  if(ctrl||e.altKey)return;
+  if(e.key==="ArrowLeft"||e.key==="ArrowRight"){var b=document.querySelector('[data-act="'+(e.key==="ArrowLeft"?"prev":"next")+'"]'); if(b){e.preventDefault();b.click()} return}
+  if(S.ui.tab==="mots"&&/^[1-4]$/.test(e.key)){S.ui.brush=BR[+e.key-1][0];sauverLocal();rafraichir();return}
+  if(k==="d"||k==="p"||k==="i"||k==="r"){var tb={d:"dictee",p:"mots",i:"imprimer",r:"reglages"}[k];aller(tb);}
+});
+addEventListener("hashchange",function(){var m=location.hash.match(/^#d(\d+)$/); if(!m||!D.length)return; var n=faites()[+m[1]-1]; if(n){S.ui.cur=n-1;S.ui.choisi=1;S.ui.tab="dictee";sauverLocal();history.replaceState({tab:"dictee"},"","#dictee");rendre();window.scrollTo(0,0)}});
+demarrer();
+</script>
+<script>if(!MODE_APP)document.write('<script src="side-nav.js" defer><\/script>');</script>
+</body>
+</html>

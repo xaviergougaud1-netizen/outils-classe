@@ -4,7 +4,8 @@
    - Documents : localStorage « kit-db:<chemin> » (ex. kit-db:lecture/groupes).
    - « lecture/main » et « maths/core » (élèves) ne sont pas stockés : il est fabriqué à partir de « Ma classe » (commun/ma-classe.js, à charger avant),
      aux formats de Classe ({state:{students:[{id, n, g}]}} et {students:{groupe:[prénoms]}}) ; on n'y écrit jamais.
-   - Téléchargements : lien de téléchargement classique (Blob, texte ou data URL). */
+   - Téléchargements : lien de téléchargement classique (Blob, texte ou data URL).
+   - « assets » (photos ajoutées) : commun/kit-images.js, s'il est chargé avant. */
 (function(){
 'use strict';
 if(!(/github\.io$/.test(location.hostname) || /[?&]mode=app/.test(location.search))) return;
@@ -102,5 +103,5 @@ addEventListener('storage', function(e){
   if(e.key === 'kit-classe'){ prevenir('lecture/main'); prevenir('maths/core'); }
   else if(e.key.indexOf(P) === 0) prevenir(e.key.slice(P.length));
 });
-window.claude = {use: function(nom){ return Promise.resolve(nom === 'db' ? db : nom === 'downloads' ? downloads : null); }, kit: true};
+window.claude = {use: function(nom){ return Promise.resolve(nom === 'db' ? db : nom === 'downloads' ? downloads : nom === 'assets' && window.KitImages ? window.KitImages.assets : null); }, kit: true};
 })();

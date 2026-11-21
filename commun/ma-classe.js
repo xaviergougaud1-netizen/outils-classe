@@ -80,11 +80,25 @@ function encartEvals(el, outil){
 }
 /* Sauvegarde complète du kit : tout ce que les outils gardent sur l'appareil (élèves, groupes, plans, évaluations, dictées). */
 var JOUR = 864e5;
-function cleSauvee(k){ return /^(kit-|classe-groupes-v1|classe-plan-v1)/.test(k) && !/^kit-ui-|-secours$|^kit-export-|^kit-avant-import/.test(k); }
+function cleSauvee(k){ return /^(kit-|classe-groupes-v1|classe-plan-v1|flashmath-)/.test(k) && !/^kit-ui-|-secours$|^kit-export-|^kit-avant-import/.test(k); }
 function sauvegarde(){
   var cles = {};
   try{ for(var i = 0; i < localStorage.length; i++){ var k = localStorage.key(i); if(cleSauvee(k)) cles[k] = localStorage.getItem(k); } }catch(e){}
   return {outil:'outils-de-classe-partages', format:2, at:Date.now(), eleves:charger().eleves, cles:cles};
+}
+/* Avec les images (photos, pages de PDF) rangées par commun/kit-images.js */
+function sauvegardeComplete(){
+  var s = sauvegarde();
+  if(!window.KitImages) return Promise.resolve(s);
+  return window.KitImages.tout().then(function(l){
+    return Promise.all(l.map(function(o){ return window.KitImages.versTexte(o.blob).then(function(t){ return {id:o.id, data:t}; }); }));
+  }).then(function(imgs){ s.images = imgs; return s; }).catch(function(){ return s; });
+}
+function restaurerComplet(p){
+  var ok = restaurer(p);
+  if(!ok || !window.KitImages || !Array.isArray(p.images)) return Promise.resolve(ok);
+  return Promise.all(p.images.map(function(o){ return window.KitImages.deTexte(o.data).then(function(b){ return window.KitImages.put(b, o.id); }); }))
+    .then(function(){ return true; }).catch(function(){ return ok; });
 }
 function restaurer(p){
   if(!p || !p.cles) return false;
@@ -110,5 +124,5 @@ function plusTard(){ lsPose('kit-export-plustard', Date.now() + 7 * JOUR); }
 function dernierExport(){ var t = lsNum('kit-export-at'); return t ? new Date(t) : null; }
 window.MaClasse = {KEY: KEY, NIVEAUX: NIVEAUX, charger: charger, enregistrer: enregistrer, migrer: migrer, trier: trier,
   roster: roster, prenomLibre: prenomLibre, nouvelId: nouvelId, renommerEvals: renommerEvals, groupeDe: groupeDe, evalsOn: evalsOn, encartEvals: encartEvals,
-  sauvegarde: sauvegarde, restaurer: restaurer, exportFait: exportFait, rappelDu: rappelDu, plusTard: plusTard, dernierExport: dernierExport};
+  sauvegarde: sauvegarde, restaurer: restaurer, sauvegardeComplete: sauvegardeComplete, restaurerComplet: restaurerComplet, exportFait: exportFait, rappelDu: rappelDu, plusTard: plusTard, dernierExport: dernierExport};
 })();

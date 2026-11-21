@@ -14,10 +14,12 @@ Licence : CC BY-NC-SA 4.0.
 
 | Outil | Adresse | Version |
 |---|---|---|
-| Portail « Outils de classe partagés » | https://xaviergougaud1-netizen.github.io/outils-classe/ | 1.2.0 |
+| Portail « Outils de classe partagés » | https://xaviergougaud1-netizen.github.io/outils-classe/ | 1.3.0 |
 | Ma classe (liste d'élèves commune, sauvegarde complète) | https://xaviergougaud1-netizen.github.io/outils-classe/ma-classe/ | 1.1.0 |
 | Correcteur de calcul posé (ceintures Charivari) | https://xaviergougaud1-netizen.github.io/outils-classe/correcteur/ | 2.6.0 |
-| Ateliers de problèmes (corrigés Accès Maths CM1 et CM2) | https://xaviergougaud1-netizen.github.io/outils-classe/problemes/ | 2.1.0 |
+| Ateliers de problèmes (corrigés Accès Maths CM1 et CM2) | https://xaviergougaud1-netizen.github.io/outils-classe/problemes/ | 2.2.0 |
+| Mes problèmes (édition libre des Ateliers) | https://xaviergougaud1-netizen.github.io/outils-classe/problemes/?libre | 2.2.0 |
+| Flash maths (exercices en photo du collègue) | https://xaviergougaud1-netizen.github.io/outils-classe/flash/ | 4.8 |
 | Groupes (groupes de travail, rôles, minuteur) | https://xaviergougaud1-netizen.github.io/outils-classe/groupes/ | 1.10.0 |
 | Dictées adaptées (édition libre, cycle, devoirs) | https://xaviergougaud1-netizen.github.io/outils-classe/dictees/ | 2.5.0 |
 | Plan de classe | https://xaviergougaud1-netizen.github.io/outils-classe/plan/ | 1.6 |
@@ -28,6 +30,9 @@ Licence : CC BY-NC-SA 4.0.
 - `commun/eval.js` : évaluations A / AR / ECA / NA, Ctrl+Z, tableau PDF. Dans Classe : base `evals/<outil>`, élèves de `maths/core.students`. Dans le kit (`{local:true}`) : élèves de « Ma classe », évaluations dans localStorage `kit-evals-<outil>`, activées outil par outil (`kit-evals-on-<outil>`).
 - `commun/ma-classe.js` : la liste d'élèves du kit (localStorage `kit-classe`), réglage « Évaluer mes élèves » de chaque outil. **Toutes les clés du kit commencent par `kit-`** (même adresse github.io que Thêta).
 - `commun/kit-db.js` : dans le kit seulement, imite la base de Classe (`window.claude.use('db')` et `use('downloads')`) avec le stockage de l'appareil (`kit-db:<chemin>`) ; `lecture/main` (élèves) est fabriqué à partir de « Ma classe ». C'est ce qui permet à Groupes et Plan de classe de tourner sans modification dans les deux endroits. Exception au préfixe `kit-` : leurs copies locales gardent leurs noms d'origine (`classe-groupes-v1`, `classe-plan-v1`).
+- `commun/kit-images.js` : images du kit sur l'appareil (IndexedDB `kit-images`), adresses `kit:<id>` affichées automatiquement, imitation de la capacité « assets ». Les photos sont incluses dans « Tout exporter ».
+- `commun/mes-problemes.js` : édition libre des Ateliers (`problemes/?libre`, localStorage `kit-problemes`) : énoncé en photo ou PDF découpé en pages (pdf.js chargé à la demande), corrigé facultatif, partage par fichier (images comprises).
+- `flash/` : même fichier que l'artéfact Flash maths (https://claude.ai/artifact/JNHQ7NdEYa62AXXM4uSviF, `index.html`). Les images de base (fichier édité, `img/cm1|cm2`) restent dans l'artéfact, **jamais dans ce dépôt** ; dans le kit, la liste de base est vide et le collègue ajoute ses photos.
 - `dictees/` : même fichier que `dictees-adaptees.html` de Classe. Dans Classe : dictées Retz (dictees-adaptees.json, jamais dans ce dépôt). Dans le kit : « Mes dictées » (textes du collègue dans ses réglages), cycle réglable, devoirs (copier, projeter, étiquettes), partage par fichier.
 - Sauvegarde complète (Ma classe › « Tout exporter ») : toutes les clés `kit-*`, `classe-groupes-v1*`, `classe-plan-v1*` dans un fichier (format 2) ; rappel 30 jours après le dernier export.
 - `groupes/`, `plan/` : mêmes fichiers que `groupes.html` et `plan.html` de Classe (barre de navigation et mentions de la fluence adaptées dans le kit).
@@ -40,10 +45,11 @@ Licence : CC BY-NC-SA 4.0.
 ## Mettre à jour un outil
 1. Modifier ici (c'est l'exemplaire de référence).
 2. Changer `VERSION` dans `index.html` **et** `CACHE` dans `sw.js` (sinon les téléphones gardent l'ancienne version).
-3. Republier aussi dans Classe : `correcteur/index.html` → `correcteur.html`, `problemes/index.html` → `problemes.html`, `groupes/index.html` → `groupes.html`, `plan/index.html` → `plan.html`, `dictees/index.html` → `dictees-adaptees.html`, `commun/*` → `outils/*` (sauf `ma-classe.js` et `kit-db.js`, inutiles dans Classe).
+3. Republier aussi dans Classe : `correcteur/index.html` → `correcteur.html`, `problemes/index.html` → `problemes.html`, `groupes/index.html` → `groupes.html`, `plan/index.html` → `plan.html`, `dictees/index.html` → `dictees-adaptees.html`, (et `flash/index.html` → `index.html` de l'artéfact Flash maths), `commun/*` → `outils/*` (sauf `ma-classe.js` et `kit-db.js`, inutiles dans Classe).
 4. Ajouter une ligne dans « Nouveautés ».
 
 ## Nouveautés
+- 2026-11-21 · Kit 1.3.0 : Mes problèmes (Ateliers 2.2.0, édition libre), Flash maths 4.8 dans le kit, images sur l'appareil (kit-images.js) et dans la sauvegarde complète.
 - 2026-11-21 · Kit 1.2.0 : Dictées adaptées 2.5.0 dans le kit (édition libre, cycle réglable, devoirs) ; Ma classe 1.1.0 : « Tout exporter » (sauvegarde complète) et rappel mensuel.
 - 2026-11-21 · Kit 1.1.0 : Groupes 1.10.0 et Plan de classe 1.6 dans le kit (élèves de Ma classe, données sur l'appareil via commun/kit-db.js), même fichier que dans Classe.
 - 2026-11-21 · Kit 1.0.0 « Outils de classe partagés » : portail, Ma classe 1.0.0, Correcteur 2.6.0 et Ateliers 2.1.0 (plus de lien vers Classe sur github.io, évaluations au choix avec les élèves de Ma classe, sur l'appareil ; PDF en téléchargement classique ; mention Accès Maths).

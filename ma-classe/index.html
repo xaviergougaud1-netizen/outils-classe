@@ -128,7 +128,7 @@ footer a{color:var(--encre-douce)}
   <details class="sec" id="s-sauve" data-sec="sauve">
     <summary><span class="tuile-s" aria-hidden="true">💾</span>Sauvegarde et autre appareil</summary>
     <div class="corps">
-      <p class="note">Un seul fichier garde <b>tout</b> ce que tes outils ont enregistré sur cet appareil : élèves, groupes, plans de classe, évaluations, dictées. Pour retrouver tout cela sur un autre appareil (ou après un nettoyage du navigateur) : exporte ici, range le fichier (par exemple dans le Nuage de l’Éducation nationale), puis importe-le.</p>
+      <p class="note">Un seul fichier garde <b>tout</b> ce que tes outils ont enregistré sur cet appareil : élèves, groupes, plans de classe, évaluations, dictées, problèmes, Flash maths (avec les photos). Pour retrouver tout cela sur un autre appareil (ou après un nettoyage du navigateur) : exporte ici, range le fichier (par exemple dans le Nuage de l’Éducation nationale), puis importe-le.</p>
       <p class="note" id="dernier-export"></p>
       <div class="outils">
         <button class="btn plein" type="button" id="b-export">⬇ Tout exporter</button>
@@ -144,6 +144,7 @@ footer a{color:var(--encre-douce)}
 <datalist id="dl-groupes"></datalist>
 <div id="toast" class="toast" role="status"></div>
 <script src="../commun/ma-classe.js"></script>
+<script src="../commun/kit-images.js"></script>
 <script>
 const VERSION = "1.1.0";
 const $ = id => document.getElementById(id);
@@ -361,9 +362,9 @@ document.addEventListener("keydown", e => {
 });
 
 /* Sauvegarde */
-function toutExporter() {
+async function toutExporter() {
   const a = document.createElement("a");
-  a.href = URL.createObjectURL(new Blob([JSON.stringify({...MaClasse.sauvegarde(), version: VERSION})], {type: "application/json"}));
+  a.href = URL.createObjectURL(new Blob([JSON.stringify({...(await MaClasse.sauvegardeComplete()), version: VERSION})], {type: "application/json"}));
   a.download = "outils-de-classe-sauvegarde-" + new Date().toISOString().slice(0, 10) + ".json";
   document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
   MaClasse.exportFait(); rendreRappel(); toast("Sauvegarde exportée : range le fichier en lieu sûr");
@@ -384,8 +385,8 @@ $("import").onchange = async () => {
   let neuf, brut;
   try { brut = JSON.parse(await f.text()); neuf = MaClasse.migrer(brut); } catch { toast("Fichier illisible"); return; }
   if (brut && brut.format === 2 && brut.cles) {
-    barreConf("Sauvegarde complète du " + new Date(brut.at).toLocaleDateString("fr-FR") + " (" + neuf.eleves.length + " élèves, avec groupes, plans, évaluations et dictées). Tout ce qui est sur cet appareil sera remplacé.",
-      [["Tout restaurer", () => { if (MaClasse.restaurer(brut)) { toast("Sauvegarde restaurée"); setTimeout(() => location.reload(), 600); } else toast("Restauration impossible : stockage plein ?"); }], ["Annuler", null]]);
+    barreConf("Sauvegarde complète du " + new Date(brut.at).toLocaleDateString("fr-FR") + " (" + neuf.eleves.length + " élèves, avec groupes, plans, évaluations, dictées, problèmes et Flash maths). Tout ce qui est sur cet appareil sera remplacé.",
+      [["Tout restaurer", async () => { if (await MaClasse.restaurerComplet(brut)) { toast("Sauvegarde restaurée"); setTimeout(() => location.reload(), 600); } else toast("Restauration impossible : stockage plein ?"); }], ["Annuler", null]]);
     return;
   }
   if (!neuf.eleves.length) { toast("Ce fichier ne contient aucun élève"); return; }

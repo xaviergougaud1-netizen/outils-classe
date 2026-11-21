@@ -14,6 +14,9 @@ Deux modes, un seul fichier :
 Données : commun/corriges-problemes.js (window.CORRIGES_PROBLEMES).
 Clés d'évaluation : « CM1-12 » (niveau-numéro), comme l'ancien fichier.
 Historique :
+- 2.2.0 (2026-11-21) édition libre « Mes problèmes » (kit, problemes/?libre) : ateliers du collègue (commun/mes-problemes.js, localStorage « kit-problemes »),
+  énoncés en photo ou PDF découpé en pages (commun/kit-images.js, IndexedDB), corrigé facultatif, projeter l'énoncé, partager / importer par fichier ;
+  évaluations « mesproblemes » ; niveaux = ceux des ateliers. Rien ne change dans Classe ni dans l'édition Accès Maths.
 - 2.1.0 (2026-11-21) kit « Outils de classe partagés » : sur github.io, plus de lien vers Classe ; « ← Outils » vers le portail ; évaluations au choix
   (« Activer », localStorage « kit-evals-on-problemes ») avec les élèves de « Ma classe », enregistrées sur l'appareil (« kit-evals-problemes ») ; mention Accès Maths.
 - 2.0.0 (2026-11-15) charte Repères, appli installable, évaluations dans Classe, Ctrl+Z, flèches ← →, bouton Retour.
@@ -55,6 +58,9 @@ h2{margin:0;font-size:1.6rem;line-height:1.15}
 .steps{grid-column:2;list-style:none;padding:0;margin:0;color:var(--encre-douce);font-size:.93rem;font-variant-numeric:tabular-nums}
 .steps li+li{margin-top:2px}
 @media(min-width:680px){.problem{grid-template-columns:44px minmax(150px,.95fr) minmax(220px,1.45fr);align-items:start}.number{grid-row:1}.steps{grid-column:3}}
+.enonce{display:grid;gap:10px;margin:12px 0 0}.enonce img{width:100%;max-height:80vh;object-fit:contain;background:#fff;border:1px solid var(--trait);border-radius:var(--arrondi-m);cursor:zoom-in}
+.libre-bar{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}.vide-libre{text-align:center;padding:10px}
+.zoom{position:fixed;inset:0;z-index:70;background:#fff;display:flex;align-items:center;justify-content:center}.zoom img{max-width:100%;max-height:100%;object-fit:contain}
 footer{margin:22px 0 34px;font-size:.82rem;color:var(--encre-douce)}
 @media print{.choix,.picker,.nav,footer{display:none}.shell{width:100%}.problem{break-inside:avoid}}
 </style>
@@ -72,43 +78,77 @@ footer{margin:22px 0 34px;font-size:.82rem;color:var(--encre-douce)}
       <form id="jump"><input id="number" aria-label="Numéro d’atelier" inputmode="numeric" maxlength="3" placeholder="N°" autocomplete="off"><button class="btn plein" type="submit">Ouvrir</button></form>
     </div>
     <p id="message" class="msg" role="status"></p>
+    <div id="libre-bar" class="libre-bar" hidden><button class="btn doux petit" type="button" id="b-nouveau">＋ Nouvel atelier</button><button class="btn petit" type="button" id="b-partager">📤 Partager</button><label class="btn petit">📥 Importer<input type="file" id="b-importer" accept=".json,application/json" hidden></label></div>
     <details class="picker"><summary>Tous les ateliers</summary><div id="grid" class="grid"></div></details>
   </section>
+  <section id="vide-libre" class="carte vide-libre" hidden><p><b>Tes ateliers de problèmes</b> : ajoute une photo ou un PDF de l’énoncé, et si tu veux le corrigé (réponses et calculs). Tout reste sur cet appareil.</p><button class="btn plein" type="button" id="b-premier">＋ Mon premier atelier</button></section>
   <nav class="nav" aria-label="Ateliers voisins"><button class="btn" id="prev" type="button" title="Atelier précédent (←)">← Précédent</button><button class="btn" id="next" type="button" title="Atelier suivant (→)">Suivant →</button></nav>
   <section aria-labelledby="heading">
     <div class="titre"><h2 id="heading" tabindex="-1"></h2><span id="lvl" class="niv"></span></div>
     <p id="topic" class="topic"></p>
+    <div id="outils-atelier" class="libre-bar" hidden><button class="btn petit" type="button" id="b-modifier">✎ Modifier l’atelier</button><button class="btn petit" type="button" id="b-projeter">⛶ Projeter l’énoncé</button></div>
+    <div id="enonce" class="enonce"></div>
     <div id="evals"></div><div id="evals-kit"></div>
     <ol id="rows" class="list"></ol>
   </section>
-  <footer>Corrigés des ateliers du fichier <b>Accès Maths</b> CM1 et CM2 (fichier non fourni : il faut l’avoir en classe) · <span id="version"></span></footer>
+  <footer><span id="pied">Corrigés des ateliers du fichier <b>Accès Maths</b> CM1 et CM2 (fichier non fourni : il faut l’avoir en classe)</span> · <span id="version"></span></footer>
 </main>
 <div id="toast" class="toast" role="status"></div>
-<script>document.write('<script src="' + COMMUN + 'corriges-problemes.js"><\/script><script src="' + COMMUN + 'eval.js"><\/script>' + (MODE_APP ? '<script src="' + COMMUN + 'ma-classe.js"><\/script>' : ''));</script>
+<script>document.write('<script src="' + COMMUN + 'corriges-problemes.js"><\/script><script src="' + COMMUN + 'eval.js"><\/script>' + (MODE_APP ? '<script src="' + COMMUN + 'ma-classe.js"><\/script><script src="' + COMMUN + 'kit-images.js"><\/script><script src="' + COMMUN + 'mes-problemes.js"><\/script>' : ''));</script>
 <script>
-const VERSION = "2.1.0";
+const VERSION = "2.2.0";
 const CLASSE_URL = "https://claude.ai/artifact/Fjw3PS19NxsGxkekSUaoZA";
-const data = window.CORRIGES_PROBLEMES;
+/* Édition libre « Mes problèmes » (kit seulement, adresse problemes/?libre) : ateliers du collègue (commun/mes-problemes.js) au lieu des corrigés Accès Maths. */
+const LIBRE = MODE_APP && /[?&]libre\b/.test(location.search);
+const LS_VUE = LIBRE ? "kit-problemes-vue" : "ateliers-problemes-v1";
+let data = LIBRE ? MesPb.versData() : window.CORRIGES_PROBLEMES;
 const get = id => document.getElementById(id);
-const levels = [...document.querySelectorAll("[data-level]")];
-const byLevel = Object.fromEntries(Object.entries(data).map(([k, v]) => [k, Object.keys(v).map(Number).sort((a, b) => a - b)]));
-const last = {CM1: byLevel.CM1[0], CM2: byLevel.CM2[0]};
-let level = "CM1", returning = false, store = null, panel = null;
+let levels = [...document.querySelectorAll("[data-level]")];
+const calcNiveaux = () => Object.fromEntries(Object.entries(data).map(([k, v]) => [k, Object.keys(v).map(Number).sort((a, b) => a - b)]));
+let byLevel = calcNiveaux();
+const last = Object.fromEntries(Object.keys(byLevel).map(k => [k, byLevel[k][0]]));
+let level = Object.keys(byLevel)[0] || "CM1", returning = false, store = null, panel = null;
 try {
-  const saved = JSON.parse(localStorage.getItem("ateliers-problemes-v1"));
+  const saved = JSON.parse(localStorage.getItem(LS_VUE));
   if (data[saved?.level]) { level = saved.level; returning = true; }
   for (const k of Object.keys(last)) if (data[k][saved?.last?.[k]]) last[k] = saved.last[k];
 } catch {}
 const evalKey = () => level + "-" + last[level];
-const prime = lv => lv === "CM2" ? "′" : "";
+const prime = lv => !LIBRE && lv === "CM2" ? "′" : "";
+/* Niveaux affichés : dans l'édition libre, ceux des ateliers du collègue */
+function majNiveaux() {
+  if (!LIBRE) return;
+  const seg = document.querySelector(".choix .seg");
+  seg.innerHTML = Object.keys(byLevel).map(k => '<button type="button" data-level="' + k + '">' + k + "</button>").join("");
+  levels = [...seg.querySelectorAll("[data-level]")];
+  lierNiveaux();
+}
+function recharger(atelier) {
+  data = MesPb.versData(); byLevel = calcNiveaux();
+  Object.keys(byLevel).forEach(k => { if (!byLevel[k].includes(last[k])) last[k] = byLevel[k][0]; });
+  if (atelier) { level = atelier.niv; last[level] = atelier.num; }
+  if (!byLevel[level]) level = Object.keys(byLevel)[0] || "CM1";
+  majNiveaux(); render();
+  if (last[level]) history.replaceState(null, "", location.pathname + location.search + "#" + level.toLowerCase() + "-" + last[level]);
+}
 
 function render() {
+  const vide = LIBRE && !Object.keys(byLevel).length;
+  get("vide-libre").hidden = !vide;
+  document.querySelector(".carte.flotte").hidden = vide;
+  document.querySelector("nav.nav").hidden = vide;
+  get("heading").closest("section").hidden = vide;
+  if (vide) return;
   const number = last[level], numbers = byLevel[level], index = numbers.indexOf(number), w = data[level][number];
   levels.forEach(b => b.setAttribute("aria-pressed", String(b.dataset.level === level)));
   get("number").value = number;
   get("heading").textContent = "Atelier " + number + prime(level);
   get("lvl").textContent = level; get("lvl").className = "niv " + level.toLowerCase();
   get("topic").textContent = w.title;
+  get("enonce").innerHTML = (w.pages || []).map((id, k) => '<img data-kit-src="kit:' + id + '" alt="Énoncé, page ' + (k + 1) + '" data-zoom>').join("");
+  get("outils-atelier").hidden = !LIBRE;
+  get("b-projeter").hidden = !(w.pages || []).length;
+  if (LIBRE && !w.rows.length) get("topic").textContent = (w.title ? w.title + " · " : "") + "pas de corrigé";
   renderGrid();
   get("rows").replaceChildren(...w.rows.map(([label, answer, calcs]) => {
     const li = document.createElement("li"); li.className = "problem";
@@ -120,7 +160,7 @@ function render() {
   }));
   get("prev").disabled = index === 0; get("next").disabled = index === numbers.length - 1;
   if (panel) panel.render();
-  try { localStorage.setItem("ateliers-problemes-v1", JSON.stringify({level, last})); } catch {}
+  try { localStorage.setItem(LS_VUE, JSON.stringify({level, last})); } catch {}
 }
 function renderGrid() {
   const number = last[level], numbers = byLevel[level];
@@ -136,7 +176,7 @@ function renderGrid() {
   }));
 }
 function select(number, focus = false, push = true) {
-  if (!data[level][number]) { get("message").textContent = number > 0 ? "L’atelier " + number + " n’est pas dans le fichier " + level + "." : "Tape un numéro d’atelier."; return; }
+  if (!data[level] || !data[level][number]) { get("message").textContent = number > 0 ? "L’atelier " + number + " n’est pas " + (LIBRE ? "dans tes ateliers de " : "dans le fichier ") + level + "." : "Tape un numéro d’atelier."; return; }
   get("message").textContent = "";
   last[level] = number;
   const h = "#" + level.toLowerCase() + "-" + number;
@@ -145,12 +185,13 @@ function select(number, focus = false, push = true) {
   if (focus) { document.querySelector(".picker").open = false; get("heading").focus({preventScroll: true}); get("heading").scrollIntoView({block: "nearest"}); }
 }
 function fromHash() {
-  const m = /^#(cm[12])-(\d+)$/i.exec(location.hash);
-  if (m) { level = m[1].toUpperCase(); if (data[level][+m[2]]) last[level] = +m[2]; }
+  const m = /^#([a-z0-9]+)-(\d+)$/i.exec(location.hash), k = m && Object.keys(data).find(x => x.toLowerCase() === m[1].toLowerCase());
+  if (k) { level = k; if (data[level][+m[2]]) last[level] = +m[2]; }
 }
 get("prev").onclick = () => { const n = byLevel[level], i = n.indexOf(last[level]); if (i > 0) select(n[i - 1]); };
 get("next").onclick = () => { const n = byLevel[level], i = n.indexOf(last[level]); if (i < n.length - 1) select(n[i + 1]); };
-levels.forEach(b => b.onclick = () => { level = b.dataset.level; select(last[level]); document.querySelector(".picker").open = true; });
+function lierNiveaux() { levels.forEach(b => b.onclick = () => { level = b.dataset.level; select(last[level]); document.querySelector(".picker").open = true; }); }
+lierNiveaux();
 get("jump").onsubmit = e => { e.preventDefault(); select(Number(get("number").value.trim().replace(/['’′]$/, "")), true); get("number").blur(); };
 addEventListener("popstate", () => { fromHash(); render(); });
 document.addEventListener("keydown", e => {
@@ -163,17 +204,18 @@ document.addEventListener("keydown", e => {
 /* Élèves du niveau affiché (mode Classe) */
 function pupils() {
   if (!store) return [];
+  if (LIBRE) { const meme = store.roster.filter(p => p.niveau === level); return (meme.length ? meme : store.roster).map(p => ({...p, info: p.group})); }
   return store.roster.filter(p => { const v = store.placeOf(p); return v === "both" || v === level; }).map(p => ({...p, info: p.group}));
 }
 async function startEvals() {
   const box = get("evals");
   if (MODE_APP) { /* kit : évaluations seulement si le collègue les active (élèves de « Ma classe », sur l'appareil) */
-    MaClasse.encartEvals(get("evals-kit"), "problemes");
-    if (!MaClasse.evalsOn("problemes")) return;
+    MaClasse.encartEvals(get("evals-kit"), LIBRE ? "mesproblemes" : "problemes");
+    if (!MaClasse.evalsOn(LIBRE ? "mesproblemes" : "problemes")) return;
   } else get("back").hidden = false;
   try {
-    store = await Evals.start("problemes", VERSION, {local: MODE_APP});
-    panel = new Evals.Panel(box, {store, key: evalKey, pupils, places: true, pdf: exportPdf});
+    store = await Evals.start(LIBRE ? "mesproblemes" : "problemes", VERSION, {local: MODE_APP});
+    panel = new Evals.Panel(box, {store, key: evalKey, pupils, places: !LIBRE, pdf: exportPdf});
     store.on(renderGrid);
     render();
   } catch (e) {
@@ -184,16 +226,31 @@ async function startEvals() {
 function exportPdf() {
   const sections = Object.keys(byLevel).map(lv => {
     const nums = byLevel[lv];
-    const rows = store.roster.filter(p => { const v = store.placeOf(p); return v === "both" || v === lv; })
+    const rows = store.roster.filter(p => { if (LIBRE) return true; const v = store.placeOf(p); return v === "both" || v === lv; })
       .map(p => ({name: p.name, cells: nums.map(n => ({m: store.get(lv + "-" + n, p.name)}))}));
     return {title: "Ateliers de problèmes · " + lv, sub: "Ateliers " + nums[0] + " à " + nums.at(-1), cols: nums.map(n => n + prime(lv)), rows};
   });
-  return Evals.pdf({sections, filename: "evaluations-ateliers-problemes.pdf", color: "#0F7A8F"});
+  return Evals.pdf({sections, filename: LIBRE ? "evaluations-mes-problemes.pdf" : "evaluations-ateliers-problemes.pdf", color: "#0F7A8F"});
 }
 
 get("version").textContent = "version " + VERSION;
+if (LIBRE) {
+  document.title = "Mes problèmes";
+  document.querySelector(".entete h1").innerHTML = "Mes problèmes<small>Mes ateliers, leurs énoncés et leurs corrigés</small>";
+  get("pied").textContent = "Tes ateliers restent sur cet appareil. Pense à « Tout exporter » dans Ma classe";
+  get("libre-bar").hidden = false;
+  majNiveaux();
+  const nouveau = () => MesPb.editer(null, {niv: byLevel[level] ? level : "CM1"}, recharger);
+  get("b-nouveau").onclick = nouveau; get("b-premier").onclick = nouveau;
+  get("b-modifier").onclick = () => { const w = data[level] && data[level][last[level]]; if (w) MesPb.editer(w.id, null, recharger); };
+  get("b-partager").onclick = () => MesPb.partager();
+  get("b-importer").onchange = e => { const f = e.target.files[0]; e.target.value = ""; if (f) MesPb.importer(f).then(n => { Evals.toast(n + " atelier" + (n > 1 ? "s importés" : " importé")); recharger(); }).catch(() => Evals.toast("Fichier illisible")); };
+  const zoom = src => { const z = document.createElement("div"); z.className = "zoom"; z.innerHTML = '<img src="' + src + '" alt="Énoncé agrandi">'; z.onclick = () => { z.remove(); if (document.fullscreenElement) document.exitFullscreen().catch(() => {}); }; document.body.append(z); if (z.requestFullscreen) z.requestFullscreen().catch(() => {}); };
+  get("enonce").onclick = e => { const i = e.target.closest("img[data-zoom]"); if (i && i.src) zoom(i.src); };
+  get("b-projeter").onclick = () => { const i = get("enonce").querySelector("img"); if (i && i.src) zoom(i.src); };
+}
 fromHash();
-history.replaceState(null, "", "#" + level.toLowerCase() + "-" + last[level]);
+if (last[level]) history.replaceState(null, "", location.pathname + location.search + "#" + level.toLowerCase() + "-" + last[level]);
 render();
 document.querySelector(".picker").open = !returning;
 startEvals();

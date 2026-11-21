@@ -22,7 +22,7 @@ Licence : CC BY-NC-SA 4.0.
 | Flash maths (exercices en photo du collègue) | https://xaviergougaud1-netizen.github.io/outils-classe/flash/ | 4.8 |
 | Fiches Claires | https://xaviergougaud1-netizen.github.io/outils-classe/fiches-claires/ | 1.11 |
 | Groupes (groupes de travail, rôles, minuteur) | https://xaviergougaud1-netizen.github.io/outils-classe/groupes/ | 1.10.0 |
-| Dictées adaptées (édition libre, cycle, devoirs, import PDF) | https://xaviergougaud1-netizen.github.io/outils-classe/dictees/ | 2.6.0 |
+| Dictées adaptées (édition libre, cycle, devoirs, import PDF) | https://xaviergougaud1-netizen.github.io/outils-classe/dictees/ | 2.6.1 |
 | Plan de classe | https://xaviergougaud1-netizen.github.io/outils-classe/plan/ | 1.6 |
 | Orienter un élève (outil de Xavier, pas dans le portail) | https://xaviergougaud1-netizen.github.io/outils-classe/orienter/ | 1.1.0 |
 

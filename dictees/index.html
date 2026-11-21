@@ -8,6 +8,7 @@ Fiche d'identité
 - Écran n° 1 : la prochaine dictée de l'année (d'après les cycles de Classe), telle que l'élève la verra.
 - Ce qu'il ne fait pas : les dates des cycles (journal de Classe, vue Dictées), les dictées originales (page « Dictées et dictées adaptées »).
 Version : voir VERSION
+- 2.6.1 (21/11/2026) : kit, Réglages s'ouvre aussi quand il n'y a encore aucune dictée (on était renvoyé sur « Mes dictées »).
 - 2.6.0 (21/11/2026) : kit, « 📄 Importer un PDF » dans Mes dictées : texte lu par pdf.js (OCR Tesseract si scanné), découpage selon les titres « Dictée n », par page ou en un seul bloc,
   lignes « Mots : » et « Règle : » reconnues, aperçu modifiable (cocher, titre, règle, texte, mots) avant l'ajout ; dates proposées à la suite.
 - 2.5.0 (21/11/2026) : un seul fichier pour Classe (dictees-adaptees.html) et le kit « Outils de classe partagés » (dépôt outils-classe, dictees/index.html).
@@ -234,7 +235,7 @@ span.gap{display:inline-block;line-height:40px}
 <div id="printzone" aria-hidden="true"></div>
 <div id="msg" role="status"></div>
 <script>
-var VERSION="2.6.0", KEY="classe-dictees-adaptees", DBPATH="dictees/reglages";
+var VERSION="2.6.1", KEY="classe-dictees-adaptees", DBPATH="dictees/reglages";
 /* Programme de l'année (livret « Leçons d'orthographe », règles H1 à H17) : dictées Retz faites, dans l'ordre */
 var PROGRAMME=[1,2,3,4,7,8,10,11,12,13,14,18,19,20,23,24,26];
 /* Notions proposées en choix : t = dictée Retz où la leçon est vue (auto) ; def = réglage par défaut */
@@ -816,7 +817,7 @@ document.addEventListener("change",function(e){
 var VUES={dictee:vueDictee,mots:vueMots,imprimer:vueImprimer,reglages:vueReglages};
 if(MODE_APP)VUES.textes=vueTextes;
 function rendre(){
-  if(MODE_APP){ kitPrep(); if(!D.length)S.ui.tab="textes"; }
+  if(MODE_APP){ kitPrep(); if(!D.length&&S.ui.tab!=="reglages")S.ui.tab="textes"; } /* sans dictée : seuls « Mes dictées » et « Réglages » s'ouvrent */
   else if(!D.length)return;
   pourOk(); var t=VUES[S.ui.tab]?S.ui.tab:"dictee", y=window.scrollY;
   $("#app").innerHTML='<header>'+(MODE_APP?'<a class="back" href="../">← Outils</a>':'<a class="back" href="index.html" data-cnav-hide>← Classe</a>')+'<h1>Dictées adaptées</h1><span class="hist"><button class="btn sq" id="bU" data-act="undo" title="Annuler (Ctrl+Z)" aria-label="Annuler la dernière modification">↶</button><button class="btn sq" id="bR" data-act="redo" title="Rétablir (Ctrl+Maj+Z)" aria-label="Rétablir">↷</button></span><div id="sync" style="width:100%;text-align:right"></div></header>'+VUES[t]();
@@ -1081,7 +1082,7 @@ async function demarrer(){
   if(m){var f=faites(), n=f[+m[2]-1]; if(n){S.ui.cur=n-1;S.ui.choisi=1;} S.ui.tab=m[1]==="i"?"imprimer":"dictee";
     if(m[1]==="i"){S.ui.qui="tous"; S.ui.docs=m[3]==="ban"?{ban:true}:{fiche:true,cor:true};} sauverLocal();}
   else if(VUES[h])S.ui.tab=h;
-  if(MODE_APP&&!D.length)S.ui.tab="textes";
+  if(MODE_APP&&!D.length&&S.ui.tab!=="reglages")S.ui.tab="textes";
   history.replaceState({tab:S.ui.tab},"","#"+S.ui.tab);
   HIST.last=JSON.stringify(S.data); appliquerTheme(); rendre(); if(L.abime)toast("Réglages illisibles sur cet appareil : copie de secours gardée");
   initSync();

@@ -4,7 +4,9 @@
      {v:1, appV, at, marks:{clé:{prénom:{m:'A'|'AR'|'ECA'|'NA'|null, at}}}, place:{prénom:{v:'CM1'|'CM2'|'both', at}}}
    Chaque case est datée : à l'enregistrement on relit la base et on fusionne case par case (la plus récente gagne),
    donc deux appareils ne s'écrasent jamais. m:null = case effacée (gardée datée pour que l'effacement se propage).
-   Copie de secours sur l'appareil : localStorage « evals-<outil> ». */
+   Copie de secours sur l'appareil : localStorage « evals-<outil> ».
+   Mode kit (Outils de classe partagés, sur github.io) : Evals.start(nom, version, {local:true}) ;
+   élèves lus dans « Ma classe » (commun/ma-classe.js), évaluations seulement sur l'appareil (localStorage « kit-evals-<outil> »), aucune base. */
 (function(){
 'use strict';
 var MARKS = {A:'Acquis', AR:'À renforcer', ECA:'En cours d’acquisition', NA:'Non acquis'};
@@ -33,14 +35,20 @@ function toast(t){
 }
 
 /* ---------- Le magasin d'évaluations d'un outil ---------- */
-function Store(name, appV){
-  this.name = name; this.appV = appV; this.LS = 'evals-' + name;
+function Store(name, appV, local){
+  this.name = name; this.appV = appV; this.local = !!local; this.LS = (local ? 'kit-evals-' : 'evals-') + name;
   this.doc = {v:1, marks:{}, place:{}}; this.roster = []; this.groups = [];
   this.status = 'att'; this.undoS = []; this.redoS = []; this.subs = []; this.timer = null; this.saving = false; this.again = false;
   try{ var c = JSON.parse(localStorage.getItem(this.LS) || 'null'); if(c) this.doc = merge(this.doc, c); }catch(e){}
 }
 Store.prototype.init = async function(){
   var self = this;
+  if(this.local){ /* kit : élèves de « Ma classe », rien à attendre d'une base */
+    var r = window.MaClasse ? window.MaClasse.roster() : {groups:[], roster:[]};
+    this.groups = r.groups; this.roster = r.roster;
+    this.status = 'ok'; this.flush(); this.emit();
+    return;
+  }
   var db = window.claude && window.claude.use ? await window.claude.use('db') : null;
   if(!db) throw new Error('Base indisponible');
   this.db = db; this.ref = db.doc('evals/' + this.name);
@@ -100,7 +108,7 @@ Store.prototype.redo = function(){
   this.setMany((u.many || [u]).map(function(c){ return {key:c.key, name:c.name, m:c.next}; }), true);
   toast('Rétabli : ' + u.name);
 };
-Store.prototype.placeOf = function(p){ var e = this.doc.place[p.name]; return e && e.v || (/^CM1/.test(p.group) ? 'CM1' : /^CM2/.test(p.group) ? 'CM2' : 'both'); };
+Store.prototype.placeOf = function(p){ var e = this.doc.place[p.name], g = p.niveau || p.group; return e && e.v || (/^CM1/.test(g) ? 'CM1' : /^CM2/.test(g) ? 'CM2' : 'both'); };
 Store.prototype.setPlace = function(name, v){ this.doc.place[name] = {v:v, at:Date.now()}; this.backup(); this.emit(); this.save(); };
 Store.prototype.backup = function(){ try{ localStorage.setItem(this.LS, JSON.stringify(this.doc)); localStorage.setItem(this.LS + '-dirty', '1'); }catch(e){} };
 Store.prototype.save = function(){
@@ -109,6 +117,11 @@ Store.prototype.save = function(){
   this.timer = setTimeout(function(){ self.flush(); }, 600);
 };
 Store.prototype.flush = async function(){
+  if(this.local){
+    try{ localStorage.setItem(this.LS, JSON.stringify(this.doc)); localStorage.removeItem(this.LS + '-dirty'); this.status = 'ok'; this.savedAt = new Date(); }
+    catch(e){ this.status = 'err'; }
+    this.emit(); return;
+  }
   if(!this.ref) return;
   if(this.saving){ this.again = true; return; }
   this.saving = true;
@@ -163,7 +176,7 @@ function Panel(el, opts){
     el.hidden = false;
     var done = L.filter(function(p){ return S.get(key, p.name); }).length;
     var open = true; try{ open = localStorage.getItem(LSo) !== '0'; }catch(e){}
-    var st = S.status === 'ok' ? '<span class="sync">Enregistré</span>' : S.status === 'err' ? '<span class="sync err">Non enregistré</span>' : '<span class="sync att">Enregistrement…</span>';
+    var st = S.status === 'ok' ? '<span class="sync">' + (S.local ? 'Sur cet appareil' : 'Enregistré') + '</span>' : S.status === 'err' ? '<span class="sync err">Non enregistré</span>' : '<span class="sync att">Enregistrement…</span>';
     var f = opts.filters && S.groups.length > 1 ? '<div class="seg" role="group" aria-label="Groupe">' + filters().map(function(g){
       return '<button type="button" data-ev="filtre" data-g="' + esc(g.id) + '" aria-pressed="' + (g.id === filt) + '">' + esc(g.label) + '</button>'; }).join('') + '</div>' : '';
     picked = picked.filter(function(n){ return L.some(function(p){ return p.name === n; }); });
@@ -188,7 +201,7 @@ function Panel(el, opts){
       (multi ? '<div class="multibar" role="group" aria-label="Évaluer les élèves choisis"><span><b>' + picked.length + '</b> choisi' + (picked.length > 1 ? 's' : '') + '</span>' +
         '<button type="button" class="btn petit" data-ev="all">' + (picked.length === L.length && L.length ? 'Aucun' : 'Tous') + '</button>' +
         '<span class="marks">' + Object.keys(MARKS).map(function(m){ return '<button type="button" class="mk" data-ev="mkmany" data-m="' + m + '" title="' + MARKS[m] + ' pour les élèves choisis"' + (picked.length ? '' : ' disabled') + '>' + m + '</button>'; }).join('') + '</span></div>' : '') +
-      (L.length ? '<ul class="evlist">' + rows + '</ul>' : '<p class="aide">Aucun élève. Les prénoms viennent de Classe › Maths (groupes).</p>') + places +
+      (L.length ? '<ul class="evlist">' + rows + '</ul>' : (S.local ? '<p class="aide">Aucun élève pour l’instant. Ajoute-les une fois dans <a href="../ma-classe/">Ma classe</a> : tous les outils les retrouvent.</p>' : '<p class="aide">Aucun élève. Les prénoms viennent de Classe › Maths (groupes).</p>')) + places +
       '<p class="legende">A Acquis · AR À renforcer · ECA En cours d’acquisition · NA Non acquis. Touche une 2<sup>e</sup> fois pour effacer. Ctrl+Z annule.</p></div></details>';
     if(focus && focus.ev){
       var sel = '[data-ev="' + focus.ev + '"]' + (focus.n ? '[data-n="' + CSS.escape(focus.n) + '"]' : '') + (focus.m ? '[data-m="' + focus.m + '"]' : '') + (focus.g ? '[data-g="' + CSS.escape(focus.g) + '"]' : '');
@@ -277,7 +290,11 @@ async function pdf(o){
   }
   var blob = pdfFromImages(images, W, H);
   var dl = window.claude && window.claude.use ? await window.claude.use('downloads') : null;
-  if(!dl){ toast('Téléchargement indisponible ici'); return; }
+  if(!dl){ /* hors de Claude (kit sur github.io) : téléchargement classique */
+    var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = o.filename;
+    document.body.append(a); a.click(); a.remove(); setTimeout(function(){ URL.revokeObjectURL(a.href); }, 4000);
+    toast('PDF enregistré'); return;
+  }
   try{ await dl.save({filename:o.filename, data:blob}); toast('PDF enregistré'); }
   catch(e){ if(!e || e.code !== 'declined') toast('Impossible d’enregistrer le PDF'); }
 }
@@ -294,7 +311,7 @@ document.addEventListener('keydown', function(e){
 
 window.Evals = {
   MARKS: MARKS, merge: merge, toast: toast, pdf: pdf,
-  start: async function(name, appV){ var s = new Store(name, appV); active = s; await s.init(); return s; },
+  start: async function(name, appV, o){ var s = new Store(name, appV, o && o.local); active = s; await s.init(); return s; },
   Panel: Panel
 };
 })();

@@ -1,8 +1,8 @@
 // Fonctionnement hors ligne de l'appli installée.
 // Changer CACHE à chaque nouvelle version (en même temps que VERSION dans index.html).
-const CACHE = "problemes-2.0.0";
+const CACHE = "problemes-2.1.0";
 const FILES = ["./", "./index.html", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png",
-  "../commun/charte.css", "../commun/corriges-problemes.js"];
+  "../commun/charte.css", "../commun/corriges-problemes.js", "../commun/eval.js", "../commun/ma-classe.js"];
 
 self.addEventListener("install", event => {
   event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(FILES)).then(() => self.skipWaiting()));

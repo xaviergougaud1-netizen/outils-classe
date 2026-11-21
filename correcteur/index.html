@@ -3,16 +3,18 @@
 Fiche d'identité
 - Rôle : corriger vite une fiche de ceinture de calcul posé (Charivari) en tapant son premier calcul, et évaluer les élèves fiche par fiche.
 - Quand : en classe, pendant ou après les ceintures, téléphone en main ; le soir sur l'ordinateur pour faire le point.
-- Où : téléphone (appli installée, corrigés seuls) ; Classe sur téléphone et ordinateur (corrigés + évaluations).
+- Où : téléphone ou ordinateur (kit github.io : corrigés, évaluations au choix sur l'appareil) ; Classe sur téléphone et ordinateur (corrigés + évaluations).
 - Écran n° 1 : la recherche avec le pavé numérique ; le corrigé s'affiche dès qu'une seule fiche correspond.
 - Ce qu'il ne fait pas : pas de liste d'élèves à lui (elle vient de Classe › Maths) ; pas de problèmes (Ateliers de problèmes).
 Version : voir VERSION (et CACHE dans sw.js, à changer ensemble).
 Charte Repères v1 (commun/charte.css), couleur de l'outil --outil-calcul.
 Deux modes, un seul fichier :
-- appli installée (github.io ou ?mode=app) : corrigés seuls, hors ligne, AUCUN prénom (dépôt public) ; fichiers communs dans ../commun/
+- kit / appli installée (github.io ou ?mode=app) : corrigés, hors ligne ; évaluations au choix avec « Ma classe », sur l'appareil seulement ; AUCUN prénom dans le dépôt ; fichiers communs dans ../commun/
 - page de Classe (correcteur.html) : + évaluations A/AR/ECA/NA (commun/eval.js, base evals/calcul, clé « Ceinture-Fiche », ex. « Jaune-B ») ; fichiers communs dans outils/
 Données : commun/fiches-calcul.js (window.FICHES_CALCUL). Calculs exacts en BigInt (pas d'erreur d'arrondi sur les décimaux).
 Historique :
+- 2.6.0 (2026-11-21) kit « Outils de classe partagés » : sur github.io, plus de lien vers Classe ; « ← Outils » vers le portail ;
+  évaluations au choix (« Activer », localStorage « kit-evals-on-calcul ») avec les élèves de « Ma classe » (commun/ma-classe.js), enregistrées sur l'appareil (« kit-evals-calcul ») ; PDF en téléchargement classique.
 - 2.5.0 (2026-11-17) bouton « À passer » (seulement les élèves dont c'est la prochaine ceinture, + ceux déjà évalués sur la fiche ; localStorage « calcul-a-passer ») ;
   « Grille de la classe » (élèves × ceintures, même filtre de groupe que le panneau, case touchée = ouvre la fiche et montre l'élève) ;
   eval.js : « ☑ Plusieurs » pour évaluer plusieurs élèves d'un coup (opts.changes : les ceintures d'avant suivent, une seule étape à annuler).
@@ -114,7 +116,7 @@ footer a{color:var(--encre-douce)}
 </head>
 <body>
 <header class="entete"><div class="shell bar">
-  <a class="retour" href="index.html" id="back" data-cnav-hide hidden>← Classe</a>
+  <a class="retour" href="index.html" id="back" data-cnav-hide hidden>← Classe</a><script>if (MODE_APP) document.write('<a class="retour" href="../" aria-label="Accueil des outils">← Outils</a>');</script>
   <span class="tuile" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="12" cy="6" r="1.4" fill="currentColor"/><path d="M5 12h14"/><circle cx="12" cy="18" r="1.4" fill="currentColor"/></svg></span>
   <h1>Correcteur de calcul posé<small>Ceintures de calcul · tests v6</small></h1>
 </div></header>
@@ -143,9 +145,9 @@ footer a{color:var(--encre-douce)}
 </main>
 <div class="dock" id="dock" hidden><button class="btn plein" id="reset" type="button" title="Nouvelle fiche (Échap)">↺ &nbsp;Nouvelle fiche</button></div>
 <div id="toast" class="toast" role="status"></div>
-<script>document.write('<script src="' + COMMUN + 'fiches-calcul.js"><\/script>' + (MODE_APP ? '' : '<script src="' + COMMUN + 'eval.js"><\/script>'));</script>
+<script>document.write('<script src="' + COMMUN + 'fiches-calcul.js"><\/script><script src="' + COMMUN + 'eval.js"><\/script>' + (MODE_APP ? '<script src="' + COMMUN + 'ma-classe.js"><\/script>' : ''));</script>
 <script>
-const VERSION = "2.5.0";
+const VERSION = "2.6.0";
 const CLASSE_URL = "https://claude.ai/artifact/Fjw3PS19NxsGxkekSUaoZA";
 const SOURCE_FICHES = window.FICHES_CALCUL;
 const belts = SOURCE_FICHES.trim().split(/\n(?=[A-Z][^\n]*\|)/).map(block => {
@@ -484,13 +486,12 @@ function pupils() {
   });
 }
 async function startEvals() {
-  if (MODE_APP) {
-    get("evals-app").innerHTML = '<div class="vers-classe"><span>👥 Les évaluations des élèves se font dans <b>Classe</b> › Outils et réglages › Maths.</span><a class="btn petit" href="' + CLASSE_URL + '" target="_blank" rel="noopener">Ouvrir Classe ↗</a></div>';
-    return;
-  }
-  get("back").hidden = false;
+  if (MODE_APP) { /* kit : évaluations seulement si le collègue les active (élèves de « Ma classe », sur l'appareil) */
+    MaClasse.encartEvals(get("evals-app"), "calcul");
+    if (!MaClasse.evalsOn("calcul")) return;
+  } else get("back").hidden = false;
   try {
-    store = await Evals.start("calcul", VERSION);
+    store = await Evals.start("calcul", VERSION, {local: MODE_APP});
     panel = new Evals.Panel(evalHost, {store, key: () => shown && sheetKey(shown), pupils, filters: true, pdf: exportPdf, changes, onMarked, onFilter: renderGrid,
       extra: () => '<button type="button" class="btn petit" data-ev="x" data-x="passer" aria-pressed="' + toPass + '" title="Seulement les élèves dont c’est la prochaine ceinture">' + (toPass ? "✓ À passer" : "À passer") + "</button>" +
         '<button type="button" class="btn petit" data-ev="x" data-x="auto" aria-pressed="' + autoPrev + '" title="Un A valide aussi les ceintures d’avant pas encore validées">' + (autoPrev ? "✓" : "✗") + " Ceintures d’avant : " + (autoPrev ? "auto" : "non") + "</button>",
@@ -503,7 +504,7 @@ async function startEvals() {
     renderGrid();
     if (shown) { const s = shown; shown = null; show(s); }
   } catch (e) {
-    evalHost.innerHTML = '<div class="vers-classe"><span>⚠ Les évaluations n’ont pas pu se charger (base de Classe injoignable).</span><button class="btn petit" type="button" id="retry">↻ Réessayer</button></div>';
+    evalHost.innerHTML = '<div class="vers-classe"><span>⚠ Les évaluations n’ont pas pu se charger' + (MODE_APP ? '' : ' (base de Classe injoignable)') + '.</span><button class="btn petit" type="button" id="retry">↻ Réessayer</button></div>';
     evalHost.querySelector("#retry").onclick = startEvals;
   }
 }

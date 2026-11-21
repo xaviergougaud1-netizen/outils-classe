@@ -1,463 +1,127 @@
 <!doctype html>
 <!-- TECHNIQUE
+Portail « Outils de classe partagés » (kit pour les collègues de la circonscription).
 Fiche d'identité
-- Rôle : corriger vite une fiche de ceinture de calcul posé (Charivari) en tapant son premier calcul, et évaluer les élèves fiche par fiche.
-- Quand : en classe, pendant ou après les ceintures, téléphone en main ; le soir sur l'ordinateur pour faire le point.
-- Où : téléphone (appli installée, corrigés seuls) ; Classe sur téléphone et ordinateur (corrigés + évaluations).
-- Écran n° 1 : la recherche avec le pavé numérique ; le corrigé s'affiche dès qu'une seule fiche correspond.
-- Ce qu'il ne fait pas : pas de liste d'élèves à lui (elle vient de Classe › Maths) ; pas de problèmes (Ateliers de problèmes).
+- Rôle : mettre à disposition des collègues certains outils de Xavier, sans ses données ; chacun y met les siennes (sur son appareil) et règle les outils.
+- Quand : préparer (liste d'élèves, contenus) et en classe (correction, plan, groupes…).
+- Où : ordinateur de classe / TBI et téléphone ; un seul appareil par défaut, export / import pour en changer.
+- Écran n° 1 : une tuile par outil ; « Ma classe » mise en avant tant que la liste d'élèves est vide.
+- Ce qu'il ne fait pas : aucun stockage en ligne ; pas le cahier journal « Classe » de Xavier (jamais partagé).
 Version : voir VERSION (et CACHE dans sw.js, à changer ensemble).
-Charte Repères v1 (commun/charte.css), couleur de l'outil --outil-calcul.
-Deux modes, un seul fichier :
-- appli installée (github.io ou ?mode=app) : corrigés seuls, hors ligne, AUCUN prénom (dépôt public) ; fichiers communs dans ../commun/
-- page de Classe (correcteur.html) : + évaluations A/AR/ECA/NA (commun/eval.js, base evals/calcul, clé « Ceinture-Fiche », ex. « Jaune-B ») ; fichiers communs dans outils/
-Données : commun/fiches-calcul.js (window.FICHES_CALCUL). Calculs exacts en BigInt (pas d'erreur d'arrondi sur les décimaux).
+Choix techniques : GitHub Pages ; un seul moteur par outil (le même fichier sert dans « Classe » et dans le kit, il reconnaît où il est ouvert) ;
+  « Ma classe » (commun/ma-classe.js) = liste d'élèves commune, localStorage « kit-classe » ; toutes les clés du kit commencent par « kit- »
+  (même adresse github.io que Thêta sur l'appareil de Xavier).
+Licence : CC BY-NC-SA 4.0.
 Historique :
-- 2.3.0 (2026-11-15) 5 derniers calculs de la calculatrice sous le pavé quand le champ est vide (localStorage « correcteur-derniers-calculs », par appareil) ;
-  gardés quand on quitte le calcul (Nouveau calcul, Échap, Entrée, champ vidé, appli mise de côté), touche pour reprendre, « Effacer la liste » confirmé.
-- 2.2.0 (2026-11-15) plus de 2e cadre de saisie (les 2 fiches au même 1er calcul sont proposées en boutons, avec leur 2e calcul) ;
-  calculatrice libre : un calcul complet qui n'ouvre aucune fiche affiche son résultat sous le pavé (étapes au toucher),
-  division à l'unité, au dixième et au centième avec le reste ; + et − acceptent plusieurs nombres.
-- 2.1.0 (2026-11-15) un « A » sur une fiche valide aussi en A les ceintures précédentes pas encore validées (clé de ceinture seule, ex. « Blanche » : on n'écrit jamais sur les fiches) ;
-  réglage « Ceintures d'avant : auto » (localStorage, par appareil, oui par défaut) ; une seule étape à annuler (setMany).
-- 2.0.0 (2026-11-15) charte Repères, évaluations dans Classe (filtre par groupe, ceinture acquise, PDF, Ctrl+Z), fiches dans un fichier de données.
-- 1.0.0 (2026-11-15) version reçue + installation, bouton Retour, Échap, numéro de version.
+- 1.0.0 (2026-11-21) portail, Ma classe, Correcteurs avec évaluations au choix sur l'appareil.
 -->
 <html lang="fr">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="theme-color" content="#E0EFE5">
-<title>Correcteur de calcul posé</title>
+<meta name="theme-color" content="#E3EBFD">
+<title>Outils de classe partagés</title>
+<meta name="description" content="Outils de classe gratuits, sans compte : correcteurs de calcul posé et d’ateliers de problèmes, liste d’élèves sur ton appareil.">
+<link rel="manifest" href="manifest.webmanifest"><link rel="icon" href="icon-192.png"><link rel="apple-touch-icon" href="icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
-<script>
-var MODE_APP = /github\.io$/.test(location.hostname) || /[?&]mode=app/.test(location.search);
-var COMMUN = MODE_APP ? '../commun/' : 'outils/';
-document.write('<link rel="stylesheet" href="' + COMMUN + 'charte.css">');
-if (MODE_APP) document.write('<link rel="manifest" href="manifest.webmanifest"><link rel="icon" href="icon-192.png"><link rel="apple-touch-icon" href="icon-192.png">');
-</script>
+<link rel="stylesheet" href="commun/charte.css">
 <style>
-:root{--outil:var(--outil-calcul)}
-main{padding-bottom:100px}
-label{display:block;font-weight:700;margin-bottom:6px;font-size:.93rem}
-.saisie{width:100%;border:1px solid var(--trait);border-radius:var(--arrondi-m);padding:11px 13px;font-size:1.25rem;background:var(--surface-2);min-height:var(--cible)}
-#history{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}#history:empty{display:none}
-#history .calc-tag{flex-basis:100%;margin:0}
-#history button{min-height:40px;border:1px solid var(--trait);background:var(--surface-2);border-radius:999px;padding:4px 12px;font-size:.88rem;font-variant-numeric:tabular-nums}
-#history button b{color:var(--outil)}
-#history .vider{color:var(--encre-douce);border-style:dashed}
-#calc-result:empty{display:none}
-#calc-result{margin-top:10px}
-#calc-result .calc{border-color:color-mix(in srgb,var(--outil) 45%,var(--trait))}
-#calc-result .answer{font-size:1.25rem}
-.calc-tag{font-size:.78rem;font-weight:700;color:var(--encre-douce);margin:0 0 2px}
-.keypad{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:10px}
-.keypad button{min-height:var(--cible);border:1px solid var(--trait);border-radius:10px;background:var(--surface-2);font-size:1.15rem;font-weight:700}
-.keypad button.op{background:color-mix(in srgb,var(--outil) 14%,var(--surface));color:var(--encre)}
-#status{font-size:.9rem;color:var(--encre-douce);margin:10px 0 0}#status:empty{display:none}
-#choices{display:flex;flex-wrap:wrap;gap:7px}#choices:empty{display:none}
-.choice{border:1px solid var(--trait);background:var(--surface);border-radius:10px;padding:9px 11px;text-align:left;margin-top:8px;font-size:.9rem;min-height:var(--cible)}
-.choice.go{background:var(--outil);border-color:var(--outil);color:var(--sur-outil);font-weight:700}
-.choice small{display:block;color:var(--encre-douce);margin-top:2px}
-#correction{margin-top:18px}
-.sheet-title{display:flex;align-items:center;gap:12px;background:var(--surface);border:1px solid var(--trait);border-radius:var(--arrondi-l);padding:12px 14px;margin-bottom:8px}
-.ceint{flex:none;width:40px;height:40px;border-radius:10px;background:var(--belt);box-shadow:inset 0 0 0 1px rgba(0,0,0,.12);display:grid;place-items:center;color:#fff;font-weight:700}
-h2{font-size:1.2rem;margin:0}
-.sheet-title p{margin:0;color:var(--encre-douce);font-size:.86rem}
-.calc{border:1px solid var(--trait);background:var(--surface);border-radius:var(--arrondi-m);margin:6px 0}
-.calc summary{display:grid;grid-template-columns:26px minmax(0,1fr) auto 12px;align-items:center;gap:8px;padding:10px 12px;min-height:54px;cursor:pointer;list-style:none}
-.calc summary::-webkit-details-marker{display:none}
-.calc summary::after{content:'›';font-size:1.4rem;color:var(--encre-douce)}
-.calc[open] summary::after{transform:rotate(90deg)}
-.num{color:var(--encre-douce);font-size:.78rem;text-align:center}
-.expr,.answer,.work{font-variant-numeric:tabular-nums}
-.expr{font-size:clamp(.88rem,3.4vw,1.05rem);font-weight:700}
-.answer{text-align:right;font-weight:700;color:var(--outil);white-space:nowrap;font-size:1.05rem}
-.expr small,.answer small{display:block;font-size:.74rem;font-weight:400;color:var(--encre-douce);margin-top:2px}
-.work{padding:12px 14px;border-top:1px solid var(--trait);background:var(--surface-2);border-radius:0 0 var(--arrondi-m) var(--arrondi-m);font-size:.92rem;overflow:auto}
-.work p{margin:8px 0 0}
-.stack{display:grid;grid-template-columns:max-content auto;gap:4px 12px;align-items:center;width:max-content;max-width:100%}
-.stack code{text-align:right;white-space:pre;font-size:1rem}
-.stack small{color:var(--encre-douce)}
-.rule{height:1px;background:var(--encre-douce);grid-column:1/2}
-.division{border-collapse:collapse;width:100%;text-align:right;white-space:nowrap}
-.division th,.division td{padding:5px 3px;border-bottom:1px solid var(--trait)}
-.division th{font-size:.78rem;color:var(--encre-douce)}
-.browse{margin-top:17px;background:var(--surface);border:1px solid var(--trait);border-radius:var(--arrondi-l);padding:8px 14px}
-.browse summary{cursor:pointer;font-weight:700;padding:8px 0}
-.belt{display:flex;align-items:center;gap:8px;border-top:1px solid var(--trait);padding:6px 0}
-.belt .dot{flex:none;width:22px;height:22px;border-radius:6px;background:var(--belt);box-shadow:inset 0 0 0 1px rgba(0,0,0,.12)}
-.belt span{flex:1;font-size:.95rem;font-weight:700}
-.belt button{min-width:44px;min-height:44px;border:1px solid var(--trait);background:var(--surface-2);border-radius:var(--arrondi-s);font-weight:700}
-.belt button[aria-current=true]{background:var(--outil);border-color:var(--outil);color:var(--sur-outil)}
-footer{text-align:center;margin:18px 0;font-size:.8rem;color:var(--encre-douce)}
+:root{--outil:var(--outil-portail)}
+main{padding-bottom:30px}
+.depart{display:flex;flex-wrap:wrap;align-items:center;gap:12px}
+.depart p{margin:0;flex:1;min-width:220px}
+.depart b{font-size:1.1rem}
+h2{font-size:1.05rem;margin:22px 0 8px;color:var(--encre-douce)}
+.tuiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px}
+.tuile-o{display:flex;flex-direction:column;gap:8px;padding:14px;border-radius:var(--arrondi-l);background:var(--surface);border:1px solid var(--trait);border-top:5px solid var(--c);text-decoration:none;color:var(--encre);min-height:150px;box-shadow:0 1px 2px rgba(17,26,44,.06)}
+a.tuile-o:hover{border-color:var(--c);box-shadow:0 3px 10px rgba(17,26,44,.10)}
+.tuile-o .tete{display:flex;align-items:center;gap:10px}
+.tuile-o .ico{display:grid;place-items:center;width:42px;height:42px;border-radius:11px;background:var(--c);color:#fff;font-size:1.3rem;flex:none}
+.tuile-o h3{margin:0;font-size:1.08rem;line-height:1.2}
+.tuile-o p{margin:0;color:var(--encre-douce);font-size:.9rem;flex:1}
+.tuile-o .etat{font-size:.8rem;font-weight:700;color:var(--c)}
+.tuile-o.bientot{opacity:.6;border-top-style:dashed;min-height:0}
+.tuile-o.bientot .ico{background:var(--encre-douce)}
+.encart{margin-top:22px}
+.encart>summary{cursor:pointer;font-weight:700;min-height:var(--cible);display:flex;align-items:center}
+.encart ul{margin:6px 0 0;padding-left:20px}
+.encart li{margin:4px 0}
+.infos{margin-top:22px;display:grid;gap:10px}
+.infos p{margin:0;font-size:.9rem}
+footer{display:flex;flex-wrap:wrap;gap:10px;justify-content:space-between;align-items:center;margin:26px 0;font-size:.82rem;color:var(--encre-douce)}
 footer a{color:var(--encre-douce)}
-.dock{position:fixed;bottom:0;left:0;right:0;text-align:center;background:color-mix(in srgb,var(--fond) 94%,transparent);padding:9px 15px calc(9px + env(safe-area-inset-bottom));border-top:1px solid var(--trait);z-index:5}
-.dock .btn{width:min(100%,608px)}
 </style>
 </head>
 <body>
 <header class="entete"><div class="shell bar">
-  <a class="retour" href="index.html" id="back" data-cnav-hide hidden>← Classe</a>
-  <span class="tuile" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="12" cy="6" r="1.4" fill="currentColor"/><path d="M5 12h14"/><circle cx="12" cy="18" r="1.4" fill="currentColor"/></svg></span>
-  <h1>Correcteur de calcul posé<small>Ceintures de calcul · tests v6</small></h1>
+  <span class="tuile" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7.5" height="7.5" rx="2"/><rect x="13.5" y="3" width="7.5" height="7.5" rx="2"/><rect x="3" y="13.5" width="7.5" height="7.5" rx="2"/><rect x="13.5" y="13.5" width="7.5" height="7.5" rx="2"/></svg></span>
+  <h1>Outils de classe partagés<small>Gratuits, sans compte · tes données restent sur ton appareil</small></h1>
+  <button class="btn petit" type="button" id="installer" hidden>📲 Installer</button>
 </div></header>
 <main class="shell">
-  <section class="carte flotte" aria-label="Recherche de fiche">
-    <label for="first">Premier calcul de la fiche, ou n’importe quel calcul</label>
-    <input id="first" class="saisie" placeholder="Ex. 47 + 279 ou 1 254 ÷ 7" autocomplete="off" spellcheck="false" inputmode="none">
-    <div id="keypad" class="keypad" aria-label="Clavier de calcul"></div>
-    <div id="history" aria-label="Derniers calculs"></div>
-    <p id="status" role="status"></p>
-    <div id="calc-result" aria-live="polite"></div>
-    <div id="choices"></div>
-  </section>
-  <section id="correction" aria-label="Corrigé" hidden></section>
-  <details id="browse" class="browse">
-    <summary>Choisir une ceinture</summary>
-    <div id="catalog"></div>
+  <section class="carte flotte depart" id="depart" aria-label="Pour commencer"></section>
+
+  <h2>Mes outils</h2>
+  <div class="tuiles" id="tuiles"></div>
+
+  <h2>Bientôt</h2>
+  <div class="tuiles" id="bientot"></div>
+
+  <details class="encart carte" id="nouveautes">
+    <summary>✨ Nouveautés</summary>
+    <ul>
+      <li><b>21/11/2026 · version 1.0</b> : premier partage. « Ma classe » (liste d’élèves une seule fois, coller une liste, export ONDE), Correcteur de calcul posé et Ateliers de problèmes, avec évaluations A / AR / ECA / NA au choix.</li>
+    </ul>
   </details>
-  <div id="evals-app"></div>
-  <footer><a href="https://www.charivarialecole.fr/archives/8508">Fiches de Charivari à l’école</a> · <span id="version"></span></footer>
+
+  <div class="infos carte">
+    <p>🔒 <b>Tes données</b> : prénoms, évaluations et réglages restent dans le navigateur de cet appareil. Rien n’est envoyé, rien n’est publié. Pour changer d’appareil, exporte ta classe dans <a href="ma-classe/#s-sauve">Ma classe</a>.</p>
+    <p>📚 <b>Contenus</b> : ceintures de calcul posé de <a href="https://www.charivarialecole.fr/archives/8508">Charivari à l’école</a> (les fiches sont à télécharger sur son site) ; corrigés des ateliers du fichier <b>Accès Maths</b> CM1 et CM2, pour les classes qui ont le fichier (non fourni).</p>
+    <p>🔄 <b>Mises à jour</b> : automatiques. Si une page semble ancienne, recharge-la (sur ordinateur : Ctrl + Maj + R).</p>
+  </div>
+
+  <footer>
+    <a class="btn petit" id="retour-mail" href="#">💬 Une idée, un souci ?</a>
+    <span>Xavier Gougaud · <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/deed.fr" rel="license">CC BY-NC-SA 4.0</a> · <span id="version"></span></span>
+  </footer>
 </main>
-<div class="dock" id="dock" hidden><button class="btn plein" id="reset" type="button" title="Nouvelle fiche (Échap)">↺ &nbsp;Nouvelle fiche</button></div>
 <div id="toast" class="toast" role="status"></div>
-<script>document.write('<script src="' + COMMUN + 'fiches-calcul.js"><\/script>' + (MODE_APP ? '' : '<script src="' + COMMUN + 'eval.js"><\/script>'));</script>
+<script src="commun/ma-classe.js"></script>
 <script>
-const VERSION = "2.3.0";
-const CLASSE_URL = "https://claude.ai/artifact/Fjw3PS19NxsGxkekSUaoZA";
-const SOURCE_FICHES = window.FICHES_CALCUL;
-const belts = SOURCE_FICHES.trim().split(/\n(?=[A-Z][^\n]*\|)/).map(block => {
-  const [head, ...variants] = block.split("\n");
-  const [name, color, precision] = head.split("|");
-  return {name, color, sheets: variants.map((line, index) => ({
-    name, color, label: "ABC"[index] ?? "D",
-    printLabel: name === "Brillante" && index === 2 ? "A" : null,
-    operations: line.split(";").map(raw => {
-      const [expression, rank] = raw.split("@");
-      return {expression, rank: Number(rank ?? precision)};
-    })
-  }))};
-});
-const sheets = belts.flatMap(belt => belt.sheets);
-const get = id => document.getElementById(id);
-const first = get("first"), correction = get("correction");
-const glyph = {"+":"+","-":"−","*":"×","/":"÷"};
-const places = ["unités","dizaines","centaines","milliers","dizaines de milliers","centaines de milliers"];
-const precisionNames = ["unités","dixièmes","centièmes","millièmes"];
-const power = n => 10n ** BigInt(n);
-const scale = s => s.split(".")[1]?.length ?? 0;
-const integer = s => BigInt(s.replace(".", ""));
-const scaled = (s, n) => integer(s) * power(n - scale(s));
-const spaced = s => s.replace(/\B(?=(\d{3})+(?!\d))/g, " ");
-function format(value, decimals = 0, fixed = false, group = true) {
-  const sign = value < 0n ? "−" : "";
-  const digits = (value < 0n ? -value : value).toString().padStart(decimals + 1, "0");
-  const units = decimals ? digits.slice(0, -decimals) : digits;
-  let fraction = decimals ? digits.slice(-decimals) : "";
-  if (!fixed) fraction = fraction.replace(/0+$/, "");
-  return sign + (group ? spaced(units) : units) + (fraction ? "," + fraction : "");
-}
-const pretty = expression => expression.replace(/\d+(?:\.\d+)?|[+*/-]/g, token =>
-  glyph[token] ? " " + glyph[token] + " " : format(integer(token), scale(token), true));
-const normalize = input => input.toLowerCase().replace(/\s/g, "").replace(/[x×]/g,"*")
-  .replace(/[÷:]/g,"/").replace(/−/g,"-").replace(/,/g,".").replace(/=$/,"");
-const parse = expression => expression.split(/([+*/-])/);
-function divide(a, b, rank) {
-  const divisor = integer(b);
-  const digits = a.split(".");
-  const fractional = (digits[1] ?? "").padEnd(rank, "0").slice(0, rank);
-  const columns = digits[0] + fractional;
-  let remainder = 0n, quotient = 0n;
-  const steps = [];
-  for (let i = 0; i < columns.length; i++) {
-    const current = remainder * 10n + BigInt(columns[i]);
-    const digit = current / divisor;
-    const product = digit * divisor;
-    remainder = current - product;
-    quotient = quotient * 10n + digit;
-    const place = digits[0].length - 1 - i;
-    if (steps.length || digit || place <= 0) {
-      steps.push({place, current, digit, product, remainder});
-    }
-  }
-  const remainderRank = Math.max(scale(a), rank);
-  const rest = scaled(a, remainderRank) - divisor * quotient * power(remainderRank - rank);
-  return {quotient, remainder: rest, remainderRank, steps};
-}
-function stackRow(number, label = "") {
-  return "<code>" + number + "</code><small>" + label + "</small>";
-}
-const rule = '<div class="rule"></div><span></span>';
-function solve(operation) {
-  const {expression, rank} = operation;
-  const [a, op, b] = parse(expression);
-  if (op === "/") {
-    const {quotient, remainder, remainderRank, steps} = divide(a, b, rank);
-    const rankLabel = rank === 1 ? "Au dixième" : rank === 2 ? "Au centième" : "";
-    const rows = steps.map(step => {
-      const label = step.place < 0 ? precisionNames[-step.place] : places[step.place];
-      return "<tr><td>" + [label, step.current, step.digit, step.product, step.remainder].join("</td><td>") + "</td></tr>";
-    }).join("");
-    return {
-      hint: rankLabel,
-      answer: format(quotient, rank, true) + "<small>Reste " + format(remainder) +
-        (remainderRank ? " " + precisionNames[remainderRank] : "") + "</small>",
-      work: '<table class="division"><thead><tr><th>Rang</th><th>À diviser</th><th>Chiffre</th><th>Produit</th><th>Reste</th></tr></thead><tbody>' +
-        rows + "</tbody></table><p>" + pretty(a) + " = " + format(quotient, rank, true) +
-        " × " + pretty(b) + " + " + format(remainder, remainderRank) + "</p>"
-    };
-  }
-  /* + et − : autant de nombres qu'on veut (ex. 120 − 35 − 8) */
-  const parts = parse(expression), nums = parts.filter((_, i) => i % 2 === 0), signs = parts.filter((_, i) => i % 2);
-  const d = Math.max(...nums.map(scale));
-  const result = op === "*" ? integer(a) * integer(b) :
-    nums.reduce((sum, n, i) => i === 0 ? scaled(n,d) : signs[i - 1] === "-" ? sum - scaled(n,d) : sum + scaled(n,d), 0n);
-  const raw = (v,n) => format(v,n,true,false);
-  const totalDecimals = op === "*" ? scale(a) + scale(b) : d;
-  let work;
-  if (op === "*") {
-    const multiplier = b.replace(".", "");
-    let rows = stackRow(integer(a)) + stackRow("× " + integer(b)) + rule;
-    if (multiplier.length > 1) {
-      rows += [...multiplier].reverse().map((digit, i) =>
-        stackRow(integer(a) * BigInt(digit) * power(i), digit + " · " + places[i])).join("") + rule;
-    }
-    rows += stackRow(result);
-    work = '<div class="stack">' + rows + "</div>";
-    if (totalDecimals) {
-      work += "<p>Replacer la virgule à " + totalDecimals + " chiffre" +
-        (totalDecimals > 1 ? "s" : "") + " de la droite → <b>" +
-        format(result,totalDecimals,true) + "</b></p>";
-    }
-  } else {
-    work = '<div class="stack">' + nums.map((n, i) => stackRow((i ? glyph[signs[i - 1]] + " " : "") + raw(scaled(n,d),d))).join("") +
-      rule + stackRow(raw(result,d)) + "</div>";
-  }
-  return {answer: format(result,totalDecimals), hint: "", work};
-}
-let shown, store = null, panel = null;
-const evalHost = document.createElement("div");
-const sheetKey = s => s.name + "-" + s.label;
-function show(sheet, scroll = false) {
-  if (sheet === shown && !scroll) return;
-  shown = sheet;
-  correction.hidden = !sheet;
-  get("dock").hidden = !sheet;
-  markCatalog();
-  if (!sheet) { correction.replaceChildren(); return; }
-  const heading = '<div class="sheet-title" style="--belt:' + sheet.color + '"><span class="ceint" aria-hidden="true">' + sheet.label + '</span><div><h2>' + title(sheet) +
-    "</h2><p>Touche un calcul pour voir les étapes.</p></div></div>";
-  const rows = sheet.operations.map((operation, i) => {
-    const solved = solve(operation);
-    return '<details class="calc"><summary><span class="num">' + (i + 1) + '</span><span class="expr">' + pretty(operation.expression) +
-      (solved.hint ? "<small>" + solved.hint + "</small>" : "") + '</span><span class="answer">' + solved.answer + '</span></summary><div class="work">' + solved.work + "</div></details>";
+const VERSION = "1.0.0";
+const MAIL = "xavier.gougaud@ac-nantes.fr";
+const $ = id => document.getElementById(id);
+const esc = t => String(t).replace(/[&<>"']/g, c => "&#" + c.charCodeAt(0) + ";");
+/* Une ligne par outil : ajouter ici les prochains outils du kit. */
+const OUTILS = [
+  {id: "ma-classe", url: "ma-classe/", ico: "👥", c: "var(--outil-maclasse)", titre: "Ma classe", texte: "Ta liste d’élèves, saisie une seule fois : tous les outils la retrouvent."},
+  {id: "calcul", url: "correcteur/", ico: "➗", c: "var(--outil-calcul)", titre: "Correcteur de calcul posé", texte: "Tape le premier calcul d’une fiche de ceinture (Charivari) : le corrigé s’affiche, avec les étapes. Sert aussi de calculatrice."},
+  {id: "problemes", url: "problemes/", ico: "🧩", c: "var(--outil-problemes)", titre: "Ateliers de problèmes", texte: "Corrigés des ateliers Accès Maths CM1 et CM2, problème par problème, avec les calculs."}
+];
+const BIENTOT = [["🪑", "Plan de classe"], ["🔀", "Groupes"], ["✍️", "Dictées"], ["📝", "Mes problèmes (édition libre)"], ["⚡", "Flash maths"], ["📄", "Fiches Claires"]];
+function rendre() {
+  const n = MaClasse.charger().eleves.length;
+  $("depart").innerHTML = n
+    ? '<p><b>👋 Bonjour !</b> Ta classe compte ' + n + " élève" + (n > 1 ? "s" : "") + ". Choisis un outil ci-dessous.</p><a class=\"btn doux\" href=\"ma-classe/\">👥 Ma classe</a>"
+    : '<p><b>Pour commencer</b> : ajoute tes élèves dans « Ma classe ». Tu le fais une fois, tous les outils les retrouvent. Les correcteurs marchent aussi sans élèves.</p><a class="btn plein" href="ma-classe/">👥 Ajouter mes élèves</a>';
+  $("tuiles").innerHTML = OUTILS.map(o => {
+    const etat = o.id === "ma-classe" ? (n ? n + " élève" + (n > 1 ? "s" : "") : "À remplir en premier")
+      : (MaClasse.evalsOn(o.id) ? "👥 Évaluations activées" : "");
+    return '<a class="tuile-o" style="--c:' + o.c + '" href="' + o.url + '"><span class="tete"><span class="ico" aria-hidden="true">' + o.ico + "</span><h3>" + esc(o.titre) + "</h3></span><p>" + esc(o.texte) + "</p>" + (etat ? '<span class="etat">' + esc(etat) + "</span>" : "") + "</a>";
   }).join("");
-  correction.innerHTML = heading + rows;
-  correction.querySelector(".sheet-title").after(evalHost);
-  if (panel) panel.render();
-  if (scroll) {
-    if (!history.state?.fiche) history.pushState({fiche: 1}, "");
-    correction.scrollIntoView({block: "start", behavior: "smooth"});
-  }
+  $("bientot").innerHTML = BIENTOT.map(([i, t]) => '<div class="tuile-o bientot" style="--c:var(--encre-douce)"><span class="tete"><span class="ico" aria-hidden="true">' + i + "</span><h3>" + esc(t) + "</h3></span></div>").join("");
 }
-const title = sheet => sheet.name + " · " + sheet.label + (sheet.printLabel ? " (A sur le PDF)" : "");
-function exact(expr, query) { return expr === query || expr.split(/[+*/-]/)[0] === query; }
-/* Calculatrice libre : un calcul complet qui n'est pas le 1er d'une fiche.
-   Renvoie {html} (résultat + étapes repliées), {error} (calcul complet mais impossible) ou null (saisie pas finie). */
-const COMPLETE = /^\d+(\.\d+)?([+*/-]\d+(\.\d+)?)+$/;
-function calculator(query) {
-  if (!COMPLETE.test(query)) return null;
-  const parts = parse(query), signs = parts.filter((_, i) => i % 2);
-  if (signs.length > 1 && signs.some(s => s === "*" || s === "/"))
-    return {error: "Pour × et ÷, tape un seul calcul à la fois (ex. 47 × 28)."};
-  const line = (operation, tag) => {
-    const solved = solve(operation);
-    return '<details class="calc"><summary><span class="num">=</span><span class="expr">' + pretty(operation.expression) +
-      "<small>" + (tag || "Touche pour voir les étapes") + '</small></span><span class="answer">' + solved.answer +
-      '</span></summary><div class="work">' + solved.work + "</div></details>";
-  };
-  if (signs[0] === "/") {
-    const divisor = parts[2];
-    if (scale(divisor)) return {error: "Le diviseur doit être un nombre entier."};
-    if (integer(divisor) === 0n) return {error: "On ne peut pas diviser par 0."};
-    return {html: '<p class="calc-tag">Calculatrice · touche une ligne pour les étapes</p>' +
-      [[0, "À l’unité"], [1, "Au dixième"], [2, "Au centième"]].map(([rank, tag]) => line({expression: query, rank}, tag)).join("")};
-  }
-  return {html: '<p class="calc-tag">Calculatrice</p>' + line({expression: query, rank: 0})};
-}
-/* Derniers calculs de la calculatrice (5 au plus, sur cet appareil, jamais de prénom).
-   Un calcul est gardé quand on le quitte : Nouveau calcul, Échap, Entrée, champ vidé ou appli mise de côté. */
-const RECENT_KEY = "correcteur-derniers-calculs";
-let recent = [], pending = null;
-try { recent = JSON.parse(localStorage.getItem(RECENT_KEY)) || []; } catch {}
-function saveRecent() { try { localStorage.setItem(RECENT_KEY, JSON.stringify(recent)); } catch {} }
-function keepPending() {
-  if (!pending) return;
-  recent = [pending, ...recent.filter(e => e !== pending)].slice(0, 5);
-  pending = null; saveRecent();
-}
-function shortAnswer(expression) {
-  try { return solve({expression, rank: 0}).answer.replace(/<small>Reste /, " r ").replace(/<[^>]+>/g, ""); } catch { return ""; }
-}
-function renderHistory(query) {
-  const box = get("history");
-  box.replaceChildren();
-  if (query || !recent.length) return;
-  box.innerHTML = '<p class="calc-tag">Derniers calculs · touche pour le reprendre</p>';
-  for (const expression of recent) {
-    const b = document.createElement("button");
-    b.type = "button";
-    b.innerHTML = pretty(expression) + " = <b>" + shortAnswer(expression) + "</b>";
-    b.onclick = () => { first.value = pretty(expression).trim(); update(); };
-    box.append(b);
-  }
-  const clear = document.createElement("button");
-  clear.type = "button"; clear.className = "vider"; clear.textContent = "✕ Effacer la liste";
-  clear.onclick = () => { if (confirm("Effacer les " + recent.length + " derniers calculs ?")) { recent = []; saveRecent(); renderHistory(""); } };
-  box.append(clear);
-}
-function update() {
-  const query = normalize(first.value), choices = get("choices"), calcBox = get("calc-result");
-  if (!query) keepPending();
-  renderHistory(query);
-  choices.replaceChildren();
-  const candidates = query ? sheets.filter(s => s.operations[0].expression.startsWith(query)) : [];
-  const matches = candidates.filter(s => exact(s.operations[0].expression, query));
-  /* Deux fiches peuvent commencer par le même calcul : on propose les deux, avec leur 2e calcul pour les départager. */
-  const ambiguous = matches.length > 1;
-  const list = ambiguous ? matches : matches.length ? [] : candidates;
-  const found = matches.length === 1 ? matches[0] : null;
-  const calc = !matches.length ? calculator(query) : null;
-  show(found);
-  calcBox.innerHTML = calc?.html ?? "";
-  if (calc?.html) pending = query;
-  get("status").textContent = !query ? "" : found ? title(found) : ambiguous ? "Ce calcul commence " + matches.length + " fiches : choisis la bonne." :
-    calc?.error ? calc.error : calc ? (list.length ? "" : "Ce calcul n’est le premier d’aucune fiche.") :
-    !candidates.length ? "Aucune fiche ne commence par ce calcul." : candidates.length > 1 ? candidates.length + " fiches correspondent." : "Continue la saisie ou ouvre la fiche proposée.";
-  get("dock").hidden = !found && !calc?.html;
-  get("reset").textContent = "↺\u00a0 " + (found || !calc?.html ? "Nouvelle fiche" : "Nouveau calcul");
-  if (found) {
-    const jump = document.createElement("button");
-    jump.className = "choice go"; jump.textContent = "Voir le corrigé ↓";
-    jump.onclick = () => show(found, true);
-    choices.append(jump);
-  } else if (list.length <= 8) {
-    for (const sheet of list) {
-      const b = document.createElement("button");
-      b.className = "choice";
-      b.innerHTML = (calc?.html ? "Fiche " : "") + title(sheet) + "<small>" + pretty(sheet.operations[0].expression) + (ambiguous ? " · puis " + pretty(sheet.operations[1].expression) : "") + "</small>";
-      b.onclick = () => show(sheet, true);
-      choices.append(b);
-    }
-  }
-}
-function markCatalog() {
-  for (const b of document.querySelectorAll("#catalog button")) b.setAttribute("aria-current", String(!!shown && b.dataset.k === sheetKey(shown)));
-}
-function init() {
-  first.addEventListener("input", update);
-  first.addEventListener("keydown", e => { if (e.key === "Enter") { keepPending(); if (shown) show(shown, true); } });
-  document.addEventListener("visibilitychange", () => { if (document.hidden) keepPending(); });
-  for (const key of ["7","8","9","÷","4","5","6","×","1","2","3","−",",","0","⌫","+"]) {
-    const b = document.createElement("button");
-    b.type = "button"; b.textContent = key;
-    if (key === "⌫") b.setAttribute("aria-label", "Effacer un caractère");
-    if ("÷×−+".includes(key)) b.className = "op";
-    b.addEventListener("pointerdown", e => e.preventDefault());
-    b.onclick = () => {
-      const f = first, start = f.selectionStart, end = f.selectionEnd;
-      const from = key === "⌫" && start === end ? Math.max(0, start - 1) : start;
-      f.setRangeText(key === "⌫" ? "" : key, from, end, "end");
-      f.focus({preventScroll: true});
-      f.dispatchEvent(new Event("input"));
-    };
-    get("keypad").append(b);
-  }
-  for (const belt of belts) {
-    const row = document.createElement("div");
-    row.className = "belt"; row.style.setProperty("--belt", belt.color);
-    const dot = document.createElement("i"); dot.className = "dot";
-    const name = document.createElement("span"); name.textContent = belt.name;
-    row.append(dot, name);
-    for (const sheet of belt.sheets) {
-      const b = document.createElement("button");
-      b.textContent = sheet.label; b.dataset.k = sheetKey(sheet);
-      b.setAttribute("aria-label", title(sheet));
-      b.onclick = () => { get("browse").open = false; show(sheet, true); };
-      row.append(b);
-    }
-    get("catalog").append(row);
-  }
-  get("reset").onclick = () => { if (history.state?.fiche) history.back(); else newSheet(); };
-  addEventListener("popstate", () => newSheet());
-  document.addEventListener("keydown", e => { if (e.key === "Escape") get("reset").click(); });
-  get("version").textContent = "version " + VERSION;
-  renderHistory("");
-}
-function newSheet() {
-  first.value = "";
-  get("browse").open = false;
-  update();
-  first.focus({preventScroll: true});
-  window.scrollTo({top: 0, behavior: "smooth"});
-}
-
-/* Évaluations (seulement dans Classe) */
-const beltOf = {};
-belts.forEach((b, i) => b.sheets.forEach(s => beltOf[sheetKey(s)] = i));
-/* Une ceinture est validée si une de ses fiches a « A », ou si elle a été validée automatiquement (clé = nom de la ceinture seul). */
-const validated = (b, name) => store.get(b.name, name) === "A" || b.sheets.some(s => store.get(sheetKey(s), name) === "A");
-function acquired(name) { /* plus haute ceinture validée */
-  for (let i = belts.length - 1; i >= 0; i--) if (validated(belts[i], name)) return i;
-  return -1;
-}
-let autoPrev = true;
-try { autoPrev = localStorage.getItem("calcul-auto-precedentes") !== "0"; } catch {}
-function onMark(key, name, m) {
-  const changes = [{key, name, m}];
-  if (m === "A" && autoPrev) for (let i = 0; i < beltOf[key]; i++)
-    if (!validated(belts[i], name)) changes.push({key: belts[i].name, name, m: "A"});
-  store.setMany(changes);
-  if (changes.length > 1) Evals.toast(name + " : " + (changes.length - 1) + " ceinture" + (changes.length > 2 ? "s" : "") + " d’avant validée" + (changes.length > 2 ? "s" : "") + " aussi");
-}
-function pupils() {
-  const b = shown && belts[beltOf[sheetKey(shown)]];
-  return store.roster.map(p => {
-    const i = acquired(p.name), auto = b && store.get(b.name, p.name) === "A";
-    return {...p, info: p.group + (i >= 0 ? " · ceinture " + belts[i].name.toLowerCase() : "") + (auto ? " · " + b.name.toLowerCase() + " validée auto" : "")};
-  });
-}
-async function startEvals() {
-  if (MODE_APP) {
-    get("evals-app").innerHTML = '<div class="vers-classe"><span>👥 Les évaluations des élèves se font dans <b>Classe</b> › Outils et réglages › Maths.</span><a class="btn petit" href="' + CLASSE_URL + '" target="_blank" rel="noopener">Ouvrir Classe ↗</a></div>';
-    return;
-  }
-  get("back").hidden = false;
-  try {
-    store = await Evals.start("calcul", VERSION);
-    panel = new Evals.Panel(evalHost, {store, key: () => shown && sheetKey(shown), pupils, filters: true, pdf: exportPdf, onMark,
-      extra: () => '<button type="button" class="btn petit" data-ev="x" aria-pressed="' + autoPrev + '" title="Un A valide aussi les ceintures d’avant pas encore validées">' + (autoPrev ? "✓" : "✗") + " Ceintures d’avant : " + (autoPrev ? "auto" : "non") + "</button>",
-      onExtra: () => { autoPrev = !autoPrev; try { localStorage.setItem("calcul-auto-precedentes", autoPrev ? "1" : "0"); } catch {} }});
-  } catch (e) {
-    evalHost.innerHTML = '<div class="vers-classe"><span>⚠ Les évaluations n’ont pas pu se charger (base de Classe injoignable).</span><button class="btn petit" type="button" id="retry">↻ Réessayer</button></div>';
-    get("retry").onclick = startEvals;
-  }
-}
-function exportPdf() {
-  const rows = store.roster.map(p => ({name: p.name, cells: belts.map(b => {
-    const l = store.last([b.name].concat(b.sheets.map(sheetKey)), p.name);
-    return l ? {m: l.m, t: l.m + " · " + (l.key === b.name ? "auto" : l.key.split("-").pop())} : null;
-  })}));
-  return Evals.pdf({sections: [{title: "Ceintures de calcul posé", sub: "Dernière évaluation de chaque ceinture (code · fiche, « auto » = validée par une ceinture suivante)", cols: belts.map(b => b.name), rows}],
-    filename: "evaluations-ceintures-calcul.pdf", color: "#23914A", colsPerPage: 11});
-}
-
-init();
-startEvals();
-if (MODE_APP && "serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("./sw.js").catch(() => {});
+$("retour-mail").href = "mailto:" + MAIL + "?subject=" + encodeURIComponent("Outils de classe partagés : une idée, un souci") +
+  "&body=" + encodeURIComponent("Bonjour Xavier,\n\nOutil concerné : \nCe que j’aimerais / ce qui ne marche pas : \n\n(Version du portail : " + VERSION + " · appareil : " + navigator.userAgent + ")\n");
+$("version").textContent = "version " + VERSION;
+let invite = null;
+addEventListener("beforeinstallprompt", e => { e.preventDefault(); invite = e; $("installer").hidden = false; });
+$("installer").onclick = async () => { if (!invite) return; invite.prompt(); await invite.userChoice.catch(() => {}); invite = null; $("installer").hidden = true; };
+addEventListener("storage", rendre);
+addEventListener("pageshow", rendre);
+rendre();
+if ("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("sw.js").catch(() => {});
 </script>
-<script>if (!MODE_APP) document.write('<script src="side-nav.js" defer><\/script>');</script>
 </body>
 </html>

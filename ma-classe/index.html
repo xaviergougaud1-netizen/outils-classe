@@ -1,0 +1,398 @@
+<!doctype html>
+<!-- TECHNIQUE
+Fiche d'identité
+- Rôle : saisir une seule fois la liste de ses élèves (prénom, niveau, groupe) ; tous les outils du kit « Outils de classe partagés » la relisent.
+- Quand : à la rentrée, puis quand un élève arrive ou part.
+- Où : l'appareil sur lequel on utilise les outils (ordinateur de classe ou téléphone) ; rien n'est envoyé.
+- Écran n° 1 : « Ajouter des élèves » (si la liste est vide) ou la liste des élèves, rangée par niveau et groupe.
+- Ce qu'il ne fait pas : pas d'évaluations (elles sont dans chaque outil), pas de noms de famille, pas de synchronisation (export / import).
+Version : voir VERSION.
+Données : commun/ma-classe.js (localStorage « kit-classe », format décrit en tête du fichier). État des sections : localStorage « kit-ui-ma-classe ».
+Import ONDE : fichier CSV (séparateur ; ou tabulation), encodage UTF-8 ou Windows-1252 ; on ne garde que le prénom et le niveau
+  (l'initiale du nom ne sert qu'à départager deux prénoms identiques).
+Historique :
+- 1.0.0 (2026-11-21) première version : un par un, coller une liste, export ONDE, modifier, supprimer, Ctrl+Z, export / import.
+-->
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#EEE8F6">
+<title>Ma classe · Outils de classe partagés</title>
+<link rel="manifest" href="../manifest.webmanifest"><link rel="icon" href="../icon-192.png"><link rel="apple-touch-icon" href="../icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../commun/charte.css">
+<style>
+:root{--outil:var(--outil-maclasse)}
+main{padding-bottom:40px}
+.compteurs{display:flex;flex-wrap:wrap;gap:8px;margin:0}
+.compteurs span{display:inline-flex;align-items:baseline;gap:5px;padding:6px 12px;border-radius:var(--arrondi-m);background:var(--surface-2);font-size:.92rem}
+.compteurs b{font-size:1.25rem;color:var(--outil)}
+.sec{margin-top:14px;background:var(--surface);border:1px solid var(--trait);border-radius:var(--arrondi-l)}
+.sec>summary{display:flex;align-items:center;gap:10px;min-height:56px;padding:6px 14px;cursor:pointer;list-style:none;font-weight:700;font-size:1.05rem}
+.sec>summary::-webkit-details-marker{display:none}
+.sec>summary::after{content:'›';display:inline-block;margin-left:auto;font-size:1.4rem;color:var(--encre-douce);transition:transform .15s}
+.sec[open]>summary::after{transform:rotate(90deg)}
+.sec .tuile-s{display:grid;place-items:center;width:32px;height:32px;border-radius:9px;background:color-mix(in srgb,var(--outil) 16%,var(--surface));font-size:1.05rem;flex:none}
+.sec .corps{padding:4px 14px 14px;border-top:1px solid var(--trait)}
+.ligne{display:flex;flex-wrap:wrap;gap:8px;align-items:end;margin-top:10px}
+.champ{display:flex;flex-direction:column;gap:4px;font-size:.85rem;color:var(--encre-douce);flex:1;min-width:120px}
+.champ.etroit{flex:0 1 110px;min-width:96px}
+input[type=text],select,textarea{border:1px solid var(--trait);border-radius:var(--arrondi-m);background:var(--surface-2);padding:10px 12px;min-height:var(--cible);color:var(--encre);font-size:1rem}
+textarea{width:100%;min-height:150px;resize:vertical;line-height:1.5}
+.seg{margin-top:10px;flex-wrap:wrap}
+.seg button{padding:0 12px}
+.groupe-t{display:flex;align-items:center;gap:8px;margin:16px 0 4px;font-weight:700}
+.groupe-t small{font-weight:400;color:var(--encre-douce)}
+.eleves{list-style:none;margin:0;padding:0}
+.eleves li{display:grid;grid-template-columns:minmax(0,1fr) 92px minmax(0,.8fr) 44px;gap:6px;align-items:center;padding:5px 0;border-top:1px solid var(--trait)}
+.eleves input,.eleves select{min-height:42px;padding:6px 8px;background:transparent;border-color:transparent;width:100%}
+.eleves input:hover,.eleves select:hover,.eleves input:focus,.eleves select:focus{border-color:var(--trait);background:var(--surface-2)}
+.eleves input.prenom{font-weight:700}
+.suppr{min-height:42px;border:1px solid var(--trait);border-radius:var(--arrondi-s);background:var(--surface);color:var(--danger);font-weight:700;padding:0}
+.suppr.arme{background:var(--danger);color:#fff;border-color:var(--danger);font-size:.72rem;grid-column:span 1}
+@media (max-width:520px){.eleves li{grid-template-columns:minmax(0,1fr) 84px 44px}.eleves .grp{grid-column:1/3;grid-row:2}}
+.outils{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:10px 0 0}
+.apercu{margin-top:12px;padding:12px;border-radius:var(--arrondi-m);background:color-mix(in srgb,var(--outil) 8%,var(--surface));border:2px solid color-mix(in srgb,var(--outil) 40%,var(--trait))}
+.apercu ul{list-style:none;margin:8px 0;padding:0;max-height:46vh;overflow:auto}
+.apercu li{display:flex;align-items:center;gap:8px;padding:4px 0;border-top:1px solid var(--trait)}
+.apercu li b{flex:1}
+.apercu li button{min-width:40px;min-height:40px;border:1px solid var(--trait);border-radius:var(--arrondi-s);background:var(--surface)}
+.barre-conf{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px;padding:10px;border-radius:var(--arrondi-m);background:var(--action-douce)}
+.barre-conf span{flex:1;min-width:180px}
+.vide{text-align:center;padding:18px 10px;color:var(--encre-douce)}
+.note{font-size:.85rem;color:var(--encre-douce);margin:8px 0 0}
+footer{text-align:center;margin:22px 0;font-size:.82rem;color:var(--encre-douce)}
+footer a{color:var(--encre-douce)}
+</style>
+</head>
+<body>
+<header class="entete"><div class="shell bar">
+  <a class="retour" href="../" aria-label="Accueil des outils">← Outils</a>
+  <span class="tuile" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19c.6-3.2 2.8-5 5.5-5s4.9 1.8 5.5 5"/><circle cx="17" cy="9" r="2.4"/><path d="M15.5 14.2c2.4-.3 4.4 1.2 5 4.3"/></svg></span>
+  <h1>Ma classe<small>Ta liste d’élèves, pour tous les outils</small></h1>
+</div></header>
+<main class="shell">
+  <section class="carte flotte" aria-label="Résumé">
+    <div class="compteurs" id="compteurs"></div>
+    <p class="note">🔒 La liste reste sur cet appareil : elle n’est envoyée nulle part. Seuls les prénoms sont gardés.</p>
+  </section>
+
+  <details class="sec" id="s-ajout" data-sec="ajout">
+    <summary><span class="tuile-s" aria-hidden="true">➕</span>Ajouter des élèves</summary>
+    <div class="corps">
+      <div class="seg" role="group" aria-label="Façon d’ajouter">
+        <button type="button" data-mode="un" aria-pressed="true">Un par un</button>
+        <button type="button" data-mode="coller" aria-pressed="false">Coller une liste</button>
+        <button type="button" data-mode="onde" aria-pressed="false">Fichier ONDE</button>
+      </div>
+      <div data-panneau="un">
+        <form class="ligne" id="f-un" autocomplete="off">
+          <label class="champ">Prénom<input type="text" id="un-prenom" placeholder="Ex. Léa" enterkeyhint="done"></label>
+          <label class="champ etroit">Niveau<select id="un-niveau"></select></label>
+          <label class="champ">Groupe (facultatif)<input type="text" id="un-groupe" list="dl-groupes" placeholder="Ex. Groupe bleu"></label>
+          <button class="btn plein" type="submit">Ajouter</button>
+        </form>
+        <p class="note">Touche Entrée pour ajouter et passer au suivant. Le niveau et le groupe restent choisis.</p>
+      </div>
+      <div data-panneau="coller" hidden>
+        <p class="note">Un élève par ligne. Tu peux ajouter le niveau et le groupe : <i>Léa ; CM1 ; Groupe bleu</i>. Les noms de famille écrits en MAJUSCULES sont retirés.</p>
+        <textarea id="coller" placeholder="Léa&#10;Tom ; CM2&#10;DUPONT Inès ; CM1 ; Groupe vert"></textarea>
+        <div class="ligne"><label class="champ etroit">Niveau par défaut<select id="coller-niveau"></select></label>
+          <button class="btn plein" type="button" id="b-coller">Voir la liste</button></div>
+      </div>
+      <div data-panneau="onde" hidden>
+        <p class="note">Dans ONDE : Élèves › Listes › exporte la liste de ta classe en fichier CSV, puis choisis-le ici. Seuls le <b>prénom</b> et le <b>niveau</b> sont gardés ; le fichier n’est envoyé nulle part.</p>
+        <label class="btn plein">📄 Choisir le fichier CSV<input type="file" id="onde" accept=".csv,.txt,text/csv" hidden></label>
+      </div>
+      <div id="apercu"></div>
+    </div>
+  </details>
+
+  <details class="sec" id="s-liste" data-sec="liste">
+    <summary><span class="tuile-s" aria-hidden="true">👥</span>Mes élèves <span class="aide" id="nb"></span></summary>
+    <div class="corps">
+      <div class="outils">
+        <button class="btn petit" type="button" id="b-annuler" title="Annuler (Ctrl+Z)" disabled>↶ Annuler</button>
+        <button class="btn petit" type="button" id="b-retablir" title="Rétablir (Ctrl+Y)" disabled>↷ Rétablir</button>
+      </div>
+      <div id="liste"></div>
+      <p class="note">Touche un prénom, un niveau ou un groupe pour le modifier. Si tu changes un prénom, ses évaluations dans les outils le suivent.</p>
+    </div>
+  </details>
+
+  <details class="sec" id="s-sauve" data-sec="sauve">
+    <summary><span class="tuile-s" aria-hidden="true">💾</span>Sauvegarde et autre appareil</summary>
+    <div class="corps">
+      <p class="note">Pour retrouver ta classe sur un autre appareil : exporte le fichier ici, envoie-le-toi (par exemple dans le Nuage de l’Éducation nationale), puis importe-le sur l’autre appareil.</p>
+      <div class="outils">
+        <button class="btn" type="button" id="b-export">⬇ Exporter ma classe</button>
+        <label class="btn">⬆ Importer<input type="file" id="import" accept=".json,application/json" hidden></label>
+        <button class="btn" type="button" id="b-vider" style="color:var(--danger)">Tout effacer</button>
+      </div>
+      <div id="conf"></div>
+    </div>
+  </details>
+  <p class="outils"><button class="btn petit" type="button" id="b-plier">Tout déplier</button></p>
+  <footer>Outils de classe partagés · <span id="version"></span></footer>
+</main>
+<datalist id="dl-groupes"></datalist>
+<div id="toast" class="toast" role="status"></div>
+<script src="../commun/ma-classe.js"></script>
+<script>
+const VERSION = "1.0.0";
+const $ = id => document.getElementById(id);
+const esc = t => String(t).replace(/[&<>"']/g, c => "&#" + c.charCodeAt(0) + ";");
+let D = MaClasse.charger();
+const annuler = [], retablir = [];
+let enAttente = null; /* aperçu d'un ajout groupé : [{prenom, niveau, groupe}] */
+
+function toast(t) { const el = $("toast"); el.textContent = t; el.classList.add("on"); clearTimeout(el._t); el._t = setTimeout(() => el.classList.remove("on"), 2400); }
+function instantane() { return JSON.stringify(D.eleves); }
+function changer(fn, message) {
+  annuler.push(instantane()); if (annuler.length > 40) annuler.shift(); retablir.length = 0;
+  fn();
+  if (!MaClasse.enregistrer(D)) toast("Enregistrement impossible sur cet appareil");
+  else if (message) toast(message);
+  rendre();
+}
+function revenir(depuis, vers, mot) {
+  if (!depuis.length) { toast("Rien à " + mot); return; }
+  vers.push(instantane()); D.eleves = JSON.parse(depuis.pop()); MaClasse.enregistrer(D); rendre();
+  toast(mot === "annuler" ? "Annulé" : "Rétabli");
+}
+
+/* ---------- Lecture des listes ---------- */
+function niveauDe(t) {
+  const s = String(t || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toUpperCase().replace(/\s+/g, " ").trim();
+  const direct = s.replace(/[\s.-]/g, "");
+  if (MaClasse.NIVEAUX.includes(direct) && direct !== "AUTRE") return direct;
+  const regles = [[/PETITE SECTION/, "PS"], [/MOYENNE SECTION/, "MS"], [/GRANDE SECTION/, "GS"], [/PREPARATOIRE/, "CP"],
+    [/ELEMENTAIRE.*(1|PREMIERE)/, "CE1"], [/ELEMENTAIRE.*(2|DEUXIEME)/, "CE2"], [/MOYEN.*(1|PREMIERE)/, "CM1"], [/MOYEN.*(2|DEUXIEME)/, "CM2"]];
+  for (const [r, n] of regles) if (r.test(s)) return n;
+  return "";
+}
+function majuscules(m) { return /\p{L}{2,}/u.test(m) && m === m.toLocaleUpperCase("fr") && m !== m.toLocaleLowerCase("fr"); }
+function joli(m) { return m.toLocaleLowerCase("fr").replace(/(^|[\s-])(\p{L})/gu, (x, a, b) => a + b.toLocaleUpperCase("fr")); }
+/* « DUPONT Léa ; CM1 ; Groupe bleu » → {prenom:"Léa", niveau:"CM1", groupe:"Groupe bleu", nomRetire:true} */
+function lireLigne(ligne, niveauDefaut) {
+  let parts = /[\t;,]/.test(ligne) ? ligne.split(/[\t;,]/) : [ligne];
+  parts = parts.map(p => p.trim()).filter(Boolean);
+  let niveau = "", nomRetire = false;
+  parts = parts.filter(p => { const n = niveauDe(p); if (n && !niveau) { niveau = n; return false; } return true; });
+  if (!parts.length) return null;
+  let mots = parts[0].split(/\s+/);
+  mots = mots.filter(m => { const n = niveauDe(m); if (n && !niveau && mots.length > 1) { niveau = n; return false; } return true; });
+  if (mots.some(majuscules) && mots.some(m => !majuscules(m))) { mots = mots.filter(m => !majuscules(m)); nomRetire = true; }
+  let prenom = mots.join(" ");
+  if (majuscules(prenom)) prenom = joli(prenom);
+  if (!prenom || /^pr[ée]nom/i.test(prenom)) return null;
+  return {prenom, niveau: niveau || niveauDefaut, groupe: parts[1] || "", nomRetire};
+}
+function lireTexte(texte, niveauDefaut) { return texte.split(/\r?\n/).map(l => l.trim()).filter(Boolean).map(l => lireLigne(l, niveauDefaut)).filter(Boolean); }
+function decoder(buf) {
+  const u = new TextDecoder("utf-8").decode(buf);
+  return u.includes("�") ? new TextDecoder("windows-1252").decode(buf) : u;
+}
+function lireOnde(texte) {
+  const lignes = texte.replace(/^﻿/, "").split(/\r?\n/).filter(l => l.trim());
+  const sep = (lignes[0] || "").includes(";") ? ";" : (lignes[0] || "").includes("\t") ? "\t" : ",";
+  const cases = l => l.split(sep).map(c => c.trim().replace(/^"|"$/g, "").trim());
+  const iTete = lignes.findIndex(l => /pr[ée]nom/i.test(l));
+  if (iTete < 0) return lireTexte(texte, "Autre");
+  const tete = cases(lignes[iTete]).map(c => c.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase());
+  const iP = tete.findIndex(c => /^prenom/.test(c) && !/2|deux|autre/.test(c));
+  const iN = tete.findIndex(c => /^nom/.test(c));
+  const iNiv = tete.findIndex(c => /niveau/.test(c));
+  const iCl = tete.findIndex(c => /classe|cycle/.test(c));
+  const out = [];
+  lignes.slice(iTete + 1).forEach(l => {
+    const c = cases(l), p = (c[iP] || "").split(/\s+/)[0];
+    if (!p) return;
+    out.push({prenom: majuscules(p) ? joli(p) : p, niveau: niveauDe(c[iNiv]) || niveauDe(c[iCl]) || "Autre", groupe: "", initiale: (c[iN] || "").charAt(0).toUpperCase()});
+  });
+  return out;
+}
+
+/* ---------- Ajout groupé : aperçu, puis ajout ---------- */
+function montrerApercu(liste, origine) {
+  enAttente = liste;
+  if (!liste.length) { $("apercu").innerHTML = '<p class="msg">Aucun prénom trouvé. Vérifie qu’il y a un élève par ligne' + (origine === "onde" ? " et une colonne « Prénom »" : "") + ".</p>"; return; }
+  if (location.hash !== "#apercu") history.pushState({apercu: 1}, "", "#apercu");
+  rendreApercu();
+}
+function rendreApercu() {
+  const L = enAttente || [];
+  if (!L.length) { fermerApercu(); return; }
+  const retires = L.some(e => e.nomRetire);
+  $("apercu").innerHTML = '<div class="apercu"><b>' + L.length + " élève" + (L.length > 1 ? "s" : "") + " trouvé" + (L.length > 1 ? "s" : "") + "</b>" +
+    (retires ? '<p class="note">Les noms de famille ont été retirés.</p>' : "") +
+    "<ul>" + L.map((e, i) => "<li><b>" + esc(e.prenom) + "</b><span class=\"niv\">" + esc(e.niveau) + "</span>" + (e.groupe ? "<small>" + esc(e.groupe) + "</small>" : "") +
+      '<button type="button" data-retirer="' + i + '" aria-label="Retirer ' + esc(e.prenom) + '">✕</button></li>').join("") + "</ul>" +
+    '<div class="outils"><button class="btn plein" type="button" id="b-ajouter-tout">Ajouter ' + (L.length > 1 ? "les " + L.length + " élèves" : "cet élève") + '</button><button class="btn" type="button" id="b-apercu-non">Annuler</button></div></div>';
+}
+function fermerApercu() { enAttente = null; $("apercu").innerHTML = ""; if (location.hash === "#apercu") history.back(); }
+function ajouterTout() {
+  const L = enAttente || []; if (!L.length) return;
+  const bas = t => t.toLocaleLowerCase("fr");
+  /* Deux prénoms identiques (dans le fichier ou déjà dans la liste) : l'initiale du nom les départage, quand on l'a (ONDE). */
+  const double = e => L.filter(x => bas(x.prenom) === bas(e.prenom)).length > 1 || D.eleves.some(x => bas(x.prenom) === bas(e.prenom));
+  changer(() => {
+    L.forEach(e => {
+      let p = e.prenom;
+      if (e.initiale && double(e)) p += " " + e.initiale + ".";
+      D.eleves.push({id: MaClasse.nouvelId(), prenom: MaClasse.prenomLibre(p, D.eleves), niveau: e.niveau || "Autre", groupe: e.groupe || ""});
+    });
+  }, L.length + " élève" + (L.length > 1 ? "s ajoutés" : " ajouté"));
+  enAttente = null; $("apercu").innerHTML = ""; $("coller").value = "";
+  if (location.hash === "#apercu") history.back();
+  $("s-liste").open = true;
+}
+
+/* ---------- Affichage ---------- */
+function options(sel, choisi) { sel.innerHTML = MaClasse.NIVEAUX.map(n => '<option value="' + n + '"' + (n === choisi ? " selected" : "") + ">" + n + "</option>").join(""); }
+function rendre() {
+  const E = MaClasse.trier(D.eleves), par = {};
+  E.forEach(e => { const n = e.niveau; par[n] = (par[n] || 0) + 1; });
+  $("compteurs").innerHTML = '<span><b>' + E.length + "</b> élève" + (E.length > 1 ? "s" : "") + "</span>" + Object.keys(par).map(n => "<span><b>" + par[n] + "</b> " + esc(n) + "</span>").join("");
+  $("nb").textContent = E.length ? "· " + E.length : "";
+  const groupes = [...new Set(E.map(e => e.groupe).filter(Boolean))];
+  $("dl-groupes").innerHTML = groupes.map(g => '<option value="' + esc(g) + '">').join("");
+  if (!E.length) $("liste").innerHTML = '<p class="vide">Aucun élève pour l’instant. Ajoute-les ci-dessus : un par un, en collant une liste ou avec ton export ONDE.</p>';
+  else {
+    const blocs = [];
+    E.forEach(e => { const g = MaClasse.groupeDe(e); let b = blocs.find(x => x.g === g); if (!b) blocs.push(b = {g, l: []}); b.l.push(e); });
+    $("liste").innerHTML = blocs.map(b => '<div class="groupe-t">' + esc(b.g) + " <small>· " + b.l.length + "</small></div><ul class=\"eleves\">" + b.l.map(e =>
+      '<li data-id="' + e.id + '"><input class="prenom" type="text" value="' + esc(e.prenom) + '" data-champ="prenom" aria-label="Prénom">' +
+      '<select data-champ="niveau" aria-label="Niveau de ' + esc(e.prenom) + '">' + MaClasse.NIVEAUX.map(n => '<option' + (n === e.niveau ? " selected" : "") + ">" + n + "</option>").join("") + "</select>" +
+      '<input class="grp" type="text" value="' + esc(e.groupe) + '" data-champ="groupe" list="dl-groupes" placeholder="Groupe" aria-label="Groupe de ' + esc(e.prenom) + '">' +
+      '<button type="button" class="suppr" data-suppr aria-label="Supprimer ' + esc(e.prenom) + '">✕</button></li>').join("") + "</ul>").join("");
+  }
+  $("b-annuler").disabled = !annuler.length; $("b-retablir").disabled = !retablir.length;
+}
+
+/* ---------- Événements ---------- */
+const LSui = "kit-ui-ma-classe";
+function etatSections() { try { return JSON.parse(localStorage.getItem(LSui) || "null"); } catch { return null; } }
+function ouvrirSections() {
+  const st = etatSections();
+  document.querySelectorAll(".sec").forEach(d => {
+    const k = d.dataset.sec;
+    d.open = st && k in st ? st[k] : (k === "ajout" ? !D.eleves.length : k === "liste");
+  });
+  if (location.hash === "#s-sauve") $("s-sauve").open = true;
+  majPlier();
+}
+function majPlier() { const tout = [...document.querySelectorAll(".sec")].every(d => d.open); $("b-plier").textContent = tout ? "Tout replier" : "Tout déplier"; }
+document.addEventListener("toggle", e => {
+  if (!e.target.matches || !e.target.matches(".sec")) return;
+  const st = etatSections() || {}; st[e.target.dataset.sec] = e.target.open;
+  try { localStorage.setItem(LSui, JSON.stringify(st)); } catch {}
+  majPlier();
+}, true);
+$("b-plier").onclick = () => { const tout = [...document.querySelectorAll(".sec")].every(d => d.open); document.querySelectorAll(".sec").forEach(d => d.open = !tout); };
+
+document.querySelectorAll("[data-mode]").forEach(b => b.onclick = () => {
+  document.querySelectorAll("[data-mode]").forEach(x => x.setAttribute("aria-pressed", x === b));
+  document.querySelectorAll("[data-panneau]").forEach(p => p.hidden = p.dataset.panneau !== b.dataset.mode);
+  if (enAttente) fermerApercu();
+  if (b.dataset.mode === "un") $("un-prenom").focus();
+});
+$("f-un").onsubmit = e => {
+  e.preventDefault();
+  const p = $("un-prenom").value.trim();
+  if (!p) { $("un-prenom").focus(); return; }
+  const l = lireLigne(p, $("un-niveau").value) || {prenom: p, niveau: $("un-niveau").value};
+  const prenom = MaClasse.prenomLibre(l.prenom, D.eleves);
+  changer(() => D.eleves.push({id: MaClasse.nouvelId(), prenom, niveau: $("un-niveau").value, groupe: $("un-groupe").value.trim()}),
+    prenom + " ajouté" + (prenom !== l.prenom ? " (prénom déjà pris)" : ""));
+  try { localStorage.setItem("kit-ma-classe-dernier", JSON.stringify({n: $("un-niveau").value, g: $("un-groupe").value.trim()})); } catch {}
+  $("un-prenom").value = ""; $("un-prenom").focus();
+};
+$("b-coller").onclick = () => montrerApercu(lireTexte($("coller").value, $("coller-niveau").value), "coller");
+$("onde").onchange = async () => {
+  const f = $("onde").files[0]; if (!f) return;
+  try { montrerApercu(lireOnde(decoder(await f.arrayBuffer())), "onde"); } catch { toast("Fichier illisible. Réessaie avec l’export CSV d’ONDE."); }
+  $("onde").value = "";
+};
+$("apercu").addEventListener("click", e => {
+  const r = e.target.closest("[data-retirer]");
+  if (r) { enAttente.splice(+r.dataset.retirer, 1); rendreApercu(); return; }
+  if (e.target.id === "b-ajouter-tout") ajouterTout();
+  if (e.target.id === "b-apercu-non") fermerApercu();
+});
+addEventListener("popstate", () => { if (enAttente && location.hash !== "#apercu") { enAttente = null; $("apercu").innerHTML = ""; } });
+
+$("liste").addEventListener("change", e => {
+  const c = e.target.closest("[data-champ]"); if (!c) return;
+  const e1 = D.eleves.find(x => x.id === c.closest("li").dataset.id); if (!e1) return;
+  const champ = c.dataset.champ, v = c.value.trim();
+  if (champ === "prenom") {
+    if (!v) { rendre(); toast("Un prénom ne peut pas être vide"); return; }
+    const neuf = MaClasse.prenomLibre(v, D.eleves, e1.id), ancien = e1.prenom;
+    if (neuf === ancien) return;
+    changer(() => { e1.prenom = neuf; MaClasse.renommerEvals(ancien, neuf); }, ancien + " → " + neuf);
+  } else changer(() => { e1[champ] = v; });
+});
+$("liste").addEventListener("click", e => {
+  const b = e.target.closest("[data-suppr]"); if (!b) return;
+  if (!b.classList.contains("arme")) {
+    document.querySelectorAll(".suppr.arme").forEach(x => { x.classList.remove("arme"); x.textContent = "✕"; });
+    b.classList.add("arme"); b.textContent = "Sûr ?"; clearTimeout(b._t);
+    b._t = setTimeout(() => { b.classList.remove("arme"); b.textContent = "✕"; }, 3500);
+    return;
+  }
+  const id = b.closest("li").dataset.id, e1 = D.eleves.find(x => x.id === id);
+  changer(() => { D.eleves = D.eleves.filter(x => x.id !== id); }, e1.prenom + " supprimé · Ctrl+Z pour annuler");
+});
+$("b-annuler").onclick = () => revenir(annuler, retablir, "annuler");
+$("b-retablir").onclick = () => revenir(retablir, annuler, "rétablir");
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape" && enAttente) { fermerApercu(); return; }
+  if (!(e.ctrlKey || e.metaKey) || e.target.matches("input,textarea,select")) return;
+  const k = e.key.toLowerCase();
+  if (k === "z" && !e.shiftKey) { e.preventDefault(); revenir(annuler, retablir, "annuler"); }
+  else if (k === "y" || (k === "z" && e.shiftKey)) { e.preventDefault(); revenir(retablir, annuler, "rétablir"); }
+});
+
+/* Sauvegarde */
+$("b-export").onclick = () => {
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([JSON.stringify({outil: "ma-classe", version: VERSION, ...D}, null, 2)], {type: "application/json"}));
+  a.download = "ma-classe-" + new Date().toISOString().slice(0, 10) + ".json";
+  document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  toast("Fichier exporté");
+};
+function barreConf(texte, boutons) {
+  $("conf").innerHTML = '<div class="barre-conf"><span>' + texte + "</span>" + boutons.map((b, i) => '<button class="btn petit' + (i === 0 ? " plein" : "") + '" type="button" data-c="' + i + '">' + b[0] + "</button>").join("") + "</div>";
+  $("conf").onclick = e => { const b = e.target.closest("[data-c]"); if (!b) return; $("conf").innerHTML = ""; const f = boutons[+b.dataset.c][1]; if (f) f(); };
+}
+$("import").onchange = async () => {
+  const f = $("import").files[0]; $("import").value = ""; if (!f) return;
+  let neuf;
+  try { neuf = MaClasse.migrer(JSON.parse(await f.text())); } catch { toast("Fichier illisible"); return; }
+  if (!neuf.eleves.length) { toast("Ce fichier ne contient aucun élève"); return; }
+  const remplacer = () => changer(() => { D.eleves = neuf.eleves; }, neuf.eleves.length + " élèves importés");
+  const ajouter = () => changer(() => neuf.eleves.forEach(e => D.eleves.push({...e, id: MaClasse.nouvelId(), prenom: MaClasse.prenomLibre(e.prenom, D.eleves)})), neuf.eleves.length + " élèves ajoutés");
+  if (!D.eleves.length) remplacer();
+  else barreConf("Le fichier contient " + neuf.eleves.length + " élèves. Tu en as déjà " + D.eleves.length + ".", [["Remplacer ma liste", remplacer], ["Ajouter à ma liste", ajouter], ["Annuler", null]]);
+};
+$("b-vider").onclick = () => {
+  if (!D.eleves.length) { toast("La liste est déjà vide"); return; }
+  barreConf("Effacer les " + D.eleves.length + " élèves de cet appareil ? (Annulable avec Ctrl+Z tant que la page reste ouverte.)", [["Tout effacer", () => changer(() => { D.eleves = []; }, "Liste effacée")], ["Annuler", null]]);
+};
+
+/* Démarrage */
+let dernier = {}; try { dernier = JSON.parse(localStorage.getItem("kit-ma-classe-dernier") || "{}"); } catch {}
+options($("un-niveau"), dernier.n || "CM1"); options($("coller-niveau"), dernier.n || "CM1");
+if (dernier.g) $("un-groupe").value = dernier.g;
+$("version").textContent = "version " + VERSION;
+if (location.hash === "#apercu") history.replaceState(null, "", location.pathname);
+addEventListener("storage", e => { if (e.key === MaClasse.KEY) { D = MaClasse.charger(); rendre(); } });
+ouvrirSections();
+rendre();
+if ("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("../sw.js").catch(() => {});
+</script>
+</body>
+</html>

@@ -9,11 +9,14 @@ Fiche d'identité
 Version : voir VERSION (et CACHE dans sw.js).
 Charte Repères v1 (commun/charte.css), couleur de l'outil --outil-problemes.
 Deux modes, un seul fichier :
-- appli installée (github.io ou ?mode=app) : corrigés seuls, hors ligne, AUCUN prénom (dépôt public) ; fichiers communs dans ../commun/
+- kit / appli installée (github.io ou ?mode=app) : corrigés, hors ligne ; évaluations au choix avec « Ma classe », sur l'appareil seulement ; AUCUN prénom dans le dépôt ; fichiers communs dans ../commun/
 - page de Classe (problemes.html) : + évaluations (commun/eval.js, base evals/problemes) ; fichiers communs dans outils/
 Données : commun/corriges-problemes.js (window.CORRIGES_PROBLEMES).
 Clés d'évaluation : « CM1-12 » (niveau-numéro), comme l'ancien fichier.
-Historique : 2.0.0 (2026-11-15) charte Repères, appli installable, évaluations dans Classe, Ctrl+Z, flèches ← →, bouton Retour.
+Historique :
+- 2.1.0 (2026-11-21) kit « Outils de classe partagés » : sur github.io, plus de lien vers Classe ; « ← Outils » vers le portail ; évaluations au choix
+  (« Activer », localStorage « kit-evals-on-problemes ») avec les élèves de « Ma classe », enregistrées sur l'appareil (« kit-evals-problemes ») ; mention Accès Maths.
+- 2.0.0 (2026-11-15) charte Repères, appli installable, évaluations dans Classe, Ctrl+Z, flèches ← →, bouton Retour.
 -->
 <html lang="fr">
 <head>
@@ -58,7 +61,7 @@ footer{margin:22px 0 34px;font-size:.82rem;color:var(--encre-douce)}
 </head>
 <body>
 <header class="entete"><div class="shell bar">
-  <a class="retour" href="index.html" id="back" data-cnav-hide hidden>← Classe</a>
+  <a class="retour" href="index.html" id="back" data-cnav-hide hidden>← Classe</a><script>if (MODE_APP) document.write('<a class="retour" href="../" aria-label="Accueil des outils">← Outils</a>');</script>
   <span class="tuile" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></span>
   <h1>Ateliers de problèmes<small>Corrigés pour l'enseignant</small></h1>
 </div></header>
@@ -75,15 +78,15 @@ footer{margin:22px 0 34px;font-size:.82rem;color:var(--encre-douce)}
   <section aria-labelledby="heading">
     <div class="titre"><h2 id="heading" tabindex="-1"></h2><span id="lvl" class="niv"></span></div>
     <p id="topic" class="topic"></p>
-    <div id="evals"></div>
+    <div id="evals"></div><div id="evals-kit"></div>
     <ol id="rows" class="list"></ol>
   </section>
-  <footer>Corrigés établis à partir des fichiers CM1 et CM2 fournis · <span id="version"></span></footer>
+  <footer>Corrigés des ateliers du fichier <b>Accès Maths</b> CM1 et CM2 (fichier non fourni : il faut l’avoir en classe) · <span id="version"></span></footer>
 </main>
 <div id="toast" class="toast" role="status"></div>
-<script>document.write('<script src="' + COMMUN + 'corriges-problemes.js"><\/script>' + (MODE_APP ? '' : '<script src="' + COMMUN + 'eval.js"><\/script>'));</script>
+<script>document.write('<script src="' + COMMUN + 'corriges-problemes.js"><\/script><script src="' + COMMUN + 'eval.js"><\/script>' + (MODE_APP ? '<script src="' + COMMUN + 'ma-classe.js"><\/script>' : ''));</script>
 <script>
-const VERSION = "2.0.0";
+const VERSION = "2.1.0";
 const CLASSE_URL = "https://claude.ai/artifact/Fjw3PS19NxsGxkekSUaoZA";
 const data = window.CORRIGES_PROBLEMES;
 const get = id => document.getElementById(id);
@@ -164,18 +167,17 @@ function pupils() {
 }
 async function startEvals() {
   const box = get("evals");
-  if (MODE_APP) {
-    box.innerHTML = '<div class="vers-classe"><span>👥 Les évaluations des élèves se font dans <b>Classe</b> › Outils et réglages › Maths.</span><a class="btn petit" href="' + CLASSE_URL + '" target="_blank" rel="noopener">Ouvrir Classe ↗</a></div>';
-    return;
-  }
-  get("back").hidden = false;
+  if (MODE_APP) { /* kit : évaluations seulement si le collègue les active (élèves de « Ma classe », sur l'appareil) */
+    MaClasse.encartEvals(get("evals-kit"), "problemes");
+    if (!MaClasse.evalsOn("problemes")) return;
+  } else get("back").hidden = false;
   try {
-    store = await Evals.start("problemes", VERSION);
+    store = await Evals.start("problemes", VERSION, {local: MODE_APP});
     panel = new Evals.Panel(box, {store, key: evalKey, pupils, places: true, pdf: exportPdf});
     store.on(renderGrid);
     render();
   } catch (e) {
-    box.innerHTML = '<div class="vers-classe"><span>⚠ Les évaluations n’ont pas pu se charger (base de Classe injoignable).</span><button class="btn petit" type="button" id="retry">↻ Réessayer</button></div>';
+    box.innerHTML = '<div class="vers-classe"><span>⚠ Les évaluations n’ont pas pu se charger' + (MODE_APP ? '' : ' (base de Classe injoignable)') + '.</span><button class="btn petit" type="button" id="retry">↻ Réessayer</button></div>';
     get("retry").onclick = startEvals;
   }
 }

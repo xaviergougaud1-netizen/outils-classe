@@ -3,14 +3,14 @@
 :root{
   --fond:#EDF1F7;--surface:#FFFFFF;--surface-2:#F4F6FA;--encre:#111A2C;--encre-douce:#475166;--trait:#D3DAE5;
   --action:#2453C7;--action-douce:#E3EBFD;--cm1:#2E8B57;--cm2:#D9772B;--valide:#1F7A45;--attention:#B45309;--danger:#B42318;
-  --outil-calcul:#23914A;--outil-problemes:#0F7A8F;
+  --outil-calcul:#23914A;--outil-problemes:#0F7A8F;--outil-maclasse:#7A4FB5;--outil-portail:#2453C7;
   --police:"Atkinson Hyperlegible",system-ui,sans-serif;--arrondi-s:8px;--arrondi-m:12px;--arrondi-l:16px;--cible:48px;
   --outil:var(--action);--sur-outil:#FFFFFF;
 }
 @media (prefers-color-scheme:dark){:root{
   --fond:#0F1522;--surface:#172033;--surface-2:#1E2940;--encre:#E9EEF7;--encre-douce:#A3AEC2;--trait:#2C3852;
   --action:#7EA2FF;--action-douce:#1F2D52;--cm1:#5CC48A;--cm2:#F2A35E;--valide:#5CC97F;--attention:#F5A83C;--danger:#F97066;
-  --outil-calcul:#5CC97F;--outil-problemes:#3BB8D6;--sur-outil:#0F1522;color-scheme:dark;
+  --outil-calcul:#5CC97F;--outil-problemes:#3BB8D6;--outil-maclasse:#B79BEA;--outil-portail:#7EA2FF;--sur-outil:#0F1522;color-scheme:dark;
 }}
 *{box-sizing:border-box}
 body{margin:0;background:var(--fond);color:var(--encre);font:16px/1.45 var(--police)}
@@ -93,9 +93,11 @@ button{cursor:pointer;touch-action:manipulation}
 .grille td button[data-m=ECA]{background:#F5C842}.grille td button[data-m=NA]{background:#B42318;color:#fff;border-color:#B42318}
 .flash{animation:flash 1.6s}@keyframes flash{0%,40%{background:color-mix(in srgb,var(--outil) 30%,transparent)}}
 
-/* Lien vers Classe dans l'appli installée */
+/* Lien vers Classe dans l'appli installée, encart « Évaluer mes élèves » du kit */
 .vers-classe{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:12px 0;padding:10px 14px;border-radius:var(--arrondi-l);background:var(--action-douce);font-size:.92rem}
 
+.kit-evals{margin:12px 0;text-align:center}
+.lien{border:0;background:none;padding:0;color:var(--action);font-weight:700;text-decoration:underline;min-height:0}
 .toast{position:fixed;left:50%;bottom:calc(84px + env(safe-area-inset-bottom));transform:translateX(-50%);background:var(--encre);color:var(--fond);padding:10px 16px;border-radius:var(--arrondi-m);opacity:0;transition:opacity .2s;pointer-events:none;z-index:50;max-width:90vw}
 .toast.on{opacity:1}
 @media print{.entete,.evals,.vers-classe,.dock,.nav,.toast{display:none!important}}

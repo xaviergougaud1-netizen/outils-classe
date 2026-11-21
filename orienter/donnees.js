@@ -361,14 +361,39 @@ const AIDES = [
 ];
 
 // Coordonnées locales par défaut (modifiables dans Réglages)
+// verifie : date de vérification (AAAA-MM-JJ ou AAAA-MM). depuis : version des réglages où la fiche a été ajoutée
+// (la migration ajoute aux appareils déjà installés les fiches plus récentes que leurs réglages, sans rien effacer).
 const CONTACTS_DEFAUT = [
-  { pro: "cmp", nom: "CMPEA Blain (EPSYLAN)", adresse: "15, rue Pierre Morin, 44130 Blain", tel: "02 40 79 86 80", mail: "" },
-  { pro: "eds", nom: "Espace départemental des solidarités Blain-Nozay", adresse: "3 bis, rue Charles de Gaulle, 44130 Blain", tel: "02 40 79 11 01", mail: "" },
-  { pro: "laep", nom: "LAEP Les P'tites Graines", adresse: "6, rue du Moulin, 44130 Blain", tel: "", mail: "laep.lesptitesgraines@gmail.com" },
-  { pro: "laep", nom: "LAEP Le Sablier (Département, enfants de 0 à 4 ans)", adresse: "16, rue Charles Perron, 44100 Nantes (Dervallières). Mardi et jeudi 15h-18h, mercredi 9h30-12h et 15h-18h", tel: "02 40 43 82 66", mail: "" },
-  { pro: "pco", nom: "PCO TND 44 Ouest (APAJH 44)", adresse: "51, rue François-René de Chateaubriand, 44600 Saint-Nazaire", tel: "02 40 70 98 08", mail: "pcotndouest@apajh44.org" },
-  { pro: "camsp", nom: "CAMSP Kerbrun (APAJH 44)", adresse: "51, rue François-René de Chateaubriand, 44600 Saint-Nazaire", tel: "", mail: "contact-kerbrun@apajh44.org" },
-  { pro: "cmpp", nom: "CMPP Kerbrun (APAJH 44)", adresse: "51, rue François-René de Chateaubriand, 44600 Saint-Nazaire", tel: "", mail: "contact-kerbrun@apajh44.org" }
+  { pro: "cmp", nom: "CMPEA Blain (EPSYLAN)", adresse: "15, rue Pierre Morin, 44130 Blain", tel: "02 40 79 86 80", mail: "", verifie: "2026-11" },
+  { pro: "eds", nom: "Espace départemental des solidarités Blain-Nozay", adresse: "3 bis, rue Charles de Gaulle, 44130 Blain", tel: "02 40 79 11 01", mail: "", verifie: "2026-11", depuis: 2 },
+  { pro: "laep", nom: "LAEP Les P'tites Graines", adresse: "6, rue du Moulin, 44130 Blain", tel: "", mail: "laep.lesptitesgraines@gmail.com", verifie: "2026-11", depuis: 2 },
+  { pro: "laep", nom: "LAEP Le Sablier (Département, enfants de 0 à 4 ans)", adresse: "16, rue Charles Perron, 44100 Nantes (Dervallières). Mardi et jeudi 15h-18h, mercredi 9h30-12h et 15h-18h", tel: "02 40 43 82 66", mail: "", verifie: "2026-11", depuis: 2 },
+  { pro: "pco", nom: "PCO TND 44 Ouest (APAJH 44)", adresse: "51, rue François-René de Chateaubriand, 44600 Saint-Nazaire", tel: "02 40 70 98 08", mail: "pcotndouest@apajh44.org", verifie: "2026-11" },
+  { pro: "camsp", nom: "CAMSP Kerbrun (APAJH 44)", adresse: "51, rue François-René de Chateaubriand, 44600 Saint-Nazaire", tel: "", mail: "contact-kerbrun@apajh44.org", verifie: "2026-11" },
+  { pro: "cmpp", nom: "CMPP Kerbrun (APAJH 44)", adresse: "51, rue François-René de Chateaubriand, 44600 Saint-Nazaire", tel: "", mail: "contact-kerbrun@apajh44.org", verifie: "2026-11" },
+  // Orthophonistes autour de Blain (tableau de Xavier du 18 novembre 2026 ; disponibilités à confirmer)
+  { pro: "ortho", nom: "Hélène Bureau-Maurice", adresse: "13, rue de Nantes, 44130 Blain", tel: "06 61 62 86 03", mail: "", verifie: "2026-11-18", depuis: 3 },
+  { pro: "ortho", nom: "Camille Dabriou", adresse: "13, rue de Nantes, 44130 Blain", tel: "06 13 99 45 30", mail: "", verifie: "2026-11-18", depuis: 3 },
+  { pro: "ortho", nom: "Ophélie Dauger", adresse: "13, rue de Nantes, 44130 Blain", tel: "06 11 04 70 83", mail: "", verifie: "2026-11-18", depuis: 3 },
+  { pro: "ortho", nom: "Ellénita Rouzioux", adresse: "7, rue des Droits de l'Homme, 44130 Blain", tel: "02 40 87 30 33", mail: "", verifie: "2026-11-18", depuis: 3 },
+  { pro: "ortho", nom: "Charlotte Varin", adresse: "7, rue des Droits de l'Homme, 44130 Blain", tel: "02 40 51 05 55", mail: "", verifie: "2026-11-18", depuis: 3 },
+  { pro: "ortho", nom: "Adeline Ruaud-Pichot", adresse: "2, rue Colette Besson, 44130 Blain", tel: "02 40 79 47 49", mail: "", verifie: "2026-11-18", depuis: 3 },
+  { pro: "ortho", nom: "Amélie Pasquier", adresse: "28, rue du Lavoir, 44130 Fay-de-Bretagne", tel: "09 87 09 23 80", mail: "", verifie: "2026-11-18", depuis: 3 },
+  { pro: "ortho", nom: "Adèle Vasseur", adresse: "4, rue du Pré Clos, 44130 Fay-de-Bretagne", tel: "07 44 43 52 72", mail: "", verifie: "2026-11-18", depuis: 3 },
+  { pro: "ortho", nom: "Anne Lecomte", adresse: "26, avenue Gustave Eiffel, 44810 Héric", tel: "02 40 57 65 07", mail: "", verifie: "2026-11-18", depuis: 3 },
+  { pro: "ortho", nom: "Lis Redouloux", adresse: "26, avenue Gustave Eiffel, 44810 Héric", tel: "02 40 57 65 07", mail: "", verifie: "2026-11-18", depuis: 3 },
+  { pro: "ortho", nom: "Maryse Coudray", adresse: "26, avenue Gustave Eiffel, 44810 Héric", tel: "", mail: "", verifie: "2026-11-18", depuis: 3 },
+  { pro: "ortho", nom: "Anne Passiant", adresse: "17, La Ville Dinais, 44630 Plessé", tel: "02 40 51 27 56", mail: "", verifie: "2026-11-18", depuis: 3 },
+  { pro: "ortho", nom: "Marlène Leray", adresse: "10, avenue du Château, 44390 Saffré", tel: "07 86 51 12 34", mail: "", verifie: "2026-11-18", depuis: 3 },
+  { pro: "ortho", nom: "Cabinet d'orthophonistes de Nozay", adresse: "2 C, rue du 11 Novembre, 44170 Nozay", tel: "02 40 79 34 51", mail: "nozay.orthophonie@gmail.com", verifie: "2026-11-18", depuis: 3 },
+  // Neuropsychologues (liste de Xavier, novembre 2026 ; tarifs et délais à demander)
+  { pro: "neuropsy", nom: "Marie-Laure Beaussart-Corbat", adresse: "Immeuble Le Philaë, parc commercial de la Colleraye, 44260 Savenay", tel: "07 85 24 78 29", mail: "ml.beaussart.corbat@gmail.com", note: "Bilans neuropsychologiques de 3 ans à 16 ans et 11 mois, dont l'évaluation d'une suspicion de TDAH.", site: "https://www.neuropsychologue-savenay.fr/consultations", verifie: "2026-11-21", depuis: 3 },
+  { pro: "neuropsy", nom: "Louise Farnoud", adresse: "40, rue de l'Église, 44260 Savenay", tel: "06 72 10 10 00", mail: "lfarnoud.neuropsy@gmail.com", note: "Bilans psychométriques et neuropsychologiques, enfants et adolescents. Demander si la question de l'attention (TDAH) est prise en charge.", site: "https://loufarnoud.wixsite.com/neuropsysavenay/la-psycholgue", verifie: "2026-11-21", depuis: 3 },
+  { pro: "neuropsy", nom: "Coline Larmet-Burgeot", adresse: "5, rue des Troènes, bâtiment KPLA, 44600 Saint-Nazaire. À partir du 30 novembre 2026 : Espace Santé, 8, place de la Mairie, 44117 Saint-André-des-Eaux", tel: "07 86 07 54 79", mail: "", note: "Bilans neuropsychologiques enfants, dont troubles de l'attention et TDAH. Vérifier le lieu au moment du rendez-vous.", site: "https://www.psychologue-neuropsychologue44.fr/", verifie: "2026-11-21", depuis: 3 },
+  { pro: "neuropsy", nom: "Coralie Rastel", adresse: "5, rue des Troènes, bâtiment KPLA, 44600 Saint-Nazaire. À partir du 30 novembre 2026 : Espace Santé, 8, place de la Mairie, 44117 Saint-André-des-Eaux", tel: "06 31 42 47 77", mail: "", note: "Même cabinet que Coline Larmet-Burgeot. Vérifier le lieu au moment du rendez-vous.", site: "https://www.psychologue-neuropsychologue44.fr/", verifie: "2026-11-21", depuis: 3 },
+  { pro: "neuropsy", nom: "Lyla Rigoulot", adresse: "1, rue d'Argentré, 44000 Nantes", tel: "07 82 70 12 44", mail: "neuropsychologuelylarigoulot@gmail.com", note: "Bilans jusqu'à 16 ans et 11 mois, avec tests attentionnels et exécutifs.", site: "https://www.lyla-rigoulot-neuropsychologue.fr/", verifie: "2026-11-21", depuis: 3 },
+  { pro: "neuropsy", nom: "Pierre Martineau", adresse: "16, impasse des Dunes, 44300 Nantes", tel: "07 85 99 54 12", mail: "pierre.martineau@neuropsychologue-44.fr", note: "Bilans enfants et adolescents, dont questionnement TDAH ou difficultés scolaires.", site: "https://www.neuropsychologue-44.fr/le-bilan/", verifie: "2026-11-21", depuis: 3 },
+  { pro: "neuropsy", nom: "Morgane Kpalma", adresse: "14 bis, boulevard des Trois Croix, 35000 Rennes", tel: "06 18 74 06 49", mail: "", note: "Enfants à partir de 6 ans, bilans attentionnels et TDAH.", site: "https://perfactive.fr/neuropsychologue/rennes/morgane-kpalma", verifie: "2026-11-21", depuis: 3 }
 ];
 
 // Se former : sections (titre, couleur, contenu HTML simple)
@@ -495,3 +520,173 @@ const FORMATION = [
       <dt>TSA</dt><dd>Trouble du spectre de l'autisme.</dd>
     </dl>` }
 ];
+
+// Vérification du contenu : date et sources générales (affichées dans les fiches et dans « À propos »).
+// Un rappel apparaît quand la vérification a plus d'un an.
+const VERIFICATION = {
+  date: "2026-11",
+  sources: ["ameli.fr", "sante.fr", "monparcourshandicap.gouv.fr", "service-public.fr", "loire-atlantique.fr", "eduscol.education.gouv.fr"]
+};
+
+/* ============================================================
+   PROTÉGER : enfant en danger ou en risque de l'être
+   Tout ce qui suit vient de sources officielles (liste en bas : PROTEGER.sources),
+   vérifiées le 21 novembre 2026. Ne rien ajouter sans source.
+   ============================================================ */
+const PROTEGER = {
+  verifie: "2026-11-21",
+
+  // Numéros d'urgence (barre toujours visible en haut de l'onglet)
+  urgences: [
+    { num: "17", txt: "Police ou gendarmerie", detail: "Danger immédiat" },
+    { num: "15", txt: "SAMU", detail: "Enfant blessé ou malade" },
+    { num: "18", txt: "Pompiers", detail: "Secours" },
+    { num: "119", txt: "Allô enfance en danger", detail: "Écoute et conseil, jour et nuit" }
+  ],
+
+  // « Que faire ? » : les questions s'enchaînent ; la première réponse « oui » donne l'issue.
+  arbre: [
+    { id: "urgence", q: "L'enfant est-il en danger immédiat ?",
+      aide: "Il est blessé, menacé, terrorisé à l'idée de rentrer chez lui, ou un adulte dangereux l'attend à la sortie.", issue: "urgence" },
+    { id: "faits", q: "As-tu connaissance de faits graves commis sur l'enfant ?",
+      aide: "Violences physiques, violences ou atteintes sexuelles : vues par un adulte de l'école ou révélées par l'enfant. Tu n'as pas à en apporter la preuve ni à vérifier.", issue: "signalement" },
+    { id: "risque", q: "Des éléments font-ils craindre pour sa santé, sa sécurité ou son éducation ?",
+      aide: "Négligences qui se répètent (soins, hygiène, repas), enfant livré à lui-même, absences inexpliquées, propos ou comportements très inquiétants, violences dans la famille.", issue: "ip" }
+  ],
+  // Issue quand toutes les réponses sont « non » ou « je ne sais pas »
+  issueSinon: "suivre",
+
+  issues: {
+    urgence: { titre: "Urgence : protéger l'enfant tout de suite", couleur: "#B42318", picto: "alerte",
+      etapes: [
+        "<b>Appelle le 17</b> (ou le 15 si l'enfant est blessé ou malade). Garde l'enfant à l'école, avec un adulte.",
+        "<b>Préviens le directeur</b>, puis l'IEN de circonscription.",
+        "<b>Écris tout de suite</b> ce que tu as vu et les paroles exactes de l'enfant, avec la date et l'heure.",
+        "<b>Ensuite</b>, le directeur fait le signalement écrit au procureur (voir « Signalement »)."
+      ] },
+    signalement: { titre: "Signalement au procureur de la République", couleur: "#B42318", picto: "alerte",
+      etapes: [
+        "<b>Ne préviens pas les parents</b> ni la personne mise en cause : cela pourrait gêner l'enquête.",
+        "<b>N'enquête pas</b> et ne cherche pas à vérifier : tu n'as pas à apporter de preuve. Note ce que tu as vu et ses paroles exactes, datées.",
+        "<b>Le directeur rédige le signalement</b> au procureur de la République : parquet des mineurs du <b>tribunal judiciaire de Nantes</b> (compétent pour Blain), sur le modèle « article 40 » de la convention départementale « école protectrice ».",
+        "<b>Copie à la CRIP</b> et information de l'IEN.",
+        "<b>Si l'enfant est en danger immédiat</b> : 17 d'abord."
+      ] },
+    ip: { titre: "Information préoccupante à la CRIP", couleur: "#D97706", picto: "fichier",
+      etapes: [
+        "<b>Note les faits</b>, datés, sans jugement (bouton « Rédiger l'IP » ci-dessous).",
+        "<b>Parles-en au directeur.</b> Ne reste pas seul : psychologue de l'Éducation nationale, IEN, conseiller technique de service social de la DSDEN.",
+        "<b>Informe les parents avant la transmission</b>, sauf si c'est contraire à l'intérêt de l'enfant (art. L226-2-1 CASF). Présente-le comme une démarche pour que la famille puisse être aidée.",
+        "<b>Le directeur remplit le formulaire en ligne du Département</b> avec le compte de l'école. Il obtient un numéro de dossier pour y revenir et ajouter un complément.",
+        "<b>Informe l'IEN.</b>",
+        "<b>Continue d'observer</b> et transmets un complément si de nouveaux éléments apparaissent."
+      ] },
+    suivre: { titre: "Pas d'élément de danger pour l'instant : rester attentif", couleur: "#0F8F6C", picto: "groupe",
+      etapes: [
+        "<b>Rencontre les parents</b> : décris ce que tu observes, écoute ce qu'ils voient à la maison, propose une aide (Répertoire › Soutien aux parents).",
+        "<b>Parles-en en équipe</b> : conseil des maîtres ou de cycle, psychologue de l'Éducation nationale.",
+        "<b>En cas de doute, demande l'avis de la CRIP</b> : par courriel (à privilégier) ou par téléphone aux heures de bureau.",
+        "<b>Note les faits datés.</b> Si la situation change, refais ce questionnaire.",
+        "<b>Absences répétées</b> : à partir de quatre demi-journées sans motif légitime dans le mois, le directeur saisit le DASEN sous couvert de l'IEN (formulaire de la circulaire départementale)."
+      ] }
+  },
+
+  // Tableau « Comparer »
+  comparer: {
+    cols: ["Rencontrer les parents", "Information préoccupante (IP)", "Signalement"],
+    lignes: [
+      ["Quand", "Une inquiétude, sans élément de danger.", "Un danger ou un risque de danger, sans urgence.", "Un danger grave ou immédiat, ou des faits qui peuvent être un crime ou un délit."],
+      ["À qui", "La famille.", "La CRIP du Département (formulaire en ligne, compte de l'école).", "Le procureur de la République (parquet des mineurs, tribunal judiciaire de Nantes), copie à la CRIP."],
+      ["Les parents", "Présents.", "Informés avant, sauf si c'est contraire à l'intérêt de l'enfant.", "Pas prévenus."],
+      ["Qui décide la suite", "La famille, avec l'école.", "La CRIP : évaluation, aide proposée à la famille, orientation, ou transmission au procureur.", "Le procureur : enquête, protection immédiate, saisine du juge des enfants."],
+      ["Textes", "—", "Art. L226-2-1 et R226-2-2 du code de l'action sociale et des familles.", "Art. 40 du code de procédure pénale ; art. 434-3 du code pénal."]
+    ]
+  },
+
+  // « Recueillir la parole de l'enfant » (livret national de l'Éducation nationale)
+  parole: {
+    faire: [
+      "Le prendre à part et le laisser s'exprimer avec ses mots.",
+      "Reformuler ce qu'il dit, plutôt que poser des questions.",
+      "Le rassurer : on le croit, ce n'est pas de sa faute, il a bien fait de parler.",
+      "Lui expliquer que la loi interdit toute forme de violence et qu'il faudra en parler à d'autres adultes pour l'aider.",
+      "Noter tout de suite ses paroles exactes, entre guillemets, avec la date, l'heure et le contexte."
+    ],
+    eviter: [
+      "Juger, ou laisser paraître ses propres émotions.",
+      "Promettre ce qu'on ne pourra pas tenir, par exemple garder le secret.",
+      "Enquêter ou vérifier soi-même ce qu'il dit.",
+      "Prévenir la famille quand il s'agit d'un signalement au procureur."
+    ]
+  },
+
+  // Aide à rédiger : motifs (nomenclature du livret national) et mots à repérer
+  motifs: ["Négligences lourdes", "Conditions d'éducation", "Comportement de l'enfant", "Défaut de scolarisation (absences)",
+    "Violences physiques", "Violences psychologiques", "Violences sexuelles", "Violences conjugales dans la famille",
+    "Harcèlement (y compris en ligne)", "Autre"],
+  // Mots repérés hors des guillemets : ce sont des jugements ou des diagnostics, pas des faits.
+  mots: [
+    { re: "maltrait|violent|brutal", conseil: "Décris ce que tu as vu ou entendu, sans le qualifier." },
+    { re: "alcool|ivre|drogu", conseil: "Décris le fait observé (date, ce que tu as vu ou senti), sans conclure." },
+    { re: "pervers|malade mental|fou\\b|folle|menteu|manipul|négligent|démission", conseil: "Jugement sur une personne : remplace par un fait daté." },
+    { re: "dépress|hyperacti|tdah|autis|dyslex|bipolaire|trouble", conseil: "Diagnostic : seul un médecin peut le poser. Décris le comportement observé." },
+    { re: "je pense|je crois|il est évident|sans doute|forcément|certainement|visiblement|on voit bien", conseil: "Garde les faits. Ce qui n'est pas vérifié s'écrit au conditionnel, avec sa source." }
+  ],
+
+  // Règles de rédaction (livret national)
+  regles: [
+    "<b>Ce que tu as constaté</b> : style direct (« J'ai constaté que… », « J'ai vu… »).",
+    "<b>Ce qu'on t'a confié</b> : style indirect, avec la source (« L'enseignante m'a dit que… »).",
+    "<b>Ce qui n'est pas vérifié</b> : au conditionnel.",
+    "<b>Les paroles de l'enfant</b> : entre guillemets, mot pour mot, même les mots crus.",
+    "<b>Sans censure, sans jugement, sans commentaire personnel</b>, sans vérification préalable : des faits."
+  ],
+
+  // Textes de loi (vérifiés)
+  droit: [
+    { ref: "Art. L226-2-1 du code de l'action sociale et des familles", txt: "Les personnes qui concourent à la protection de l'enfance transmettent sans délai au Département toute information préoccupante. Sauf intérêt contraire de l'enfant, les parents en sont préalablement informés." },
+    { ref: "Art. R226-2-2 du code de l'action sociale et des familles", txt: "Définit l'information préoccupante : une information transmise à la CRIP sur un mineur dont la santé, la sécurité ou la moralité sont en danger ou en risque de l'être, ou dont l'éducation ou le développement sont gravement compromis ou en risque de l'être." },
+    { ref: "Art. 40 du code de procédure pénale", txt: "Le fonctionnaire qui, dans l'exercice de ses fonctions, a connaissance d'un crime ou d'un délit en avise sans délai le procureur de la République." },
+    { ref: "Art. 434-3 du code pénal", txt: "Ne pas informer les autorités de privations, de mauvais traitements ou d'agressions ou atteintes sexuelles infligés à un mineur dont on a connaissance est un délit." },
+    { ref: "Art. 226-14 du code pénal", txt: "Le signalement aux autorités fait dans les conditions de cet article ne peut engager la responsabilité civile, pénale ou disciplinaire de son auteur, sauf s'il est établi qu'il n'a pas agi de bonne foi." },
+    { ref: "Art. L226-8 du code de l'action sociale et des familles", txt: "L'affichage du 119 est obligatoire dans tous les établissements qui reçoivent des mineurs, donc dans l'école." },
+    { ref: "Art. L542-3 du code de l'éducation", txt: "Au moins une séance annuelle d'information et de sensibilisation sur la protection de l'enfance, notamment les violences intrafamiliales et sexuelles, est inscrite dans l'emploi du temps." }
+  ],
+
+  // Contacts fixes (les contacts de la circonscription se règlent dans Réglages)
+  contacts: [
+    { nom: "CRIP de Loire-Atlantique (Département)", tel: "02 51 17 21 88", mail: "crip44@loire-atlantique.fr",
+      detail: "Lundi au vendredi, 9h-12h30 et 13h30-17h30. Pour un avis en cas de doute : le courriel est à privilégier. Le service ne reçoit pas de public.",
+      liens: [{ t: "Formulaire en ligne (professionnels)", u: "https://demarche.loire-atlantique.fr/recueil-info-preoccupante/" }] },
+    { nom: "Tribunal judiciaire de Nantes (parquet des mineurs)", tel: "02 51 17 95 00", mail: "tj-nantes@justice.fr",
+      detail: "Compétent pour Blain. 19, quai François Mitterrand, 44000 Nantes. Standard du lundi au vendredi, 8h-17h : demander le parquet des mineurs.",
+      liens: [{ t: "Fiche officielle", u: "https://lannuaire.service-public.gouv.fr/pays-de-la-loire/loire-atlantique/59edbec7-feb1-49aa-bb94-5f6c316b9093" }] },
+    { nom: "119, Allô enfance en danger", tel: "119", mail: "",
+      detail: "Numéro national, gratuit, jour et nuit. En dehors des heures d'ouverture de la CRIP, ses appels basculent vers le 119.",
+      liens: [{ t: "allo119.gouv.fr", u: "https://www.allo119.gouv.fr/" }] },
+    { nom: "Absences répétées : DSDEN de Loire-Atlantique", tel: "", mail: "eleves44-absenteistes-degre1@ac-nantes.fr",
+      detail: "Formulaire de signalement de la circulaire départementale (3 octobre 2025), transmis sous couvert de l'IEN.",
+      liens: [{ t: "Circulaire absentéisme 1er degré 2025-2026", u: "https://textes-officiels-academiques.ac-nantes.fr/medias/fichier/circulaire-absenteisme-1er-degre-2025-2026_1762958212159" }] }
+  ],
+
+  // Après la transmission, et pour l'adulte
+  apres: [
+    "<b>Après une IP</b>, la CRIP décide des suites : orientation vers une aide de droit commun, évaluation de la situation par les services de l'aide sociale à l'enfance, ou transmission au procureur en cas d'infraction ou de danger immédiat.",
+    "<b>Après un signalement</b>, le procureur décide : enquête pénale, mesure de protection immédiate ou saisine du juge des enfants.",
+    "<b>Ton rôle continue</b> : accueillir l'enfant normalement, rester disponible, noter les faits nouveaux et les transmettre en complément.",
+    "<b>Ne reste pas seul</b> : en parler au directeur, à l'IEN, au conseiller technique de service social de la DSDEN.",
+    "<b>Si tu es menacé ou mis en cause</b> à cause de ta démarche : demande la protection fonctionnelle à ton administration (code général de la fonction publique, art. L134-1 et suivants)."
+  ],
+
+  sources: [
+    { t: "Département de Loire-Atlantique : alerter sur la situation préoccupante d'un enfant", u: "https://www.loire-atlantique.fr/44/enfance-familles/alerter-sur-la-situation-preoccupante-d-un-enfant/c_1282021" },
+    { t: "Département de Loire-Atlantique : la CRIP", u: "https://www.loire-atlantique.fr/44/enfance-familles/cellule-de-recueil-des-informations-preoccupantes-crip/c_1209992" },
+    { t: "Éduscol : enfants en danger, comment les repérer et que faire ?", u: "https://eduscol.education.gouv.fr/4974/enfants-en-danger-comment-les-reperer-et-que-faire" },
+    { t: "Livret national : accompagnement et prise en charge des situations de protection de l'enfance", u: "https://eduscol.education.gouv.fr/sites/default/files/document/2021-11-25-livret-daccompagnement-accompagnement-prise-charge-situation-protection-enfancepdf-73728.pdf" },
+    { t: "Vademecum : violences sexuelles intrafamiliales, comprendre, prévenir, repérer et agir", u: "https://eduscol.education.fr/document/12583/download" },
+    { t: "Académie de Nantes : convention pour une école protectrice en Loire-Atlantique (modèles d'IP et d'article 40)", u: "https://www.ac-nantes.fr/une-convention-pour-une-ecole-protectrice-en-loire-atlantique-128246" },
+    { t: "DSDEN 44 : circulaire absentéisme 1er degré 2025-2026", u: "https://textes-officiels-academiques.ac-nantes.fr/medias/fichier/circulaire-absenteisme-1er-degre-2025-2026_1762958212159" },
+    { t: "Service-public : tribunal judiciaire de Nantes", u: "https://lannuaire.service-public.gouv.fr/pays-de-la-loire/loire-atlantique/59edbec7-feb1-49aa-bb94-5f6c316b9093" },
+    { t: "Allô 119 : affichage obligatoire dans les établissements scolaires", u: "https://allo119.gouv.fr/sites/default/files/upload/content/actualites/cp-affichage_du_119-_etablissements_scolaires-010922.pdf" }
+  ]
+};

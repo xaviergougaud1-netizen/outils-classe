@@ -1,13 +1,15 @@
 <!doctype html>
 <!-- TECHNIQUE
 Fiche d'identité
-  Rôle : aider les enseignants à repérer vers qui orienter un élève, à se former et à préparer le courrier de l'école pour le médecin.
-  Quand : avant ou après une rencontre avec la famille, en conseil de cycle, pour préparer une équipe éducative.
+  Nom : Boussole élève (orienter, soutenir, protéger). Adresse inchangée : dossier orienter/ (ne pas renommer : appli installée et liens des fiches).
+  Rôle : aider les enseignants et le directeur à savoir vers qui orienter un élève, comment soutenir sa famille et que faire quand il est peut-être en danger (rencontre, IP, signalement).
+  Quand : avant ou après une rencontre avec la famille, en conseil de cycle, pour préparer une équipe éducative, face à une inquiétude pour la sécurité d'un enfant.
   Où : ordinateur de l'école ou de la maison, téléphone. Page publique sur GitHub Pages, sans compte.
   Écran n° 1 : le répertoire des professionnels, avec la prise en charge visible d'un coup d'œil.
-  Ce qu'il ne fait pas : pas de dossier d'élève partagé, pas de diagnostic, pas de compte rendu d'équipe éducative (skill compte-rendu-equipe-educative).
+  Ce qu'il ne fait pas : pas de dossier d'élève, pas de diagnostic, ne transmet rien (l'IP se fait sur le formulaire en ligne du Département), pas de compte rendu d'équipe éducative (skill compte-rendu-equipe-educative).
 Version : voir VERSION (une seule constante)
 Historique :
+  - 1.3.0 (2026-11-21) Nouveau nom « Boussole élève ». Onglet Protéger : que faire (urgence, signalement, IP, rester attentif), comparer, recueillir la parole, rédiger une IP (en mémoire seulement, rien n'est enregistré), contacts (CRIP 44, parquet de Nantes, 119), textes de loi et sources. Date de vérification sur chaque fiche et chaque contact, rappel au-delà d'un an. Orthophonistes et neuropsychologues du secteur ajoutés (migration v3 : ajout aux appareils déjà installés, sans rien effacer). Fiche « Enfant en danger : que faire » à imprimer.
   - 1.2.0 (2026-11-21) Répertoire : catégories « Soutien aux parents » (LAEP, espace départemental des solidarités, TISF, AED, avec l'accord des parents) et « Mesures du juge des enfants » (AEMO, MJIE). Question « famille démunie ». Se former : section aides administratives / judiciaires. Coordonnées EDS Blain-Nozay et LAEP (Les P'tites Graines, Le Sablier) ajoutées aux réglages existants. Fiche familles : section « Pour vous, les parents » (3 pages).
   - 1.1.0 (2026-11-18) Fiches à imprimer (familles, enseignants) en PDF et Word, dossier fiches/, en tête du Répertoire (section repliable).
   - 1.0.0 (2026-11-18) Répertoire, Questions, Courrier, Se former, Réglages. et CACHE dans sw.js, à changer ensemble.
@@ -22,7 +24,7 @@ Choix techniques :
 <html lang="fr"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#B03A48">
-<title>Orienter un élève</title>
+<title>Boussole élève</title>
 <link rel="manifest" href="manifest.webmanifest"><link rel="icon" href="icon-192.png"><link rel="apple-touch-icon" href="icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
@@ -62,7 +64,7 @@ header.entete .titre{flex:1;min-width:0;display:flex;align-items:center;gap:10px
 header.entete .tuile{background:var(--outil-orienter);color:#fff}
 .contenu{padding:16px 16px 110px;max-width:1180px;width:100%}
 nav.bas{position:fixed;left:0;right:0;bottom:0;z-index:6;display:flex;background:var(--surface);border-top:1px solid var(--trait);padding-bottom:env(safe-area-inset-bottom)}
-nav.bas button{flex:1;min-height:60px;border:0;background:none;color:var(--encre-douce);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:12px;cursor:pointer}
+nav.bas button{flex:1;min-width:0;min-height:60px;border:0;background:none;color:var(--encre-douce);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:12px;cursor:pointer}
 nav.bas button[aria-current=page]{color:var(--outil-orienter);font-weight:700}
 @media (min-width:1000px){
   .cote{display:flex;flex-direction:column;gap:4px;width:250px;flex:none;background:var(--surface);border-right:1px solid var(--trait);padding:16px 12px;position:sticky;top:0;height:100vh}
@@ -186,6 +188,23 @@ dl.gloss{display:grid;grid-template-columns:max-content 1fr;gap:6px 14px;margin:
 .ligne-contact{border:1px solid var(--trait);border-radius:var(--arrondi-m);padding:10px;margin-bottom:10px;background:var(--surface-2)}
 
 #toast{position:fixed;left:50%;bottom:84px;transform:translateX(-50%);background:var(--encre);color:var(--fond);padding:10px 16px;border-radius:var(--arrondi-m);opacity:0;transition:opacity .2s;pointer-events:none;z-index:20;max-width:90vw}
+/* Protéger */
+.urgences{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:14px}
+@media (min-width:700px){.urgences{grid-template-columns:repeat(4,1fr)}}
+.urgences a{display:flex;align-items:center;gap:10px;min-height:56px;padding:8px 12px;border-radius:var(--arrondi-m);background:var(--bad-bg);color:var(--bad-fg);text-decoration:none;border:1px solid transparent}
+.urgences a b{font-size:24px;line-height:1}.urgences a span{font-size:13px;line-height:1.25}
+.urgences.compact{grid-template-columns:repeat(4,1fr)}.urgences.compact a{min-height:44px;justify-content:center;padding:6px}.urgences.compact a span{display:none}.urgences.compact a b{font-size:20px}
+.urgences a:focus-visible,.urgences a:hover{border-color:var(--danger)}
+.issue{border-left:6px solid var(--c);background:var(--surface);border-radius:var(--arrondi-l);padding:16px;margin-bottom:12px;border-top:1px solid var(--trait);border-right:1px solid var(--trait);border-bottom:1px solid var(--trait)}
+.issue h2{margin-top:0;color:var(--c)}
+.tab-defile{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.tab-defile table{min-width:640px}
+table.tab th[scope=row]{color:var(--encre-douce);white-space:nowrap}
+.ip-sortie{white-space:pre-wrap;font-family:inherit;font-size:15px;background:var(--surface);border:1px solid var(--trait);border-radius:var(--arrondi-m);padding:14px;max-height:60vh;overflow:auto}
+.verif{font-size:13px;color:var(--encre-douce);margin-top:6px}
+.contact .verif{margin-top:4px}
+.mot-repere{background:var(--warn-bg);color:var(--warn-fg);border-radius:var(--arrondi-m);padding:8px 10px;margin:6px 0;font-size:15px}
+.ok-msg{background:var(--ok-bg);color:var(--ok-fg);border-radius:var(--arrondi-m);padding:8px 10px;font-size:15px}
 #impression{display:none}
 
 @media print{
@@ -218,7 +237,7 @@ dl.gloss{display:grid;grid-template-columns:max-content 1fr;gap:6px 14px;margin:
 <script src="donnees.js"></script>
 <script>
 "use strict";
-const VERSION = "1.2.0";
+const VERSION = "1.3.0";
 const CLE_R = "orienter-reglages", CLE_B = "orienter-brouillon", CLE_SEC = "orienter-sections";
 
 /* ---------- Pictogrammes (style Lucide) ---------- */
@@ -254,20 +273,27 @@ const P = {
   plus:'<path d="M12 5v14M5 12h14"/>',
   info:'<circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/>',
   lien:'<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>',
+  bouclier:'<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>',
   tel:'<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/>'
 };
 function ic(n){return '<svg class="i" viewBox="0 0 24 24" aria-hidden="true">'+(P[n]||"")+'</svg>'}
 function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
 
 /* ---------- Données de l'appareil ---------- */
-function defautR(){return{v:2,theme:"auto",expire:30,ecole:{nom:"École primaire Andrée Chedid",ville:"Blain",circo:"Circonscription de Blain-Nozay",adresse:"",tel:"",mail:"",directeur:"Xavier Gougaud"},contacts:JSON.parse(JSON.stringify(CONTACTS_DEFAUT))}}
+function defautR(){return{v:3,theme:"auto",expire:30,ecole:{nom:"École primaire Andrée Chedid",ville:"Blain",circo:"Circonscription de Blain-Nozay",adresse:"",tel:"",mail:"",directeur:"Xavier Gougaud"},contacts:JSON.parse(JSON.stringify(CONTACTS_DEFAUT)),prot:{ien:{nom:"",tel:"",mail:""},ctss:{nom:"",tel:"",mail:""}}}}
 function defautB(){return{v:1,savedAt:0,eleve:{prenom:"",nom:"",naissance:"",classe:"",enseignant:""},rencontre:"",niveau:"",domaines:[],rep:{},aides:{},autresAides:"",obs:"",persiste:true}}
-function migrerR(d){var r=defautR();if(!d||typeof d!=="object")return r;r.theme=d.theme||r.theme;if(typeof d.expire==="number")r.expire=d.expire;r.ecole=Object.assign(r.ecole,d.ecole||{});if(Array.isArray(d.contacts)){r.contacts=d.contacts;if(!(d.v>=2)){var deja=r.contacts.map(function(x){return x.pro});CONTACTS_DEFAUT.forEach(function(c){if((c.pro==="laep"||c.pro==="eds")&&deja.indexOf(c.pro)<0)r.contacts.push(JSON.parse(JSON.stringify(c)))})}}return r}
+function migrerR(d){var r=defautR();if(!d||typeof d!=="object")return r;r.theme=d.theme||r.theme;if(typeof d.expire==="number")r.expire=d.expire;r.ecole=Object.assign(r.ecole,d.ecole||{});
+  if(d.prot&&typeof d.prot==="object"){r.prot.ien=Object.assign(r.prot.ien,d.prot.ien||{});r.prot.ctss=Object.assign(r.prot.ctss,d.prot.ctss||{})}
+  if(Array.isArray(d.contacts)){r.contacts=d.contacts;var vAvant=typeof d.v==="number"?d.v:1;
+    // Ajoute les fiches apparues depuis la version des réglages de l'appareil, sans doublon ni effacement
+    var noms=r.contacts.map(function(x){return(x.nom||"").toLowerCase()});
+    CONTACTS_DEFAUT.forEach(function(c){if((c.depuis||1)>vAvant&&noms.indexOf(c.nom.toLowerCase())<0)r.contacts.push(JSON.parse(JSON.stringify(c)))})}
+  return r}
 function migrerB(d){var b=defautB();if(!d||typeof d!=="object")return b;Object.keys(b).forEach(function(k){if(d[k]!==undefined)b[k]=d[k]});b.eleve=Object.assign(defautB().eleve,d.eleve||{});return b}
 function lire(cle,migrer){try{var t=localStorage.getItem(cle);return migrer(t?JSON.parse(t):null)}catch(e){try{localStorage.setItem(cle+"-secours",localStorage.getItem(cle))}catch(x){}return migrer(null)}}
 function ecrire(cle,val){try{localStorage.setItem(cle,JSON.stringify(val))}catch(e){toast("Enregistrement impossible sur cet appareil")}}
 
-const S={vue:"repertoire",filtre:"tous",cherche:"",q:{etape:"niveau",i:0},annul:[],refaire:[]};
+const S={vue:"repertoire",filtre:"tous",cherche:"",q:{etape:"niveau",i:0},p:{page:"accueil",rep:{}},ip:ipVide(),annul:[],refaire:[]};
 let R=lire(CLE_R,migrerR);
 let B=lire(CLE_B,migrerB);
 let SEC={};try{SEC=JSON.parse(localStorage.getItem(CLE_SEC))||{}}catch(e){SEC={}}
@@ -296,16 +322,16 @@ function ordoCls(o){if(/Sans ordonnance|Accès direct/.test(o))return"ok";if(/Vi
 function badges(p){var c=COUTS[p.cout];return '<span class="badge '+c.cls+'">'+esc(c.txt)+'</span><span class="badge '+ordoCls(p.ordo)+'">'+esc(p.ordo)+'</span>'}
 
 /* ---------- Navigation ---------- */
-const ONGLETS=[["repertoire","Répertoire","annuaire"],["questions","Questions","boussole"],["courrier","Courrier","fichier"],["former","Se former","former"],["reglages","Réglages","reglages"]];
-function aller(vue,q){S.vue=vue;if(q)S.q=q;history.pushState({vue:S.vue,q:S.q},"","#"+vue);rendre();window.scrollTo(0,0)}
-addEventListener("popstate",function(e){var st=e.state||{};S.vue=st.vue||"repertoire";if(st.q)S.q=st.q;rendre()});
+const ONGLETS=[["repertoire","Répertoire","annuaire"],["questions","Questions","boussole"],["courrier","Courrier","fichier"],["proteger","Protéger","bouclier"],["former","Se former","former"],["reglages","Réglages","reglages"]];
+function aller(vue,q,p){S.vue=vue;if(q)S.q=q;if(p)S.p=p;history.pushState({vue:S.vue,q:S.q,p:S.p},"","#"+vue);rendre();window.scrollTo(0,0)}
+addEventListener("popstate",function(e){var st=e.state||{};S.vue=st.vue||"repertoire";if(st.q)S.q=st.q;S.p=st.p||{page:"accueil",rep:{}};rendre()});
 
 function rendreCadre(){
   var t=ONGLETS.find(function(o){return o[0]===S.vue});
   var annul=(S.vue==="courrier"||S.vue==="questions")?'<button class="btn petit" data-act="annuler" title="Annuler (Ctrl+Z)">'+ic("annuler")+'<span>Annuler</span></button>':"";
   document.getElementById("entete").innerHTML='<div class="titre"><span class="tuile p">'+ic(t[2])+'</span><div><h1>'+t[1]+'</h1></div></div>'+annul;
-  var cote='<div class="marque"><span class="tuile" style="background:var(--outil-orienter)">'+ic("boussole")+'</span>Orienter un élève</div>';
-  ONGLETS.forEach(function(o,i){cote+=(i===4?'<div class="bas-cote"></div>':"")+'<button data-tab="'+o[0]+'" '+(S.vue===o[0]?'aria-current="page"':"")+'>'+ic(o[2])+'<span>'+o[1]+'</span></button>'});
+  var cote='<div class="marque"><span class="tuile" style="background:var(--outil-orienter)">'+ic("boussole")+'</span><span>Boussole élève<small style="display:block;font-weight:400;font-size:12px;color:var(--encre-douce)">Orienter, soutenir, protéger</small></span></div>';
+  ONGLETS.forEach(function(o,i){cote+=(o[0]==="reglages"?'<div class="bas-cote"></div>':"")+'<button data-tab="'+o[0]+'" '+(S.vue===o[0]?'aria-current="page"':"")+'>'+ic(o[2])+'<span>'+o[1]+'</span></button>'});
   document.getElementById("cote").innerHTML=cote;
   document.getElementById("nav").innerHTML=ONGLETS.map(function(o){return '<button data-tab="'+o[0]+'" '+(S.vue===o[0]?'aria-current="page"':"")+'>'+ic(o[2])+'<span>'+o[1]+'</span></button>'}).join("");
 }
@@ -317,6 +343,9 @@ function htmlContact(c){
   if(c.adresse)t+='<br>'+esc(c.adresse);
   if(c.tel)t+='<br><a href="tel:'+esc(c.tel.replace(/\s/g,""))+'">'+esc(c.tel)+'</a>';
   if(c.mail)t+='<br><a href="mailto:'+esc(c.mail)+'">'+esc(c.mail)+'</a>';
+  if(c.note)t+='<br><span class="muted">'+esc(c.note)+'</span>';
+  if(c.site)t+='<br><a href="'+esc(c.site)+'" target="_blank" rel="noopener">Site</a>';
+  if(c.verifie)t+='<div class="verif">Vérifié : '+esc(fmtVerif(c.verifie))+(vieux(c.verifie)?' · à revérifier':'')+'</div>';
   return t+'</div>';
 }
 function carteHTML(p){
@@ -327,7 +356,8 @@ function carteHTML(p){
   if(p.acces&&p.acces.length)h+='<div class="bloc"><h4>Comment y aller</h4><ol>'+p.acces.map(function(x){return"<li>"+esc(x)+"</li>"}).join("")+'</ol></div>';
   h+='<div class="prise '+cout.cls+'"><b>'+esc(cout.txt)+' · '+esc(p.ordo)+'</b><span>'+esc(p.coutTxt)+'</span>'+(p.delai?'<span>Délai : '+esc(p.delai)+'</span>':"")+'</div>';
   if(p.parler)h+='<div class="bloc"><h4>Pour en parler</h4><p>'+esc(p.parler)+'</p></div>';
-  var cs=contactsDe(p.id);if(cs.length)h+='<div class="bloc"><h4>Près de chez nous</h4>'+cs.map(htmlContact).join("")+'</div>';
+  var cs=contactsDe(p.id);if(cs.length)h+='<div class="bloc"><h4>Près de chez nous</h4>'+(cs.length>3?'<details class="plus-contacts"><summary class="btn petit doux">Voir les '+cs.length+' contacts</summary><div class="cartes" style="margin-top:8px">'+cs.map(htmlContact).join("")+'</div></details>':cs.map(htmlContact).join(""))+'</div>';
+  h+='<div class="verif">Informations vérifiées : '+esc(fmtVerif(p.verifie||VERIFICATION.date))+(p.lien?' · source : '+esc(p.lien.txt):"")+'</div>';
   var act="";
   if(p.lien)act+='<a class="btn petit" href="'+esc(p.lien.url)+'" target="_blank" rel="noopener">'+ic("lien")+esc(p.lien.txt)+'</a>';
   if(p.famille)act+='<button class="btn petit doux" data-act="fiche" data-id="'+p.id+'">'+ic("imprimer")+'Fiche pour la famille</button>';
@@ -335,9 +365,11 @@ function carteHTML(p){
   return h+'</div></details>';
 }
 function vueRepertoire(){
-  var h=sec("r-fiches","Fiches à imprimer","#1F3864","imprimer",
+  var h=rappelVerif();
+  h+=sec("r-fiches","Fiches à imprimer","#1F3864","imprimer",
     '<div class="cartes">'+[["fiche-familles","Pour les familles","Les professionnels qui peuvent aider votre enfant. Mots simples, ordonnance et coût en couleur, aides pour les parents. 3 pages A4."],
-      ["fiche-enseignants","Pour les enseignants","Tous les professionnels : rôle, quand y penser, comment y aller, prise en charge, délai. Tableau A4 paysage."]].map(function(f){
+      ["fiche-enseignants","Pour les enseignants","Tous les professionnels : rôle, quand y penser, comment y aller, prise en charge, délai. Tableau A4 paysage."],
+      ["fiche-enfant-en-danger","Enfant en danger : que faire","Urgence, signalement, IP : les étapes, la parole de l'enfant et les contacts. Une page A4, pour le classeur du remplaçant et la salle des maîtres."]].map(function(f){
       return '<div class="encadre" style="margin:0"><b>'+f[1]+'</b><p class="muted" style="margin:4px 0 10px;font-size:15px">'+f[2]+'</p><div class="rangee"><a class="btn petit plein" href="fiches/'+f[0]+'.pdf" target="_blank" rel="noopener">'+ic("imprimer")+'PDF</a><a class="btn petit" href="fiches/'+f[0]+'.docx" download>'+ic("telecharger")+'Word</a></div></div>'}).join("")+'</div>',"");
   h+='<div class="recherche">'+ic("chercher")+'<input id="cherche" type="search" placeholder="Chercher : orthophoniste, gratuit, écriture…" value="'+esc(S.cherche)+'" aria-label="Chercher"></div>';
   h+='<div class="puces" role="group" aria-label="Filtrer">'+[["tous","Tous"]].concat(CATEGORIES.map(function(c){return[c.id,c.nom]})).concat([["gratuit","Gratuit"]]).map(function(f){return '<button class="puce" data-filtre="'+f[0]+'" aria-pressed="'+(S.filtre===f[0])+'">'+f[1]+'</button>'}).join("")+'</div>';
@@ -457,8 +489,136 @@ function vueCourrier(){
   return h;
 }
 function champ(k,l,v,type){return '<div class="champ"><label for="f-'+k+'">'+l+'</label><input id="f-'+k+'" type="'+(type||"text")+'" data-eleve="'+k+'" value="'+esc(v)+'" autocomplete="off"></div>'}
-function sec(id,titre,couleur,picto,corps,extra){var ouvert=SEC[id]!==undefined?SEC[id]:(id==="c-eleve"||id==="r-ecole"||id==="f-parcours");return '<details class="sec" data-sec="'+id+'" style="--c:'+couleur+'" '+(ouvert?"open":"")+'><summary><span class="tuile p" style="background:'+couleur+'">'+ic(picto)+'</span>'+titre+(extra||"")+'</summary><div class="int">'+corps+'</div></details>'}
+function sec(id,titre,couleur,picto,corps,extra){var ouvert=SEC[id]!==undefined?SEC[id]:(id==="c-eleve"||id==="r-ecole"||id==="f-parcours"||id==="ip-motifs"||id==="ip-faits"||id==="r-prot");return '<details class="sec" data-sec="'+id+'" style="--c:'+couleur+'" '+(ouvert?"open":"")+'><summary><span class="tuile p" style="background:'+couleur+'">'+ic(picto)+'</span>'+titre+(extra||"")+'</summary><div class="int">'+corps+'</div></details>'}
 function majApercu(){var a=document.getElementById("apercu");if(a)a.innerHTML=lettreHTML()}
+
+/* ---------- Vérification des informations ---------- */
+const MOIS=["janvier","février","mars","avril","mai","juin","juillet","août","septembre","octobre","novembre","décembre"];
+function fmtVerif(v){if(!v)return"";var p=String(v).split("-");if(p.length<2)return v;var m=MOIS[+p[1]-1]||"";return(p[2]?(+p[2])+" ":"")+m+" "+p[0]}
+function dateVerif(v){var p=String(v||"").split("-");if(p.length<2)return null;return new Date(+p[0],+p[1]-1,+(p[2]||1))}
+function vieux(v){var d=dateVerif(v);return !!d&&(Date.now()-d.getTime())>365*864e5}
+function rappelVerif(){
+  var msg=[];
+  if(vieux(VERIFICATION.date))msg.push("Les informations du répertoire ont été vérifiées en "+fmtVerif(VERIFICATION.date)+", il y a plus d'un an.");
+  if(vieux(PROTEGER.verifie))msg.push("Les démarches de l'onglet Protéger ont été vérifiées le "+fmtVerif(PROTEGER.verifie)+", il y a plus d'un an.");
+  var n=R.contacts.filter(function(c){return vieux(c.verifie)}).length;
+  if(n)msg.push(n+" coordonnée"+(n>1?"s ont":" a")+" plus d'un an (Réglages › Coordonnées).");
+  if(!msg.length)return"";
+  return '<div class="note" style="margin-bottom:12px">'+ic("info")+' <b>À revérifier.</b> '+msg.map(esc).join(" ")+' Demande à Claude de refaire la vérification sur les sources officielles.</div>';
+}
+
+/* ---------- Protéger ---------- */
+// Le texte de l'IP reste en mémoire seulement : jamais enregistré sur l'appareil ni envoyé.
+function ipVide(){return{motifs:{},constats:"",paroles:"",rapporte:"",contexte:"",deja:"",parents:"",parentsDate:"",parentsQui:"",parentsReaction:"",parentsMotif:""}}
+function ipRempli(){var x=S.ip;return Object.keys(x.motifs).length>0||["constats","paroles","rapporte","contexte","deja","parents"].some(function(k){return (x[k]||"").trim()})}
+const PAGES_P=[["arbre","Que faire ?","boussole","Trois questions pour savoir s'il faut appeler, signaler, faire une IP ou rester attentif."],
+  ["comparer","Comparer","fichier","Rencontre, IP, signalement : différences, destinataires, parents."],
+  ["parole","Recueillir la parole","bulle","Ce qu'on fait et ce qu'on évite quand un enfant se confie."],
+  ["rediger","Rédiger une IP","crayon","Un texte clair et factuel à copier dans le formulaire en ligne."],
+  ["contacts","Contacts","tel","CRIP 44, parquet de Nantes, 119, ta circonscription."],
+  ["apres","Après, et pour toi","coeur","Les suites, ton rôle, ta protection, les textes."]];
+function urgencesHTML(compact){return '<div class="urgences'+(compact?" compact":"")+'">'+PROTEGER.urgences.map(function(u){return '<a href="tel:'+u.num+'"><b>'+u.num+'</b><span><b style="font-size:14px">'+esc(u.txt)+'</b><br>'+esc(u.detail)+'</span></a>'}).join("")+'</div>'}
+function retourP(){return '<button class="btn petit" data-act="p-page" data-v="accueil">'+ic("retour")+'Protéger</button>'}
+function vueProteger(){
+  var pg=S.p.page,h=urgencesHTML(pg!=="accueil");
+  if(pg==="accueil"){
+    h+='<p class="muted">Pour un enfant peut-être en danger ou en risque de l\'être. Tout vient des textes officiels et des procédures de Loire-Atlantique (vérifiés le '+esc(fmtVerif(PROTEGER.verifie))+').</p>';
+    h+='<div class="grille-tuiles">'+PAGES_P.map(function(x){return '<button class="tuile-choix" style="--c:var(--outil-orienter)" data-act="p-page" data-v="'+x[0]+'"><span class="tuile" style="background:var(--outil-orienter)">'+ic(x[2])+'</span><b>'+x[1]+'</b><span class="nb">'+x[3]+'</span></button>'}).join("")+'</div>';
+    if(ipRempli())h+='<div class="note" style="margin-top:12px">'+ic("info")+' Un texte d\'IP est en cours (en mémoire). <button class="btn petit" data-act="p-page" data-v="rediger">Le reprendre</button></div>';
+    return h;
+  }
+  h+=retourP();
+  if(pg==="arbre")return h+vueArbre();
+  if(pg==="comparer"){var C=PROTEGER.comparer;
+    return h+'<h2>Rencontre, IP, signalement</h2><div class="tab-defile"><table class="tab"><thead><tr><th></th>'+C.cols.map(function(c){return"<th>"+esc(c)+"</th>"}).join("")+'</tr></thead><tbody>'+C.lignes.map(function(l){return '<tr><th scope="row">'+esc(l[0])+'</th>'+l.slice(1).map(function(x){return"<td>"+esc(x)+"</td>"}).join("")+'</tr>'}).join("")+'</tbody></table></div><p class="muted" style="font-size:14px">Sur téléphone, fais glisser le tableau sur le côté.</p>';}
+  if(pg==="parole"){var Pa=PROTEGER.parole;
+    return h+'<h2>Quand un enfant se confie</h2><div class="deuxcol"><div class="encadre"><h4 style="color:var(--ok-fg)">On fait</h4><ul>'+Pa.faire.map(function(x){return"<li>"+esc(x)+"</li>"}).join("")+'</ul></div><div class="encadre"><h4 style="color:var(--bad-fg)">On évite</h4><ul>'+Pa.eviter.map(function(x){return"<li>"+esc(x)+"</li>"}).join("")+'</ul></div></div><div class="rangee"><button class="btn plein" data-act="p-page" data-v="rediger">'+ic("crayon")+'Noter ses paroles</button></div>';}
+  if(pg==="rediger")return h+vueRediger();
+  if(pg==="contacts")return h+vueContactsP();
+  if(pg==="apres")return h+'<h2>Après la transmission</h2><div class="encadre"><ul>'+PROTEGER.apres.map(function(x){return"<li>"+x+"</li>"}).join("")+'</ul></div>'+
+    sec("p-droit","Ce que disent les textes","#475166","livre",'<dl class="gloss">'+PROTEGER.droit.map(function(d){return"<dt>"+esc(d.ref)+"</dt><dd>"+esc(d.txt)+"</dd>"}).join("")+'</dl>',"")+
+    sec("p-sources","Sources officielles","#475166","lien",'<ul>'+PROTEGER.sources.map(function(x){return '<li><a href="'+esc(x.u)+'" target="_blank" rel="noopener">'+esc(x.t)+'</a></li>'}).join("")+'</ul><p class="verif">Vérifiées le '+esc(fmtVerif(PROTEGER.verifie))+'.</p>',"");
+  S.p.page="accueil";return vueProteger();
+}
+function vueArbre(){
+  var A=PROTEGER.arbre,rep=S.p.rep||{},i;
+  for(i=0;i<A.length;i++){
+    var r=rep[A[i].id];
+    if(r==="oui")return issueHTML(A[i].issue,i);
+    if(!r){var q=A[i];
+      return '<div class="carte-q" style="--c:var(--outil-orienter)"><div class="rangee"><b>Que faire ?</b><span class="muted" style="margin-left:auto">'+(i+1)+' / '+A.length+'</span></div><div class="progres"><i style="width:'+Math.round((i+1)/A.length*100)+'%"></i></div>'+
+        '<div class="question">'+esc(q.q)+'</div><p class="muted">'+esc(q.aide)+'</p>'+
+        '<div class="reponses"><button class="btn oui" data-act="p-rep" data-id="'+q.id+'" data-v="oui">Oui</button><button class="btn non" data-act="p-rep" data-id="'+q.id+'" data-v="non">Non</button><button class="btn non" data-act="p-rep" data-id="'+q.id+'" data-v="nsp">Je ne sais pas</button></div>'+
+        (i?'<div class="rangee" style="margin-top:14px"><button class="btn petit" data-act="p-prec">'+ic("retour")+'Question précédente</button></div>':"")+'</div>';}
+  }
+  var nsp=A.some(function(q){return rep[q.id]==="nsp"});
+  return issueHTML(PROTEGER.issueSinon,A.length,nsp);
+}
+function issueHTML(id,i,nsp){
+  var I=PROTEGER.issues[id];
+  var h='<div class="issue" style="--c:'+I.couleur+'"><h2>'+esc(I.titre)+'</h2>';
+  if(nsp)h+='<div class="note" style="margin-bottom:10px">'+ic("info")+' Tu as répondu « Je ne sais pas » : en cas de doute, demande l\'avis de la CRIP (courriel à privilégier) avant de décider.</div>';
+  h+='<ol class="etapes">'+I.etapes.map(function(x){return"<li>"+x+"</li>"}).join("")+'</ol></div>';
+  h+='<div class="rangee">';
+  if(id==="ip")h+='<button class="btn plein" data-act="p-page" data-v="rediger">'+ic("crayon")+'Rédiger l\'IP</button><a class="btn" href="https://demarche.loire-atlantique.fr/recueil-info-preoccupante/" target="_blank" rel="noopener">'+ic("lien")+'Formulaire en ligne</a>';
+  if(id==="signalement"||id==="urgence")h+='<button class="btn plein" data-act="p-page" data-v="rediger">'+ic("crayon")+'Noter les faits</button>';
+  h+='<button class="btn" data-act="p-page" data-v="contacts">'+ic("tel")+'Contacts</button><button class="btn" data-act="p-recommencer">Recommencer</button></div>';
+  return h;
+}
+function vueContactsP(){
+  var h='<h2>Contacts</h2><div class="cartes">'+PROTEGER.contacts.map(function(c){
+    return '<div class="contact"><b>'+esc(c.nom)+'</b>'+(c.tel?'<br><a href="tel:'+esc(c.tel.replace(/\s/g,""))+'">'+esc(c.tel)+'</a>':"")+(c.mail?'<br><a href="mailto:'+esc(c.mail)+'">'+esc(c.mail)+'</a>':"")+'<br><span class="muted">'+esc(c.detail)+'</span>'+(c.liens||[]).map(function(l){return '<br><a href="'+esc(l.u)+'" target="_blank" rel="noopener">'+esc(l.t)+'</a>'}).join("")+'<div class="verif">Vérifié : '+esc(fmtVerif(PROTEGER.verifie))+'</div></div>'}).join("");
+  [["ien","IEN de la circonscription"],["ctss","Conseiller technique de service social (DSDEN)"]].forEach(function(k){var c=R.prot[k[0]];
+    h+='<div class="contact"><b>'+k[1]+'</b>'+(c.nom||c.tel||c.mail?(c.nom?'<br>'+esc(c.nom):"")+(c.tel?'<br><a href="tel:'+esc(c.tel.replace(/\s/g,""))+'">'+esc(c.tel)+'</a>':"")+(c.mail?'<br><a href="mailto:'+esc(c.mail)+'">'+esc(c.mail)+'</a>':""):'<br><span class="muted">À renseigner dans Réglages › Contacts pour protéger.</span>')+'</div>'});
+  return h+'</div><div class="rangee" style="margin-top:12px"><button class="btn" data-act="p-reglages">'+ic("reglages")+'Modifier les contacts de la circonscription</button></div>';
+}
+function champIp(k,titre,aide,rows){return '<div class="champ"><label for="ip-'+k+'">'+titre+'</label><p class="muted" style="margin:0 0 6px;font-size:14px">'+aide+'</p><textarea id="ip-'+k+'" data-ip="'+k+'" rows="'+(rows||4)+'">'+esc(S.ip[k])+'</textarea></div>'}
+function vueRediger(){
+  var x=S.ip,P=PROTEGER;
+  var h='<div class="bandeau-brouillon">'+ic("info")+'<div style="flex:1"><b>Rien n\'est enregistré</b>, ni sur l\'appareil ni sur internet. Si tu recharges ou fermes la page, le texte est perdu : copie-le dans le formulaire en ligne. N\'écris pas ici le nom de l\'enfant : le formulaire le demande.</div><button class="btn petit danger" data-act="ip-effacer">'+ic("poubelle")+'Effacer</button></div>';
+  h+='<div class="deux"><div>';
+  h+=sec("ip-regles","Règles de rédaction","#475166","info",'<ul>'+P.regles.map(function(r){return"<li>"+r+"</li>"}).join("")+'</ul>',"");
+  h+=sec("ip-motifs","Ce qui inquiète","#B42318","alerte",P.motifs.map(function(m,i){return '<label class="coche"><input type="checkbox" data-ipmotif="'+i+'" '+(x.motifs[i]?"checked":"")+'><span>'+esc(m)+'</span></label>'}).join(""),"");
+  h+=sec("ip-faits","Les faits","#D97706","crayon",
+    champIp("constats","Ce que j'ai constaté moi-même","Date, heure, lieu, ce que tu as vu ou entendu. « Le 18/11, à 8h40, à l'accueil, j'ai vu… »",5)+
+    champIp("paroles","Ce que l'enfant a dit","Ses mots exacts entre « guillemets », la date, l'heure, à qui, et s'il a parlé spontanément ou en réponse à quoi.",5)+
+    champIp("rapporte","Ce qu'on m'a rapporté","Qui (fonction), quand, ce qui a été dit. Au conditionnel s'il n'est pas vérifié.",3),"");
+  h+=sec("ip-cont","Le contexte et ce que l'école a fait","#2453C7","ecole",
+    champIp("contexte","Le contexte à l'école","Scolarité, comportement, ce qui a changé et depuis quand, absences.",3)+
+    champIp("deja","Ce que l'école a déjà fait","Rencontres avec la famille (dates), aides mises en place, professionnels sollicités.",3),"");
+  h+=sec("ip-par","Information des parents","#7C3AED","groupe",
+    '<label class="coche"><input type="radio" name="ipp" data-ipradio="oui" '+(x.parents==="oui"?"checked":"")+'><span>Les parents ont été informés de la transmission</span></label>'+
+    '<label class="coche"><input type="radio" name="ipp" data-ipradio="non" '+(x.parents==="non"?"checked":"")+'><span>Les parents n\'ont pas été informés (contraire à l\'intérêt de l\'enfant)</span></label>'+
+    (x.parents==="oui"?'<div class="grille2"><div class="champ"><label for="ip-parentsDate">Le</label><input id="ip-parentsDate" type="date" data-ip="parentsDate" value="'+esc(x.parentsDate)+'"></div><div class="champ"><label for="ip-parentsQui">Par</label><input id="ip-parentsQui" data-ip="parentsQui" value="'+esc(x.parentsQui)+'" placeholder="le directeur, l\'enseignante…"></div></div>'+champIp("parentsReaction","Leur réaction","Ce qu'ils ont dit ou fait, en restant factuel.",2):"")+
+    (x.parents==="non"?champIp("parentsMotif","Pourquoi","Par exemple : risque de pression sur l'enfant, faits pouvant concerner un parent.",2):"")+
+    '<p class="muted" style="font-size:14px">S\'il s\'agit d\'un signalement au procureur, les parents ne sont pas prévenus.</p>',"");
+  h+='</div><div class="apercu-col"><div class="rangee" style="margin-bottom:10px"><button class="btn plein" data-act="ip-copier">'+ic("copier")+'Copier le texte</button><a class="btn" href="https://demarche.loire-atlantique.fr/recueil-info-preoccupante/" target="_blank" rel="noopener">'+ic("lien")+'Formulaire en ligne</a></div><div id="ip-controle">'+controleIp()+'</div><div class="ip-sortie" id="ip-sortie">'+esc(texteIp()||"Le texte apparaît ici au fur et à mesure.")+'</div></div></div>';
+  return h;
+}
+function texteIp(){
+  var x=S.ip,P=PROTEGER,t=[];
+  var m=P.motifs.filter(function(_,i){return x.motifs[i]});
+  if(m.length)t.push("MOTIF\n"+m.join(" ; "));
+  [["constats","CE QUE J'AI CONSTATÉ"],["paroles","PAROLES DE L'ENFANT (rapportées mot pour mot)"],["rapporte","ÉLÉMENTS RAPPORTÉS"],["contexte","CONTEXTE À L'ÉCOLE"],["deja","CE QUE L'ÉCOLE A DÉJÀ FAIT"]].forEach(function(k){if((x[k[0]]||"").trim())t.push(k[1]+"\n"+x[k[0]].trim())});
+  if(x.parents==="oui")t.push("INFORMATION DES PARENTS\nLes parents ont été informés de cette transmission"+(x.parentsDate?" le "+fmtDate(x.parentsDate):"")+(x.parentsQui.trim()?" par "+x.parentsQui.trim():"")+"."+(x.parentsReaction.trim()?"\nLeur réaction : "+x.parentsReaction.trim():""));
+  if(x.parents==="non")t.push("INFORMATION DES PARENTS\nLes parents n'ont pas été informés de cette transmission, car ce serait contraire à l'intérêt de l'enfant."+(x.parentsMotif.trim()?"\nRaison : "+x.parentsMotif.trim():""));
+  return t.join("\n\n");
+}
+function horsGuillemets(s){return String(s||"").replace(/«[^»]*»/g," ").replace(/"[^"]*"/g," ").replace(/“[^”]*”/g," ")}
+function controleIp(){
+  var x=S.ip,P=PROTEGER,av=[];
+  var tout=horsGuillemets([x.constats,x.rapporte,x.contexte,x.deja,x.parentsReaction].join("\n")).toLowerCase();
+  P.mots.forEach(function(m){var r=new RegExp("("+m.re+")[a-zàâçéèêëîïôûùüÿœ]*","i"),f=tout.match(r);if(f)av.push("« "+f[0]+" » : "+m.conseil)});
+  if(x.paroles.trim()&&!/[«"“]/.test(x.paroles))av.push("Paroles de l'enfant : mets ses mots exacts entre guillemets.");
+  if(x.constats.trim()&&!/\d/.test(x.constats))av.push("Constats : ajoute la date (et l'heure si possible).");
+  if(ipRempli()&&!x.parents)av.push("Information des parents : indique si les parents ont été informés.");
+  if(!ipRempli())return"";
+  if(!av.length)return '<div class="ok-msg">'+ic("ok")+' Aucun mot de jugement repéré. Relis quand même : des faits, datés, avec leur source.</div>';
+  return av.map(function(a){return '<div class="mot-repere">'+ic("alerte")+' '+esc(a)+'</div>'}).join("");
+}
+function majIp(){var s=document.getElementById("ip-sortie"),c=document.getElementById("ip-controle");if(s)s.textContent=texteIp()||"Le texte apparaît ici au fur et à mesure.";if(c)c.innerHTML=controleIp()}
+function copierIp(){var t=texteIp();if(!t){toast("Le texte est vide");return}if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(t).then(function(){toast("Texte copié : colle-le dans le formulaire")},function(){repli(t)});else repli(t)}
+addEventListener("beforeunload",function(e){if(ipRempli()){e.preventDefault();e.returnValue=""}});
 
 /* ---------- Se former ---------- */
 function vueFormer(){
@@ -468,16 +628,29 @@ function vueFormer(){
 }
 
 /* ---------- Réglages ---------- */
+function editeurContacts(opts){
+  var h="",ordre=opts.map(function(o){return o[0]});
+  ordre.forEach(function(id){
+    var l=[];R.contacts.forEach(function(c,i){if(c.pro===id)l.push(i)});if(!l.length)return;
+    h+='<h4 style="margin:14px 0 6px">'+esc((pro(id)||{nom:id}).nom)+' <span class="muted" style="font-weight:400">('+l.length+')</span></h4>';
+    l.forEach(function(i){var c=R.contacts[i];
+      h+='<details class="ligne-contact" data-ci="'+i+'"'+(S.ouvreContact===i?" open":"")+'><summary><b>'+esc(c.nom||"Sans nom")+'</b>'+(c.verifie?' <span class="verif" style="display:inline">· vérifié : '+esc(fmtVerif(c.verifie))+(vieux(c.verifie)?" · à revérifier":"")+'</span>':"")+'</summary><div class="grille2" style="margin-top:8px"><div class="champ"><label>Pour</label><select data-contact="'+i+'" data-k="pro">'+opts.map(function(o){return '<option value="'+o[0]+'" '+(o[0]===c.pro?"selected":"")+'>'+esc(o[1])+'</option>'}).join("")+'</select></div>'+
+        [["nom","Nom"],["adresse","Adresse"],["tel","Téléphone"],["mail","Courriel"],["site","Site internet"],["note","Remarque"],["verifie","Vérifié le (AAAA-MM-JJ)"]].map(function(k){return '<div class="champ"><label>'+k[1]+'</label><input data-contact="'+i+'" data-k="'+k[0]+'" value="'+esc(c[k[0]]||"")+'"></div>'}).join("")+
+        '</div><div class="rangee"><button class="btn petit" data-act="verif-contact" data-i="'+i+'">'+ic("ok")+'Vérifié aujourd\'hui</button><button class="btn petit danger" data-act="suppr-contact" data-i="'+i+'">'+ic("poubelle")+'Supprimer</button></div></details>'});
+  });
+  return h;
+}
 function vueReglages(){
   var E=R.ecole;
   var h='<div class="outils-sec"><button class="btn petit" data-act="tout" data-v="1">Tout déplier</button><button class="btn petit" data-act="tout" data-v="0">Tout replier</button></div>';
   h+=sec("r-ecole","École (en-tête du courrier)","#2453C7","ecole",'<div class="grille2">'+[["nom","Nom de l'école"],["circo","Circonscription"],["ville","Ville"],["directeur","Directeur ou directrice"],["adresse","Adresse"],["tel","Téléphone"],["mail","Courriel"]].map(function(x){return '<div class="champ"><label>'+x[1]+'</label><input data-ecole="'+x[0]+'" value="'+esc(E[x[0]])+'"></div>'}).join("")+'</div>',"");
   var opts=PROS.filter(function(p){return p.cat!=="dispositif"&&p.cat!=="justice"}).map(function(p){return[p.id,p.nom]});
-  h+=sec("r-contacts","Coordonnées près de chez nous","#7C3AED","tel",'<p class="muted">Elles s\'affichent dans les fiches du répertoire et sur les fiches pour les familles.</p>'+R.contacts.map(function(c,i){return '<div class="ligne-contact"><div class="grille2"><div class="champ"><label>Pour</label><select data-contact="'+i+'" data-k="pro">'+opts.map(function(o){return '<option value="'+o[0]+'" '+(o[0]===c.pro?"selected":"")+'>'+esc(o[1])+'</option>'}).join("")+'</select></div>'+["nom","adresse","tel","mail"].map(function(k){return '<div class="champ"><label>'+{nom:"Nom",adresse:"Adresse",tel:"Téléphone",mail:"Courriel"}[k]+'</label><input data-contact="'+i+'" data-k="'+k+'" value="'+esc(c[k])+'"></div>'}).join("")+'</div><button class="btn petit danger" data-act="suppr-contact" data-i="'+i+'">'+ic("poubelle")+'Supprimer</button></div>'}).join("")+'<button class="btn doux" data-act="ajout-contact">'+ic("plus")+'Ajouter des coordonnées</button>',"");
+  h+=sec("r-contacts","Coordonnées près de chez nous","#7C3AED","tel",'<p class="muted">Elles s\'affichent dans les fiches du répertoire et sur les fiches pour les familles. Touche une fiche pour la modifier.</p>'+editeurContacts(opts)+'<button class="btn doux" data-act="ajout-contact">'+ic("plus")+'Ajouter des coordonnées</button>',R.contacts.length?'<span class="badge info compte">'+R.contacts.length+'</span>':"");
+  h+=sec("r-prot","Contacts pour protéger","#B42318","bouclier",'<p class="muted">Ils s\'affichent dans Protéger › Contacts.</p>'+[["ien","IEN de la circonscription"],["ctss","Conseiller technique de service social (DSDEN)"]].map(function(k){var c=R.prot[k[0]];return '<h4>'+k[1]+'</h4><div class="grille2">'+[["nom","Nom"],["tel","Téléphone"],["mail","Courriel"]].map(function(f){return '<div class="champ"><label>'+f[1]+'</label><input data-prot="'+k[0]+'" data-k="'+f[0]+'" value="'+esc(c[f[0]])+'"></div>'}).join("")+'</div>'}).join(""),"");
   h+=sec("r-brouillon","Brouillon du courrier","#B03A48","fichier",'<div class="champ"><label for="expire">Effacer automatiquement le brouillon après</label><select id="expire">'+[[7,"7 jours"],[30,"30 jours"],[90,"90 jours"],[0,"Jamais"]].map(function(o){return '<option value="'+o[0]+'" '+(R.expire===o[0]?"selected":"")+'>'+o[1]+'</option>'}).join("")+'</select></div><p class="muted">Le brouillon contient des informations sur un élève : le garder le moins longtemps possible.</p><button class="btn danger" data-act="effacer-b">'+ic("poubelle")+'Effacer le brouillon maintenant</button>',"");
   h+=sec("r-app","Apparence","#64748B","reglages",'<div class="champ"><label for="th">Thème</label><select id="th"><option value="auto">Automatique</option><option value="light">Clair</option><option value="dark">Sombre</option></select></div>',"");
   h+=sec("r-sauv","Sauvegarde des réglages","#0F8F6C","telecharger",'<p class="muted">Pour copier les réglages (école, coordonnées) sur un autre appareil ou chez un collègue. Le brouillon n\'est pas inclus.</p><div class="rangee"><button class="btn" data-act="export">'+ic("telecharger")+'Exporter</button><label class="btn">'+ic("plus")+'Importer<input type="file" accept=".json" id="imp" hidden></label><button class="btn danger" data-act="reinit">Remettre les réglages d\'origine</button></div>',"");
-  h+=sec("r-info","À propos","#475166","info",'<p>Version '+VERSION+'. Informations vérifiées en novembre 2026 (ameli.fr, sante.fr, monparcourshandicap.gouv.fr, service-public.fr). Les prises en charge peuvent évoluer : en cas de doute, vérifier.</p><p class="muted">Raccourcis : Ctrl+Z annule, Ctrl+Maj+Z rétablit. Dans « Questions » : O, N, S.</p>',"");
+  h+=sec("r-info","À propos","#475166","info",'<p>Boussole élève, version '+VERSION+'. Répertoire vérifié en '+esc(fmtVerif(VERIFICATION.date))+' ('+esc(VERIFICATION.sources.join(", "))+'). Onglet Protéger vérifié le '+esc(fmtVerif(PROTEGER.verifie))+' (sources dans Protéger › Après, et pour toi). Les prises en charge et les procédures peuvent évoluer : en cas de doute, vérifier. Un rappel s\'affiche dans le Répertoire quand une vérification a plus d\'un an.</p><p class="muted">Raccourcis : Ctrl+Z annule, Ctrl+Maj+Z rétablit. Dans « Questions » : O, N, S.</p>',"");
   return h;
 }
 
@@ -497,7 +670,7 @@ function ficheFamille(id){
 }
 
 /* ---------- Rendu ---------- */
-const VUES={repertoire:vueRepertoire,questions:vueQuestions,courrier:vueCourrier,former:vueFormer,reglages:vueReglages};
+const VUES={repertoire:vueRepertoire,questions:vueQuestions,courrier:vueCourrier,proteger:vueProteger,former:vueFormer,reglages:vueReglages};
 function rendre(){
   rendreCadre();
   document.getElementById("vue").innerHTML=VUES[S.vue]();
@@ -529,9 +702,17 @@ document.addEventListener("click",function(ev){
   else if(a==="word")telechargerWord();
   else if(a==="copier")copierTexte();
   else if(a==="tout"){document.querySelectorAll("details.sec").forEach(function(d){d.open=v==="1";SEC[d.dataset.sec]=v==="1"});try{localStorage.setItem(CLE_SEC,JSON.stringify(SEC))}catch(e){}}
-  else if(a==="ajout-contact"){R.contacts.push({pro:"cmp",nom:"",adresse:"",tel:"",mail:""});sauverR();SEC["r-contacts"]=true;rendre()}
+  else if(a==="ajout-contact"){R.contacts.push({pro:"cmp",nom:"",adresse:"",tel:"",mail:"",verifie:new Date().toISOString().slice(0,10)});sauverR();SEC["r-contacts"]=true;S.ouvreContact=R.contacts.length-1;rendre()}
   else if(a==="suppr-contact"){var c=R.contacts[+t.dataset.i];if(confirm("Supprimer les coordonnées « "+(c.nom||"sans nom")+" » ?")){R.contacts.splice(+t.dataset.i,1);sauverR();rendre()}}
   else if(a==="export")exporter();
+  else if(a==="p-page")aller("proteger",null,{page:v,rep:S.p.rep||{}});
+  else if(a==="p-rep"){var nr=Object.assign({},S.p.rep);nr[t.dataset.id]=v;aller("proteger",null,{page:"arbre",rep:nr})}
+  else if(a==="p-prec"){var A=PROTEGER.arbre,pr=Object.assign({},S.p.rep),k2=A.length-1;while(k2>=0&&!pr[A[k2].id])k2--;if(k2>=0)delete pr[A[k2].id];aller("proteger",null,{page:"arbre",rep:pr})}
+  else if(a==="p-recommencer")aller("proteger",null,{page:"arbre",rep:{}});
+  else if(a==="p-reglages"){SEC["r-prot"]=true;aller("reglages")}
+  else if(a==="ip-copier")copierIp();
+  else if(a==="ip-effacer"){if(!ipRempli()){toast("Le texte est déjà vide");return}if(confirm("Effacer tout le texte de l'IP ? Il n'est enregistré nulle part : il sera perdu.")){S.ip=ipVide();rendre();toast("Texte effacé")}}
+  else if(a==="verif-contact"){var cc=R.contacts[+t.dataset.i];cc.verifie=new Date().toISOString().slice(0,10);sauverR();S.ouvreContact=+t.dataset.i;rendre();toast("Date de vérification mise à jour")}
   else if(a==="reinit"){if(confirm("Remettre l'école et les coordonnées d'origine ? Tes modifications seront perdues.")){R=defautR();sauverR();theme();rendre();toast("Réglages d'origine remis")}}
 });
 document.addEventListener("change",function(ev){
@@ -539,6 +720,8 @@ document.addEventListener("change",function(ev){
   if(t.dataset.cons){avant();if(t.checked)B.rep[t.dataset.cons]="oui";else delete B.rep[t.dataset.cons];sauverB();var s=t.closest("details");majCompte(s);majApercu()}
   else if(t.dataset.aide!==undefined){avant();if(t.checked)B.aides[t.dataset.aide]=true;else delete B.aides[t.dataset.aide];sauverB();majCompte(t.closest("details"));majApercu()}
   else if(t.dataset.act==="persiste"){avant();B.persiste=t.checked;sauverB();majApercu()}
+  else if(t.dataset.ipmotif!==undefined){if(t.checked)S.ip.motifs[t.dataset.ipmotif]=true;else delete S.ip.motifs[t.dataset.ipmotif];majIp()}
+  else if(t.dataset.ipradio){S.ip.parents=t.dataset.ipradio;rendre()}
   else if(t.id==="th"){R.theme=t.value;sauverR();theme()}
   else if(t.id==="expire"){R.expire=+t.value;sauverR();rendre()}
   else if(t.dataset.contact!==undefined&&t.tagName==="SELECT"){R.contacts[+t.dataset.contact][t.dataset.k]=t.value;sauverR()}
@@ -550,12 +733,14 @@ document.addEventListener("input",function(ev){
   if(t.dataset.eleve||t.dataset.champ){if(Date.now()-dernierAvant>1500){avant();dernierAvant=Date.now()}
     if(t.dataset.eleve==="rencontre")B.rencontre=t.value;else if(t.dataset.eleve)B.eleve[t.dataset.eleve]=t.value;else B[t.dataset.champ]=t.value;sauverB();majApercu()}
   else if(t.dataset.ecole){R.ecole[t.dataset.ecole]=t.value;sauverR()}
+  else if(t.dataset.ip){S.ip[t.dataset.ip]=t.value;majIp()}
+  else if(t.dataset.prot){R.prot[t.dataset.prot][t.dataset.k]=t.value;sauverR()}
   else if(t.dataset.contact!==undefined){R.contacts[+t.dataset.contact][t.dataset.k]=t.value;sauverR()}
 });
 document.addEventListener("toggle",function(ev){var d=ev.target;if(d.dataset&&d.dataset.sec){SEC[d.dataset.sec]=d.open;try{localStorage.setItem(CLE_SEC,JSON.stringify(SEC))}catch(e){}}},true);
 document.addEventListener("keydown",function(ev){
   var champ=/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName);
-  if((ev.ctrlKey||ev.metaKey)&&ev.key.toLowerCase()==="z"&&!champ){ev.preventDefault();if(ev.shiftKey)refaire();else annuler();return}
+  if((ev.ctrlKey||ev.metaKey)&&ev.key.toLowerCase()==="z"&&!champ&&(S.vue==="courrier"||S.vue==="questions")){ev.preventDefault();if(ev.shiftKey)refaire();else annuler();return}
   if(S.vue==="questions"&&S.q.etape==="q"&&!champ&&!ev.ctrlKey&&!ev.metaKey){var k=ev.key.toLowerCase();if(k==="o")repondre("oui");else if(k==="n")repondre("non");else if(k==="s")repondre("nsp")}
 });
 function majCompte(d){if(!d)return;var n=d.querySelectorAll("input[type=checkbox]:checked").length,s=d.querySelector("summary"),b=s.querySelector(".compte");if(b)b.remove();if(n)s.insertAdjacentHTML("beforeend",'<span class="badge info compte">'+n+'</span>')}
@@ -573,11 +758,12 @@ function telechargerWord(){
 }
 function copierTexte(){var t=lettreTexte();if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(t).then(function(){toast("Texte copié")},function(){repli(t)});else repli(t)}
 function repli(t){var x=document.createElement("textarea");x.value=t;document.body.appendChild(x);x.select();try{document.execCommand("copy");toast("Texte copié")}catch(e){toast("Copie impossible")}x.remove()}
-function exporter(){var a=document.createElement("a");a.href=URL.createObjectURL(new Blob([JSON.stringify(R,null,2)],{type:"application/json"}));a.download="orienter-reglages.json";document.body.appendChild(a);a.click();setTimeout(function(){URL.revokeObjectURL(a.href);a.remove()},1000)}
+function exporter(){var a=document.createElement("a");a.href=URL.createObjectURL(new Blob([JSON.stringify(R,null,2)],{type:"application/json"}));a.download="boussole-eleve-reglages.json";document.body.appendChild(a);a.click();setTimeout(function(){URL.revokeObjectURL(a.href);a.remove()},1000)}
 
 /* ---------- Démarrage ---------- */
 (function(){var h=location.hash.slice(1);if(VUES[h])S.vue=h})();
-history.replaceState({vue:S.vue,q:S.q},"","#"+S.vue);
+history.replaceState({vue:S.vue,q:S.q,p:S.p},"","#"+S.vue);
+sauverR(); // enregistre tout de suite les réglages migrés (ajouts de la v3)
 theme();rendre();
 if("serviceWorker" in navigator&&location.protocol==="https:")navigator.serviceWorker.register("sw.js").catch(function(){});
 </script>

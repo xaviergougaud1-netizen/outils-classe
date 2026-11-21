@@ -1,7 +1,7 @@
 {
-  "name": "Orienter un élève",
-  "short_name": "Orienter",
-  "description": "Professionnels qui accompagnent les élèves, questions guidées et courrier de l'école pour le médecin",
+  "name": "Boussole élève",
+  "short_name": "Boussole",
+  "description": "Orienter, soutenir, protéger un élève : professionnels, courrier pour le médecin, enfant en danger (IP, signalement)",
   "lang": "fr",
   "start_url": "./",
   "scope": "./",

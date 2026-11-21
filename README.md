@@ -24,7 +24,7 @@ Licence : CC BY-NC-SA 4.0.
 | Groupes (groupes de travail, rôles, minuteur) | https://xaviergougaud1-netizen.github.io/outils-classe/groupes/ | 1.10.0 |
 | Dictées adaptées (édition libre, cycle, devoirs, import PDF) | https://xaviergougaud1-netizen.github.io/outils-classe/dictees/ | 2.6.1 |
 | Plan de classe | https://xaviergougaud1-netizen.github.io/outils-classe/plan/ | 1.6 |
-| Orienter un élève (outil de Xavier, pas dans le portail) | https://xaviergougaud1-netizen.github.io/outils-classe/orienter/ | 1.1.0 |
+| Boussole élève, ex-« Orienter un élève » (outil de Xavier, pas dans le portail) | https://xaviergougaud1-netizen.github.io/outils-classe/orienter/ | 1.3.0 |
 
 ## Organisation
 - `commun/charte.css` : charte Repères v1 commune (couleur de chaque outil : `--outil-calcul`, `--outil-problemes`).
@@ -57,6 +57,7 @@ Licence : CC BY-NC-SA 4.0.
 - 2026-11-21 · Kit 1.2.0 : Dictées adaptées 2.5.0 dans le kit (édition libre, cycle réglable, devoirs) ; Ma classe 1.1.0 : « Tout exporter » (sauvegarde complète) et rappel mensuel.
 - 2026-11-21 · Kit 1.1.0 : Groupes 1.10.0 et Plan de classe 1.6 dans le kit (élèves de Ma classe, données sur l'appareil via commun/kit-db.js), même fichier que dans Classe.
 - 2026-11-21 · Kit 1.0.0 « Outils de classe partagés » : portail, Ma classe 1.0.0, Correcteur 2.6.0 et Ateliers 2.1.0 (plus de lien vers Classe sur github.io, évaluations au choix avec les élèves de Ma classe, sur l'appareil ; PDF en téléchargement classique ; mention Accès Maths).
+- 2026-11-21 · Boussole élève 1.3.0 (ex-« Orienter un élève ») : onglet Protéger (que faire, comparer rencontre/IP/signalement, recueillir la parole, aide à rédiger une IP sans rien enregistrer, contacts CRIP 44 et parquet de Nantes, textes et sources), date de vérification sur les fiches et les contacts, orthophonistes et neuropsychologues du secteur, fiche « Enfant en danger : que faire » (PDF, Word).
 - 2026-11-18 · Orienter un élève 1.1.0 : fiches à imprimer (familles, enseignants) en PDF et Word dans `orienter/fiches/`, en tête du Répertoire.
 - 2026-11-18 · Orienter un élève 1.0.0 : répertoire de 27 professionnels, structures et dispositifs (ordonnance et prise en charge visibles), questions guidées, courrier de l'école pour le médecin (brouillon sur l'appareil, effacé après 30 jours), Se former, fiches pour les familles. Contenu modifiable dans `orienter/donnees.js`. Aucun prénom d'élève n'est enregistré dans le dépôt.
 - 2026-11-15 · Correcteur 2.1.0 : dans Classe, un « A » sur une fiche valide aussi les ceintures d'avant pas encore validées (réglage « Ceintures d'avant : auto / non », annulable d'un coup) ; « auto » dans le tableau PDF.

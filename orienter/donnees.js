@@ -363,7 +363,9 @@ const AIDES = [
 // Coordonnées locales par défaut (modifiables dans Réglages)
 const CONTACTS_DEFAUT = [
   { pro: "cmp", nom: "CMPEA Blain (EPSYLAN)", adresse: "15, rue Pierre Morin, 44130 Blain", tel: "02 40 79 86 80", mail: "" },
+  { pro: "eds", nom: "Espace départemental des solidarités Blain-Nozay", adresse: "3 bis, rue Charles de Gaulle, 44130 Blain", tel: "02 40 79 11 01", mail: "" },
   { pro: "laep", nom: "LAEP Les P'tites Graines", adresse: "6, rue du Moulin, 44130 Blain", tel: "", mail: "laep.lesptitesgraines@gmail.com" },
+  { pro: "laep", nom: "LAEP Le Sablier (Département, enfants de 0 à 4 ans)", adresse: "16, rue Charles Perron, 44100 Nantes (Dervallières). Mardi et jeudi 15h-18h, mercredi 9h30-12h et 15h-18h", tel: "02 40 43 82 66", mail: "" },
   { pro: "pco", nom: "PCO TND 44 Ouest (APAJH 44)", adresse: "51, rue François-René de Chateaubriand, 44600 Saint-Nazaire", tel: "02 40 70 98 08", mail: "pcotndouest@apajh44.org" },
   { pro: "camsp", nom: "CAMSP Kerbrun (APAJH 44)", adresse: "51, rue François-René de Chateaubriand, 44600 Saint-Nazaire", tel: "", mail: "contact-kerbrun@apajh44.org" },
   { pro: "cmpp", nom: "CMPP Kerbrun (APAJH 44)", adresse: "51, rue François-René de Chateaubriand, 44600 Saint-Nazaire", tel: "", mail: "contact-kerbrun@apajh44.org" }

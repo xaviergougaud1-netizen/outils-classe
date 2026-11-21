@@ -8,7 +8,7 @@ Fiche d'identité
   Ce qu'il ne fait pas : pas de dossier d'élève partagé, pas de diagnostic, pas de compte rendu d'équipe éducative (skill compte-rendu-equipe-educative).
 Version : voir VERSION (une seule constante)
 Historique :
-  - 1.2.0 (2026-11-21) Répertoire : catégories « Soutien aux parents » (LAEP, espace départemental des solidarités, TISF, AED, avec l'accord des parents) et « Mesures du juge des enfants » (AEMO, MJIE). Question « famille démunie ». Se former : section aides administratives / judiciaires. Contact LAEP de Blain ajouté aux réglages existants.
+  - 1.2.0 (2026-11-21) Répertoire : catégories « Soutien aux parents » (LAEP, espace départemental des solidarités, TISF, AED, avec l'accord des parents) et « Mesures du juge des enfants » (AEMO, MJIE). Question « famille démunie ». Se former : section aides administratives / judiciaires. Coordonnées EDS Blain-Nozay et LAEP (Les P'tites Graines, Le Sablier) ajoutées aux réglages existants. Fiche familles : section « Pour vous, les parents » (3 pages).
   - 1.1.0 (2026-11-18) Fiches à imprimer (familles, enseignants) en PDF et Word, dossier fiches/, en tête du Répertoire (section repliable).
   - 1.0.0 (2026-11-18) Répertoire, Questions, Courrier, Se former, Réglages. et CACHE dans sw.js, à changer ensemble.
 Publié dans le dépôt outils-classe, dossier orienter/ (appli installable, hors ligne).
@@ -262,7 +262,7 @@ function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){retur
 /* ---------- Données de l'appareil ---------- */
 function defautR(){return{v:2,theme:"auto",expire:30,ecole:{nom:"École primaire Andrée Chedid",ville:"Blain",circo:"Circonscription de Blain-Nozay",adresse:"",tel:"",mail:"",directeur:"Xavier Gougaud"},contacts:JSON.parse(JSON.stringify(CONTACTS_DEFAUT))}}
 function defautB(){return{v:1,savedAt:0,eleve:{prenom:"",nom:"",naissance:"",classe:"",enseignant:""},rencontre:"",niveau:"",domaines:[],rep:{},aides:{},autresAides:"",obs:"",persiste:true}}
-function migrerR(d){var r=defautR();if(!d||typeof d!=="object")return r;r.theme=d.theme||r.theme;if(typeof d.expire==="number")r.expire=d.expire;r.ecole=Object.assign(r.ecole,d.ecole||{});if(Array.isArray(d.contacts)){r.contacts=d.contacts;if(!(d.v>=2))CONTACTS_DEFAUT.forEach(function(c){if(c.pro==="laep"&&!r.contacts.some(function(x){return x.pro===c.pro}))r.contacts.push(JSON.parse(JSON.stringify(c)))})}return r}
+function migrerR(d){var r=defautR();if(!d||typeof d!=="object")return r;r.theme=d.theme||r.theme;if(typeof d.expire==="number")r.expire=d.expire;r.ecole=Object.assign(r.ecole,d.ecole||{});if(Array.isArray(d.contacts)){r.contacts=d.contacts;if(!(d.v>=2)){var deja=r.contacts.map(function(x){return x.pro});CONTACTS_DEFAUT.forEach(function(c){if((c.pro==="laep"||c.pro==="eds")&&deja.indexOf(c.pro)<0)r.contacts.push(JSON.parse(JSON.stringify(c)))})}}return r}
 function migrerB(d){var b=defautB();if(!d||typeof d!=="object")return b;Object.keys(b).forEach(function(k){if(d[k]!==undefined)b[k]=d[k]});b.eleve=Object.assign(defautB().eleve,d.eleve||{});return b}
 function lire(cle,migrer){try{var t=localStorage.getItem(cle);return migrer(t?JSON.parse(t):null)}catch(e){try{localStorage.setItem(cle+"-secours",localStorage.getItem(cle))}catch(x){}return migrer(null)}}
 function ecrire(cle,val){try{localStorage.setItem(cle,JSON.stringify(val))}catch(e){toast("Enregistrement impossible sur cet appareil")}}
@@ -336,7 +336,7 @@ function carteHTML(p){
 }
 function vueRepertoire(){
   var h=sec("r-fiches","Fiches à imprimer","#1F3864","imprimer",
-    '<div class="cartes">'+[["fiche-familles","Pour les familles","Les professionnels qui peuvent aider votre enfant. Mots simples, ordonnance et coût en couleur. 2 pages A4."],
+    '<div class="cartes">'+[["fiche-familles","Pour les familles","Les professionnels qui peuvent aider votre enfant. Mots simples, ordonnance et coût en couleur, aides pour les parents. 3 pages A4."],
       ["fiche-enseignants","Pour les enseignants","Tous les professionnels : rôle, quand y penser, comment y aller, prise en charge, délai. Tableau A4 paysage."]].map(function(f){
       return '<div class="encadre" style="margin:0"><b>'+f[1]+'</b><p class="muted" style="margin:4px 0 10px;font-size:15px">'+f[2]+'</p><div class="rangee"><a class="btn petit plein" href="fiches/'+f[0]+'.pdf" target="_blank" rel="noopener">'+ic("imprimer")+'PDF</a><a class="btn petit" href="fiches/'+f[0]+'.docx" download>'+ic("telecharger")+'Word</a></div></div>'}).join("")+'</div>',"");
   h+='<div class="recherche">'+ic("chercher")+'<input id="cherche" type="search" placeholder="Chercher : orthophoniste, gratuit, écriture…" value="'+esc(S.cherche)+'" aria-label="Chercher"></div>';

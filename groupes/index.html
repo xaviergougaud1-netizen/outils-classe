@@ -1,0 +1,604 @@
+<!doctype html>
+<!-- TECHNIQUE
+Fiche d'identité
+- Rôle : créer des groupes de travail équilibrés selon des critères choisis, puis les projeter.
+- Quand : la veille pour préparer, ou en classe juste avant l'activité.
+- Où : ordi de classe / TBI (projection), téléphone (retouches).
+- Écran n° 1 : taille des groupes + bouton « Créer les groupes », puis les cartes des groupes.
+- Ce qu'il ne fait pas : les scores de fluence se saisissent dans l'onglet Lecture (lecture.html).
+Version : 1.10.0 (21/11/2026) : un seul fichier pour Classe (groupes.html) et le kit « Outils de classe partagés » (dépôt outils-classe, groupes/index.html) ;
+  dans le kit : élèves de « Ma classe », données sur l'appareil (commun/kit-db.js imite la base), barre Outils / Ma classe / Groupes / Plan de classe, sans mention de la fluence.
+Version : 1.9.1 (15/11/2026) : colonne commune de Classe (side-nav.js) à gauche sur ordinateur, liens de la barre du haut masqués.
+Version : 1.9.0 (14/11/2026)
+- 1.9 : charte « Repères » : couleurs et police de la charte (Atkinson Hyperlegible seule), en-tête bleu pâle, barre des pages de Classe (← Classe, Maths, Photocopies, Groupes, Plan de classe, Fluence).
+- 1.8 : exceptions « peut être la seule fille » (eleves[sid].fs = 1), réglables sous le critère et dans la fiche de l'élève.
+- 1.7 (09/11)
+- 1.7 : deux réglages séparés : p.sexe (ign|mix) et p.fseule (ok|non) ; ancien "f2" → mix + non. Les volets Critères / Compétences restent ouverts ou fermés comme Xavier les a laissés (S.ouvert, événement toggle).
+- 1.6 (09/11)
+- 1.6 : Filles et garçons : choix « Jamais une fille seule » (p.sexe = "f2" : pénalité 60 si un groupe a exactement 1 fille, mixité légère ensuite ; groupes sans garçon acceptés).
+- 1.5 (09/11)
+- 1.5 : critère Filles et garçons (p.sexe = ign|mix) ; eleves[sid].s = "f"|"g", saisi dans Élèves › Profils (bouton ? → 👧 → 👦).
+- 1.4 (09/11)
+- 1.4 : élèves toujours par ordre alphabétique (liste lue dans Lecture triée ; membres des groupes triés à l'affichage par alpha()).
+- 1.3 (08/11)
+- 1.3 : minuteur du plein écran (durée par menu, pause, sonnerie réglable avant la fin + message, son de fin, volume ; p.tm), rôles en pastilles de couleur (r.c réglable).
+- 1.2 (06/11)
+- 1.2 : Lecture = compétence (préremplie avec les groupes 1-4 de Lecture), onglets « Préparer les groupes » / « Créer avec les élèves » (sans infos perso),
+  critères et rôles avec le bouton Créer, effacer les rôles, glisser-déposer (poignée ⠿), légende des rôles en plein écran, bouton Valider supprimé.
+- 1.1 : profils de fluence 1-4, groupes d'amis, saisie des compétences par compétence, vue élèves.
+Choix techniques :
+- Page de l'artéfact « Classe ». Lit les élèves dans lecture/main (prénom, niveau, scores, profil) sans les recopier.
+- Ses propres données dans lecture/groupes (règle « lecture » : lecture et écriture réservées à admin, donc privées).
+- Copie locale « classe-groupes-v1 » affichée d'abord, puis la base fait foi. Le plus récent (ts) gagne ;
+  si les deux ont changé, une fenêtre demande laquelle garder. Jamais d'envoi de l'état par défaut si la base n'a pas répondu.
+- Répartition : coût pondéré par critère + recherche locale (échanges) avec plusieurs départs aléatoires.
+  Ignorer = 0 ; Si possible = 6 par écart ; Obligatoire = 1000 par écart.
+- Projection : prénoms et rôles seulement (ni score, ni comportement).
+Décisions de structure :
+- eleves[sid] = {o:"g"|"n"|"p" (oral), c:1 (étiquette comportement), k:{compId:1..3}}
+- amis = [[sidA,sidB]] (symétrique) ; amisG = [{id, m}] (groupes d'amis) ; sep = [{id, m:[sid…]}] (paires ou groupes à séparer)
+- comps[{src:"fluence",max:4}] : Lecture, préremplie par le groupe 1-4 de l'onglet Lecture ; une valeur saisie à la main dans eleves[sid].k la remplace
+- cur = {d, g:[{m:[sid], r:{sid:roleId}}], cons} ; saved = [{id, nom, d, g}] ; hist = [{d, g}] (30 max)
+-->
+<html lang="fr"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Groupes</title>
+<script>/* Kit « Outils de classe partagés » (github.io ou ?mode=app) : élèves de « Ma classe », données sur l'appareil (commun/kit-db.js). */
+var MODE_APP=/github\.io$/.test(location.hostname)||/[?&]mode=app/.test(location.search);
+if(MODE_APP)document.write('<link rel="manifest" href="../manifest.webmanifest"><link rel="icon" href="../icon-192.png"><script src="../commun/ma-classe.js"><\/script><script src="../commun/kit-db.js"><\/script>');</script>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#EDF1F7;--page:#FFFFFF;--ink:#111A2C;--muted:#475166;--rule:#D3DAE5;--accent:#2453C7;--accbg:#E3EBFD;--warn:#B45309;--warnbg:#FFF1DC;--danger:#B42318;--sel:#f59e0b;--entete:#E2EAF7;--entete-ink:#15244A;--entete-doux:#4A5A7C;--entete-ctl:#FFFFFF;--entete-bd:#C7D3EA;--entete-on:#2E5BBA;--entete-on-ink:#FFFFFF}
+:root[data-theme=dark]{--bg:#0F1522;--page:#172033;--ink:#E9EEF7;--muted:#A3AEC2;--rule:#2C3852;--accent:#7EA2FF;--accbg:#1F2D52;--warn:#FBBF24;--warnbg:#3A2C10;--danger:#F2B8B5;--entete:#1A2440;--entete-ink:#E9EEF7;--entete-doux:#AAB6CF;--entete-ctl:#222E4D;--entete-bd:#34436B;--entete-on:#7EA2FF;--entete-on-ink:#0F1522}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]):not([data-theme=dark]){--bg:#0F1522;--page:#172033;--ink:#E9EEF7;--muted:#A3AEC2;--rule:#2C3852;--accent:#7EA2FF;--accbg:#1F2D52;--warn:#FBBF24;--warnbg:#3A2C10;--danger:#F2B8B5;--entete:#1A2440;--entete-ink:#E9EEF7;--entete-doux:#AAB6CF;--entete-ctl:#222E4D;--entete-bd:#34436B;--entete-on:#7EA2FF;--entete-on-ink:#0F1522}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.4 "Atkinson Hyperlegible",system-ui,sans-serif}
+h1,h2,h3{font-family:"Atkinson Hyperlegible",system-ui,sans-serif;margin:0}
+h1{font-size:1.5rem}h2{font-size:1.15rem;margin:18px 0 8px}h3{font-size:1rem}
+header{position:sticky;top:0;z-index:20;background:var(--entete);color:var(--entete-ink);border-bottom:1px solid var(--entete-bd)}
+.top{max-width:1100px;margin:0 auto;display:flex;align-items:center;gap:8px;padding:8px 12px 4px}
+.hubnav{display:flex;gap:6px;align-items:center;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}.hubnav::-webkit-scrollbar{display:none}
+.hubnav a{flex:none;color:var(--entete-ink);text-decoration:none;border:1px solid var(--entete-bd);border-radius:999px;padding:0 14px;min-height:36px;display:inline-flex;align-items:center;font-weight:700;font-size:14px;background:var(--entete-ctl);white-space:nowrap}
+.hubnav a:hover{border-color:var(--entete-on)}.hubnav a.on{background:var(--entete-on);color:var(--entete-on-ink);border-color:var(--entete-on)}
+.hubnav a:first-child{background:none;border-color:transparent;color:var(--entete-on);padding-left:4px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.tabs{display:flex;gap:4px;max-width:1100px;margin:0 auto;padding:0 8px;overflow-x:auto}
+.tabs button{border:0;background:none;padding:10px 12px;font:inherit;color:var(--entete-doux);border-bottom:3px solid transparent;white-space:nowrap;min-height:44px;cursor:pointer}
+.tabs button[aria-current=page]{color:var(--entete-ink);border-color:var(--entete-on);font-weight:700}
+#statut{margin-left:auto;flex:none;font-size:.8rem;color:var(--entete-doux);border:0;background:none;font:inherit;font-size:.8rem;cursor:pointer}
+#statut.orange{color:var(--warn);font-weight:700}
+main{max-width:1100px;margin:0 auto;padding:12px 12px 120px}
+.card{background:var(--page);border:1px solid var(--rule);border-radius:16px;padding:12px;margin:10px 0}
+.btn{min-height:44px;padding:0 14px;border-radius:12px;border:1px solid var(--rule);background:var(--page);color:var(--ink);font:inherit;display:inline-flex;align-items:center;justify-content:center;gap:6px;cursor:pointer}
+.btn.pri{background:var(--accent);color:#fff;border-color:var(--accent);font-weight:700}
+.btn.big{min-height:56px;font-size:1.1rem;width:100%}
+.btn.danger{color:var(--danger)}
+.btn.sm{min-height:36px;padding:0 10px;font-size:.9rem;border-radius:10px}
+.muted{color:var(--muted)}.small{font-size:.85rem}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.seg{display:inline-flex;border:1px solid var(--rule);border-radius:12px;overflow:hidden;background:var(--page)}
+.seg button{border:0;background:none;font:inherit;padding:0 10px;min-height:40px;color:var(--ink);cursor:pointer;font-size:.92rem}
+.seg button+button{border-left:1px solid var(--rule)}
+.seg button[aria-pressed=true]{background:var(--accent);color:#fff;font-weight:700}
+.step{display:inline-flex;align-items:center;gap:6px}
+.step b{min-width:2.2em;text-align:center;font-size:1.4rem;font-family:"Atkinson Hyperlegible",sans-serif}
+.step button{width:44px;height:44px;border-radius:50%;border:1px solid var(--rule);background:var(--page);font-size:1.3rem;color:var(--ink);cursor:pointer}
+.crit{display:grid;grid-template-columns:minmax(0,1fr);gap:4px;padding:8px 0;border-top:1px solid var(--rule)}
+.crit:first-child{border-top:0}
+@media(min-width:620px){.crit{grid-template-columns:220px 1fr;align-items:center}}
+.crit .lbl{font-weight:700}.crit .lbl small{display:block;font-weight:400;color:var(--muted)}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{border:1px solid var(--rule);background:var(--page);color:var(--ink);border-radius:999px;padding:4px 12px;min-height:36px;font:inherit;font-size:.92rem;cursor:pointer}
+.chip[aria-pressed=true]{background:var(--accbg);border-color:var(--accent);color:var(--accent);font-weight:700}
+.chip.abs[aria-pressed=true]{background:var(--warnbg);border-color:var(--warn);color:var(--warn);text-decoration:line-through}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,230px),1fr));gap:10px}
+.grp{background:var(--page);border:1px solid var(--rule);border-top:6px solid var(--gc,var(--accent));border-radius:16px;padding:10px;min-width:0}
+.grp h3{display:flex;align-items:center;gap:6px}
+.grp .sum{font-size:.78rem;color:var(--muted);margin:2px 0 6px}
+.mem{display:flex;align-items:center;gap:6px;border:1px solid transparent;border-radius:10px;padding:2px 4px;margin:2px 0}
+.mem .nm{flex:1;min-width:0;text-align:left;border:0;background:none;font:inherit;color:var(--ink);padding:6px 4px;cursor:pointer;min-height:40px}
+.mem.sel{border-color:var(--sel);background:color-mix(in srgb,var(--sel) 18%,transparent)}
+.mem .tag{font-size:.7rem;color:var(--muted);margin-left:4px}
+.dh{flex:none;width:30px;height:40px;display:inline-flex;align-items:center;justify-content:center;color:var(--muted);font-size:1.2rem;cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none}
+.mem.dragging{opacity:.35}.ghost{position:fixed;z-index:300;pointer-events:none;background:var(--page);border:2px solid var(--sel)!important;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.25)}
+.dropok{outline:3px solid var(--sel);outline-offset:2px}
+.leg{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;padding:8px 2px;font-size:.92rem}.leg>span{display:inline-flex;align-items:center;gap:6px}
+.chip.auto[aria-pressed=true]{border-style:dashed}
+.tag.pg1,.tag.pg2,.tag.pg3,.tag.pg4{border-radius:6px;padding:0 5px;font-weight:700;color:#fff;font-size:.68rem}
+.tag.pg1{background:#b3261e}.tag.pg2{background:#c2610c}.tag.pg3{background:#2e6fdb}.tag.pg4{background:#2a9d5c}
+.grid.vel .mem .nm{font-size:1.2rem;font-weight:700}.grid.vel .grp h3{font-size:1.25rem}
+.here{width:100%;margin-top:6px;border:2px dashed var(--sel);background:none;border-radius:10px;min-height:40px;font:inherit;color:var(--ink);cursor:pointer}
+.warns{background:var(--warnbg);border:1px solid var(--warn);color:var(--warn);border-radius:12px;padding:8px 12px;margin:8px 0;font-size:.92rem}
+.warns ul{margin:4px 0 0;padding-left:18px}
+.ok{background:var(--accbg);color:var(--accent);border-radius:12px;padding:8px 12px;margin:8px 0;font-size:.92rem}
+.toolbar{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+.erow{display:flex;align-items:center;gap:6px;padding:6px 0;border-top:1px solid var(--rule)}
+.erow:first-child{border-top:0}
+.erow .nm{flex:1;min-width:0;border:0;background:none;text-align:left;font:inherit;color:var(--ink);padding:6px 0;cursor:pointer}
+.erow .nm small{display:block;color:var(--muted);font-size:.78rem}
+.ob{border:1px solid var(--rule);background:var(--page);width:40px;height:40px;border-radius:10px;font-size:1.1rem;cursor:pointer;padding:0}
+.ob[aria-pressed=true]{background:var(--accbg);border-color:var(--accent)}
+.ob.c[aria-pressed=true]{background:var(--warnbg);border-color:var(--warn)}
+details>summary{cursor:pointer;font-weight:700;min-height:40px;display:flex;align-items:center;gap:6px}
+input[type=text],textarea,select{font:inherit;color:var(--ink);background:var(--page);border:1px solid var(--rule);border-radius:10px;padding:8px 10px;min-height:42px}
+textarea{width:100%;min-height:120px}
+.ov{position:fixed;inset:0;z-index:150;background:rgba(10,15,30,.5);display:flex;align-items:flex-end;justify-content:center}
+@media(min-width:620px){.ov{align-items:center}}
+.sheet{background:var(--page);color:var(--ink);width:100%;max-width:560px;max-height:88vh;overflow:auto;border-radius:18px 18px 0 0;padding:16px;padding-bottom:calc(16px + env(safe-area-inset-bottom))}
+@media(min-width:620px){.sheet{border-radius:18px}}
+.sheet h2{margin-top:0}
+.rt{display:flex;gap:4px;flex-wrap:wrap;align-items:center;margin:6px 0}
+.rt b{min-width:9em;font-weight:400}
+#toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--ink);color:var(--page);padding:10px 16px;border-radius:12px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:200;max-width:90vw}
+/* Projection */
+#proj{position:fixed;inset:0;z-index:100;background:#fbfaf7;color:#111;display:flex;flex-direction:column;overflow:auto}
+#proj .pbar{display:flex;gap:10px;align-items:center;padding:10px 16px;flex-wrap:wrap;background:#fff;border-bottom:1px solid #ddd}
+#proj .cons{flex:1;min-width:200px;font-size:clamp(1.1rem,2.4vw,2rem);font-family:"Atkinson Hyperlegible",sans-serif;font-weight:800;border:0;background:none;color:#111}
+#proj select{min-height:40px;border-radius:10px;border:1px solid #ccc;background:#fff;color:#111;font:inherit;padding:0 8px}
+.tmbox{position:relative;width:clamp(76px,9vw,120px);height:clamp(76px,9vw,120px);display:inline-flex;align-items:center;justify-content:center;flex:none}
+.tmbox svg{position:absolute;inset:0;transform:rotate(-90deg)}.tmbg{fill:none;stroke:#e7e5df;stroke-width:3.4}
+.tmring{fill:none;stroke:#2a9d5c;stroke-width:3.4;stroke-linecap:round;stroke-dasharray:100;transition:stroke-dashoffset .25s linear}
+.tmt{position:relative;font:800 clamp(1.2rem,2.2vw,1.9rem) "Atkinson Hyperlegible",sans-serif;color:#111}
+.tmbox.warn .tmring{stroke:#e8590c}.tmbox.warn .tmt{color:#c2410c}.tmbox.fin .tmring{stroke:#b3261e}.tmbox.fin .tmt{color:#b3261e;animation:clig 1s steps(2) infinite}
+@keyframes clig{50%{opacity:.25}}
+.tmban{text-align:center;font:800 clamp(1.2rem,3vw,2.4rem) "Atkinson Hyperlegible",sans-serif;padding:8px 16px;background:#fff4e5;color:#c2410c;border-bottom:3px solid #e8590c}
+.tmban.fin{background:#fde8e7;color:#b3261e;border-color:#b3261e}
+.rp{flex:none;max-width:52%;min-height:40px;border-radius:999px;border:2px dashed var(--rule);background:none;padding:0 12px;font:inherit;font-size:.88rem;font-weight:700;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer}
+.rp.on{border:0;background:var(--rc);color:#fff;box-shadow:0 1px 3px rgba(0,0,0,.2)}.rp .ic{font-size:1.2rem;vertical-align:-3px}
+.rpp{display:inline-flex;align-items:center;gap:6px;background:var(--rc);color:#fff;font-weight:800;border-radius:999px;padding:3px 12px 3px 8px;white-space:nowrap;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+#proj .pgrid{flex:1;display:grid;gap:14px;padding:14px;grid-template-columns:repeat(var(--cols,3),minmax(0,1fr));align-content:start}
+#proj .pg{background:#fff;border-radius:18px;border:3px solid var(--gc);box-shadow:0 2px 6px rgba(0,0,0,.06);overflow:hidden}
+#proj .pg h3{background:var(--gc);color:#fff;font-size:clamp(1.1rem,2.2vw,1.9rem);padding:6px 14px}
+#proj .pg ul{list-style:none;margin:0;padding:8px 14px 12px}
+#proj .pg li{font-size:clamp(1.1rem,2.3vw,2rem);padding:4px 0;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+#proj .pg li .rpp{font-size:.62em}
+#proj .leg{padding:6px 16px 14px;font-size:clamp(1rem,1.8vw,1.5rem);justify-content:center}
+#proj .btn{background:#fff;color:#111;border-color:#ccc}
+@media print{header,main,#toast,#sheetzone{display:none!important}#proj{position:static}#proj .pbar button,#proj .pbar .tm{display:none}}
+</style></head><body>
+<header>
+ <div class="top"><h1 class="sr">Groupes</h1><nav class="hubnav" aria-label="Pages de Classe"><a href="index.html">← Classe</a><a href="maths.html">Maths</a><a href="copies.html">Photocopies</a><a href="groupes.html" class="on" aria-current="page">Groupes</a><a href="plan.html">Plan de classe</a><a href="lecture.html">Fluence</a></nav><script>if(MODE_APP)document.querySelectorAll(".hubnav").forEach(function(n){n.setAttribute("aria-label","Outils");n.innerHTML='<a href="../">← Outils</a><a href="../ma-classe/">Ma classe</a><a href="../groupes/" class="on" aria-current="page">Groupes</a><a href="../plan/">Plan de classe</a>'});</script><button id="statut" data-act="statut">Chargement…</button></div>
+ <nav class="tabs" id="tabs"></nav>
+</header>
+<main id="app"></main>
+<div id="sheetzone"></div>
+<div id="projzone"></div>
+<div id="toast" role="status"></div>
+<script>
+"use strict";
+var VERSION="1.10.0",LS="classe-groupes-v1",LSB=LS+"-base",DOC="lecture/groupes";
+var COUL=["#d1495b","#2e6fdb","#2a9d5c","#d4a017","#8e44ad","#e8590c","#8d5524","#0e9aa7","#555","#d63384","#6c8a1f","#3d405b"];
+
+function defaut(){return {v:1,ts:0,
+ eleves:{},amis:[],amisG:[],sep:[],
+ comps:[{id:"lect",t:"Lecture",i:"📖",max:4,src:"fluence"},{id:"ecr",t:"Écriture",i:"✍️"},{id:"calc",t:"Calcul",i:"🔢"},{id:"pb",t:"Résolution de problèmes",i:"🧩"},{id:"coop",t:"Coopération",i:"🤝"},{id:"auto",t:"Autonomie",i:"🚀"},{id:"crea",t:"Créativité",i:"🎨"},{id:"num",t:"Numérique",i:"💻"},{id:"orga",t:"Organisation",i:"🗂️"},{id:"dess",t:"Dessin, schéma",i:"📐"},{id:"angl",t:"Anglais",i:"🇬🇧"}],
+ roles:[{id:"pp",t:"Porte-parole",i:"🎤",pref:"oral"},{id:"sec",t:"Secrétaire",i:"✏️",pref:""},{id:"tps",t:"Gardien du temps",i:"⏱️",pref:""},{id:"calme",t:"Gardien du calme",i:"🤫",pref:""},{id:"mat",t:"Responsable du matériel",i:"🎒",pref:""},{id:"lec",t:"Lecteur",i:"📖",pref:"lect"}],
+ noms:["🔴 Rouges","🔵 Bleus","🟢 Verts","🟡 Jaunes","🟣 Violets","🟠 Orange","🟤 Marron","🩵 Turquoise","⚫ Gris","🩷 Roses","🍏 Pommes","🌙 Lunes"],
+ p:{mode:"nb",nb:6,taille:4,arr:"plus",niv:"mix",sexe:"mix",fseule:"ok",oral:"mix",compt:"oblig",sep:"oblig",ami:"ign",hist:"souple",comp:{lect:"mix"},roles:false,rolesOn:["pp","sec","tps"],abs:[],absD:""},
+ theme:"auto",cur:null,saved:[],hist:[]}}
+function migrer(d){var b=defaut();if(!d||typeof d!=="object")return b;var o=Object.assign(b,d);o.p=Object.assign(defaut().p,d.p||{});
+ if(!o.p.comp||typeof o.p.comp!=="object")o.p.comp={};["amis","amisG","sep","comps","roles","noms","saved","hist"].forEach(function(k){if(!Array.isArray(o[k]))o[k]=defaut()[k]});
+ if(!o.comps.some(function(k){return k.src==="fluence"}))o.comps.unshift(defaut().comps[0]);
+ if(!("lect" in o.p.comp))o.p.comp.lect=(d.p&&d.p.lect)||"mix";delete o.p.lect;delete o.p.lectSrc;
+ if(o.p.sexe==="f2"){o.p.sexe="mix";o.p.fseule="non"}
+ if(!Array.isArray(o.p.abs))o.p.abs=[];if(!Array.isArray(o.p.rolesOn))o.p.rolesOn=[];if(!o.eleves||typeof o.eleves!=="object")o.eleves={};return o}
+function lsGet(k){try{return localStorage.getItem(k)}catch(e){return null}}
+function lsSet(k,v){try{localStorage.setItem(k,v);return true}catch(e){return false}}
+function chargerLocal(){var t=lsGet(LS);if(!t)return defaut();try{return migrer(JSON.parse(t))}catch(e){lsSet(LS+"-secours",t);return defaut()}}
+
+var S={data:chargerLocal(),base:Number(lsGet(LSB))||0,dirty:false,sent:{},loaded:false,db:null,dl:null,el:[],acces:"attente",vue:"creer",sel:null,proj:false,timer:null,showAbs:false,elMode:"profils",compSel:null,sending:false,again:false};
+function today(){var d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")}
+function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
+function toast(t){var el=document.getElementById("toast");el.textContent=t;el.style.opacity=1;clearTimeout(el._t);el._t=setTimeout(function(){el.style.opacity=0},2600)}
+function uid(){return Math.random().toString(36).slice(2,9)}
+function fmtD(ts){if(!ts)return "—";var d=new Date(ts);return d.toLocaleDateString("fr-FR",{weekday:"short",day:"numeric",month:"short"})+" "+d.toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"})}
+
+/* ---------- Élèves (lus dans lecture/main) ---------- */
+function lireEleves(state){var out=[];if(!state||!Array.isArray(state.students))return out;
+ var sc=state.scores||{},mods=Object.keys(sc).sort(function(a,b){return (parseInt(a.slice(1))||0)-(parseInt(b.slice(1))||0)});
+ state.students.forEach(function(s){if(!s||!s.id)return;var score=null;
+  mods.forEach(function(m){var a=sc[m]&&sc[m][s.id];if(a&&typeof a[0]==="number")score=a[0]});
+  var est=false;if(score==null){est=true;score=s.p?[45,80,120,155][s.p-1]:100}
+  out.push({id:s.id,n:s.n||"?",g:s.g||"",niv:/CM1/i.test(s.g||"")?"CM1":"CM2",score:score,est:est,p:s.p||null})});
+ return out.sort(function(a,b){return a.n.localeCompare(b.n,"fr",{sensitivity:"base"})})}
+function alpha(ids){return ids.slice().sort(function(a,b){return nom(a).localeCompare(nom(b),"fr",{sensitivity:"base"})})}
+function E(sid){for(var i=0;i<S.el.length;i++)if(S.el[i].id===sid)return S.el[i];return null}
+function nom(sid){var e=E(sid);return e?e.n:"(élève retiré)"}
+function info(sid){return S.data.eleves[sid]||{}}
+function setInfo(sid,k,v){var o=Object.assign({},S.data.eleves[sid]||{});if(v===undefined||v===null||v==="")delete o[k];else o[k]=v;S.data.eleves[sid]=o}
+function absentsDuJour(){var p=S.data.p;if(p.absD!==today()){p.abs=[];p.absD=today()}return p.abs}
+function presents(){var a=absentsDuJour();return S.el.filter(function(e){return a.indexOf(e.id)<0})}
+function compMax(k){return k.max||3}
+function niveau(sid,k){var v=(info(sid).k||{})[k.id];if(v)return v;if(k.src==="fluence"){var e=E(sid);return e&&e.p?e.p:0}return 0}
+function estAuto(sid,k){return k.src==="fluence"&&!(info(sid).k||{})[k.id]&&!!niveau(sid,k)}
+function compLect(){for(var i=0;i<S.data.comps.length;i++)if(S.data.comps[i].src==="fluence")return S.data.comps[i];return null}
+
+/* ---------- Taille ---------- */
+function plan(n){var p=S.data.p,G;if(n<=0)return [];
+ if(p.mode==="nb")G=Math.max(1,Math.min(n,p.nb));else{var k=Math.max(2,p.taille);G=p.arr==="plus"?Math.ceil(n/k):Math.max(1,Math.floor(n/k))}
+ var base=Math.floor(n/G),r=n%G,s=[];for(var i=0;i<G;i++)s.push(base+(i<r?1:0));return s}
+function planTxt(){var n=presents().length,s=plan(n);if(!s.length)return "Aucun élève présent";var mi=Math.min.apply(null,s),ma=Math.max.apply(null,s);
+ return n+" présents → "+s.length+" groupe"+(s.length>1?"s":"")+" de "+(mi===ma?mi:mi+" ou "+ma)+" élèves"}
+
+/* ---------- Répartition ---------- */
+var W={souple:6,oblig:1000};
+function contexte(ids){var p=S.data.p,n=ids.length,ix={};ids.forEach(function(s,i){ix[s]=i});
+ var c={n:n,ids:ids,lect:[],cm1:[],fil:[],fsok:[],oral:[],compt:[],nums:[],pair:[]},i,j;
+ var sc=ids.map(function(s){return E(s).score}),mn=Math.min.apply(null,sc),mx=Math.max.apply(null,sc);
+ for(i=0;i<n;i++){var e=E(ids[i]),f=info(ids[i]);c.cm1.push(e.niv==="CM1"?1:0);c.fil.push(f.s==="f"?1:f.s==="g"?0:-1);c.fsok.push(f.fs?1:0);c.oral.push(f.o||"n");c.compt.push(f.c?1:0);c.pair.push(new Float64Array(n))}
+ /* critères numériques : lecture + compétences */
+ S.data.comps.forEach(function(k){var m=p.comp[k.id];if(!m||m==="ign")return;var M=compMax(k),x=ids.map(function(s){var v=niveau(s,k);return v?(v-1)/(M-1):.5});c.nums.push({m:m,x:x,w:k.src?(m==="homo"?16:10):(m==="homo"?12:8)})});
+ function add(a,b,v){if(ix[a]==null||ix[b]==null||a===b)return;c.pair[ix[a]][ix[b]]+=v;c.pair[ix[b]][ix[a]]+=v}
+ if(p.sep!=="ign")S.data.sep.forEach(function(g){for(var a=0;a<g.m.length;a++)for(var b=a+1;b<g.m.length;b++)add(g.m[a],g.m[b],W[p.sep])});
+ if(p.ami!=="ign"){var wa=p.ami==="sep"?3:p.ami==="obl"?-60:-3;S.data.amis.forEach(function(a){add(a[0],a[1],wa)});S.data.amisG.forEach(function(g){for(var a=0;a<g.m.length;a++)for(var b=a+1;b<g.m.length;b++)add(g.m[a],g.m[b],wa)})}
+ if(p.hist!=="ign")S.data.hist.slice(0,4).forEach(function(h,k){var w=[3,2,1.5,1][k];h.g.forEach(function(g){var m=g.m||g;for(var a=0;a<m.length;a++)for(var b=a+1;b<m.length;b++)add(m[a],m[b],w)})});
+ c.pCM1=c.cm1.reduce(function(a,b){return a+b},0)/n;
+ var kn=c.fil.filter(function(v){return v>=0});c.pF=kn.length?kn.reduce(function(a,b){return a+b},0)/kn.length:0;
+ c.pO={g:c.oral.filter(function(o){return o==="g"}).length/n,p:c.oral.filter(function(o){return o==="p"}).length/n};
+ c.nums.forEach(function(u){u.mean=u.x.reduce(function(a,b){return a+b},0)/n;u.var=u.x.reduce(function(a,b){return a+(b-u.mean)*(b-u.mean)},0)/n||1e-9});
+ return c}
+function cout(gs,c){var p=S.data.p,t=0;
+ for(var g=0;g<gs.length;g++){var m=gs[g],L=m.length,i,j,cm=0,og=0,op=0,cp=0,nf=0,nk=0,fi=-1;
+  for(i=0;i<L;i++){cm+=c.cm1[m[i]];if(c.fil[m[i]]>=0){nk++;nf+=c.fil[m[i]];if(c.fil[m[i]]===1)fi=m[i]}var o=c.oral[m[i]];if(o==="g")og++;else if(o==="p")op++;cp+=c.compt[m[i]];for(j=i+1;j<L;j++)t+=c.pair[m[i]][m[j]]}
+  if(p.sexe==="mix"&&nk){var df=nf-nk*c.pF;t+=3*df*df}
+  if(p.fseule==="non"&&nf===1&&!c.fsok[fi])t+=60;
+  if(p.niv==="mix"){var d=cm-L*c.pCM1;t+=3*d*d}else if(p.niv==="sep")t+=40*Math.min(cm,L-cm);
+  if(p.oral==="mix"){var a=og-L*c.pO.g,b=op-L*c.pO.p;t+=2*(a*a+b*b)}else if(p.oral==="homo"){var on=L-og-op;t+=4*(L-Math.max(og,op,on))}
+  if(p.compt!=="ign"&&cp>1)t+=W[p.compt]*(cp-1);
+ }
+ for(var u=0;u<c.nums.length;u++){var U=c.nums[u],between=0;
+  for(g=0;g<gs.length;g++){var s=0;for(i=0;i<gs[g].length;i++)s+=U.x[gs[g][i]];var mg=s/gs[g].length;between+=gs[g].length*(mg-U.mean)*(mg-U.mean)}
+  var f=between/(c.n*U.var);t+=U.w*(U.m==="mix"?f:1-f)*3}
+ return t}
+function repartir(ids){var n=ids.length,sizes=plan(n);if(!n)return [];var c=contexte(ids),best=null,bc=Infinity,R=24,IT=2500;
+ for(var r=0;r<R;r++){var o=ids.map(function(_,i){return i});for(var i=n-1;i>0;i--){var j=Math.floor(Math.random()*(i+1)),x=o[i];o[i]=o[j];o[j]=x}
+  var gs=[],k=0;sizes.forEach(function(s){gs.push(o.slice(k,k+s));k+=s});var cc=cout(gs,c);
+  for(var it=0;it<IT&&gs.length>1;it++){var a=Math.floor(Math.random()*gs.length),b=Math.floor(Math.random()*gs.length);if(a===b)continue;
+   var ia=Math.floor(Math.random()*gs[a].length),ib=Math.floor(Math.random()*gs[b].length),t1=gs[a][ia];gs[a][ia]=gs[b][ib];gs[b][ib]=t1;
+   var nc=cout(gs,c);if(nc<=cc)cc=nc;else{gs[b][ib]=gs[a][ia];gs[a][ia]=t1}}
+  if(cc<bc){bc=cc;best=gs.map(function(g){return g.slice()})}}
+ return best.map(function(g){return {m:g.map(function(i){return ids[i]}),r:{}}})}
+function attribuerRoles(groupes){var p=S.data.p,roles=S.data.roles.filter(function(r){return p.rolesOn.indexOf(r.id)>=0});
+ var recent={};S.data.hist.slice(0,3).forEach(function(h){h.g.forEach(function(g){Object.keys(g.r||{}).forEach(function(s){recent[s+"|"+g.r[s]]=1})})});
+ groupes.forEach(function(g){g.r={};var libres=g.m.slice();
+  roles.forEach(function(r){if(!libres.length)return;var bestS=null,bv=-1e9;
+   libres.forEach(function(s){var v=Math.random(),f=info(s),e=E(s);
+    if(r.pref==="oral")v+=f.o==="g"?3:f.o==="p"?-3:1;
+    if(r.pref==="lect"&&e){var kl=compLect();v+=kl?niveau(s,kl):e.score/50}
+    if(r.pref==="calme"&&f.c)v+=2;
+    if(recent[s+"|"+r.id])v-=2;
+    if(v>bv){bv=v;bestS=s}});
+   g.r[bestS]=r.id;libres.splice(libres.indexOf(bestS),1)})})}
+function alertes(gs){var p=S.data.p,w=[];
+ gs.forEach(function(g,gi){var nomG=nomGroupe(gi);
+  if(p.compt!=="ign"){var c=g.m.filter(function(s){return info(s).c});if(c.length>1)w.push(nomG+" : "+c.length+" élèves ⚠️ ensemble ("+alpha(c).map(nom).join(", ")+")")}
+  if(p.sep!=="ign")S.data.sep.forEach(function(sp){var x=sp.m.filter(function(s){return g.m.indexOf(s)>=0});if(x.length>1)w.push(nomG+" : à séparer → "+alpha(x).map(nom).join(" et "))});
+  if(p.ami==="sep")S.data.amis.forEach(function(a){if(g.m.indexOf(a[0])>=0&&g.m.indexOf(a[1])>=0)w.push(nomG+" : copains ensemble → "+nom(a[0])+" et "+nom(a[1]))});
+ });
+ if(p.fseule==="non")gs.forEach(function(g,gi){var f=g.m.filter(function(s){return info(s).s==="f"});if(f.length===1&&!info(f[0]).fs)w.push(nomGroupe(gi)+" : "+nom(f[0])+" est la seule fille du groupe")});
+ if(p.ami==="obl"){var pres=presents().map(function(e){return e.id});S.data.amisG.forEach(function(ag){var m=ag.m.filter(function(s){return pres.indexOf(s)>=0});if(m.length<2)return;var gis={};m.forEach(function(s){gis[groupeDeIn(gs,s)]=1});if(Object.keys(gis).length>1)w.push("Groupe d'amis séparé : "+alpha(m).map(nom).join(", "))})}
+ var nc=S.data.p.compt!=="ign"?presents().filter(function(e){return info(e.id).c}).length:0;
+ if(nc>gs.length&&gs.length)w.push("Il y a "+nc+" élèves ⚠️ pour "+gs.length+" groupes : impossible d'en mettre un seul par groupe.");
+ return w}
+function groupeDeIn(gs,sid){for(var i=0;i<gs.length;i++)if(gs[i].m.indexOf(sid)>=0)return i;return -1}
+function nomGroupe(i){var n=S.data.noms;return (n[i%n.length]||("Groupe "+(i+1)))}
+function couleur(i){return COUL[i%COUL.length]}
+function resume(g){var cm1=0,og=0,op=0,cp=0,nf=0,ng=0;g.m.forEach(function(s){var e=E(s),f=info(s);if(!e)return;if(e.niv==="CM1")cm1++;if(f.s==="f")nf++;if(f.s==="g")ng++;if(f.o==="g")og++;if(f.o==="p")op++;if(f.c)cp++});
+ var t="CM1 "+cm1+" · CM2 "+(g.m.length-cm1)+((nf||ng)?" · 👧"+nf+" 👦"+ng:"")+" · 🗣️"+og+" 🤐"+op+(cp?" · ⚠️"+cp:"");
+ S.data.comps.forEach(function(k){var m=S.data.p.comp[k.id];if(!m||m==="ign")return;var v=g.m.map(function(s){return niveau(s,k)}).filter(Boolean);t+=" · "+k.i+" "+(v.length?v.sort().join("-"):"?")});
+ return t}
+
+/* ---------- Actions groupes ---------- */
+function creer(){var ids=presents().map(function(e){return e.id});if(ids.length<2){toast("Il faut au moins 2 élèves présents");return}
+ var t0=performance.now(),gs=repartir(ids);if(S.data.p.roles)attribuerRoles(gs);
+ S.data.cur={d:Date.now(),g:gs,cons:(S.data.cur&&S.data.cur.cons)||""};S.sel=null;sauver();rendre();
+ var w=alertes(gs);toast(w.length?"Groupes créés · "+w.length+" point(s) à vérifier":"Groupes créés ✓ toutes les règles respectées");
+ var r=document.getElementById("resultat");if(r)r.scrollIntoView({behavior:"smooth",block:"start"});void t0}
+function groupeDe(sid){var g=S.data.cur.g;for(var i=0;i<g.length;i++)if(g[i].m.indexOf(sid)>=0)return i;return -1}
+function choisir(sid){if(!S.data.cur)return;if(S.sel===sid){S.sel=null;rendre();return}
+ if(!S.sel){S.sel=sid;rendre();return}
+ var a=groupeDe(S.sel),b=groupeDe(sid),G=S.data.cur.g;if(a<0||b<0){S.sel=null;rendre();return}
+ if(a!==b){var ia=G[a].m.indexOf(S.sel),ib=G[b].m.indexOf(sid);G[a].m[ia]=sid;G[b].m[ib]=S.sel;
+  var ra=G[a].r[S.sel],rb=G[b].r[sid];delete G[a].r[S.sel];delete G[b].r[sid];if(ra)G[a].r[sid]=ra;if(rb)G[b].r[S.sel]=rb;/* le rôle reste au groupe : celui qui arrive prend le rôle de celui qui part */toast(nom(S.sel)+" ⇄ "+nom(sid))}
+ S.sel=null;sauver();rendre()}
+function deplacer(gi){if(!S.sel)return;var a=groupeDe(S.sel),G=S.data.cur.g;if(a<0||a===gi){S.sel=null;rendre();return}
+ var cible=nomGroupe(gi);G[a].m.splice(G[a].m.indexOf(S.sel),1);var r=G[a].r[S.sel];delete G[a].r[S.sel];G[gi].m.push(S.sel);if(r&&!Object.keys(G[gi].r).some(function(x){return G[gi].r[x]===r}))G[gi].r[S.sel]=r;
+ toast(nom(S.sel)+" → "+cible);S.sel=null;sauver();rendre()}
+function ajouterGroupe(){if(!S.data.cur)return;S.data.cur.g.push({m:[],r:{}});sauver();rendre()}
+function noterHist(){var c=S.data.cur;if(!c)return;var snap={d:Date.now(),g:JSON.parse(JSON.stringify(c.g))};
+ var h=S.data.hist;if(h[0]&&JSON.stringify(h[0].g)===JSON.stringify(snap.g))h[0].d=snap.d;else h.unshift(snap);S.data.hist=h.slice(0,30);sauver()}
+
+/* ---------- Synchronisation ---------- */
+function setStatut(t,orange){var b=document.getElementById("statut");if(MODE_APP)t=t.replace(/Synchronisé|Enregistré/,"Sur cet appareil");b.textContent=t;b.classList.toggle("orange",!!orange)}
+function sauver(){S.data.ts=Date.now();lsSet(LS,JSON.stringify(S.data));S.dirty=true;
+ if(!S.loaded){setStatut(S.acces==="non"?"Enregistré sur cet appareil seulement":"Pas encore envoyé",true);return}
+ setStatut("Envoi…");clearTimeout(S._t);S._t=setTimeout(envoyer,1200)}
+function envoyer(){if(!S.loaded||!S.db)return;if(S.sending){S.again=true;return}S.sending=true;var copie=JSON.parse(JSON.stringify(S.data));S.sent[copie.ts]=1;
+ S.db.doc(DOC).set(copie).then(function(){S.base=copie.ts;lsSet(LSB,String(S.base));if(S.data.ts===copie.ts)S.dirty=false;setStatut("✓ Enregistré · "+new Date().toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"}))})
+ .catch(function(e){setStatut(e&&e.code==="invalid_argument"?"Lecture seule":"Échec de l'envoi · Réessayer",true)})
+ .then(function(){S.sending=false;if(S.again){S.again=false;envoyer()}})}
+function recevoir(remote){remote=migrer(remote);
+ if(remote.ts===S.data.ts)return;
+ if(S.sent[remote.ts]){if(remote.ts>S.base){S.base=remote.ts;lsSet(LSB,String(S.base))}return}
+ if(S.dirty&&S.data.ts>S.base&&remote.ts>S.base&&remote.ts!==S.data.ts){conflit(remote);return}
+ if(remote.ts>S.data.ts||!S.dirty){S.data=remote;S.base=remote.ts;S.dirty=false;lsSet(LS,JSON.stringify(S.data));lsSet(LSB,String(S.base));appliquerTheme();rendre();setStatut("✓ Synchronisé · "+fmtD(remote.ts))}
+ else envoyer()}
+function conflit(remote){ouvrirSheet('<h2>Deux versions différentes</h2><p>Les groupes ont été modifiés sur cet appareil <b>et</b> sur un autre. Laquelle garder ?</p>'+
+ '<p class="row"><button class="btn pri" data-act="garder" data-v="ici">Celle de cet appareil<br><small>'+fmtD(S.data.ts)+'</small></button>'+
+ '<button class="btn" data-act="garder" data-v="base">Celle de la base<br><small>'+fmtD(remote.ts)+'</small></button></p>',{nofermer:true});S._remote=remote}
+async function demarrer(){appliquerTheme();rendre();setStatut("Connexion…");
+ var db=null;try{db=await window.claude.use("db")}catch(e){db=null}
+ try{S.dl=await window.claude.use("downloads")}catch(e){S.dl=null}
+ if(!db){S.acces="non";setStatut("Hors de Claude : enregistré sur cet appareil seulement",true);rendre();return}
+ S.db=db;
+ try{var l=await db.doc("lecture/main").get();
+  if(!l.exists){S.acces="non";setStatut("Zone réservée",true);rendre();return}
+  var d=l.data()||{};S.el=lireEleves(d.state||d);S.acces="ok";
+ }catch(e){S.acces="erreur";setStatut("Base lente · Réessayer",true);rendre();return}
+ try{var g=await db.doc(DOC).get();
+  S.loaded=true;
+  if(g.exists){recevoir(g.data());if(!S.dirty)setStatut("✓ Synchronisé · "+fmtD(S.data.ts))}
+  else{setStatut(S.dirty?"Pas encore envoyé":"✓ Prêt",S.dirty);if(S.dirty)envoyer()}
+  db.doc(DOC).onSnapshot(function(sn){if(sn.metadata&&sn.metadata.hasPendingWrites)return;if(sn.exists)recevoir(sn.data())},function(){});
+ }catch(e){setStatut("Base lente · Réessayer",true)}
+ rendre()}
+
+/* ---------- Rendu ---------- */
+var ONGLETS=[["creer","🎲 Préparer les groupes"],["classe","👥 Créer avec les élèves"],["eleves","🧒 Élèves"],["enreg","💾 Enregistrés"],["reglages","⚙️ Réglages"]];
+function seg(name,val,opts){return '<div class="seg" role="group">'+opts.map(function(o){return '<button data-act="set" data-k="'+name+'" data-v="'+o[0]+'" aria-pressed="'+(val===o[0])+'">'+o[1]+'</button>'}).join("")+'</div>'}
+function crit(ico,lbl,sub,name,val,opts){return '<div class="crit"><div class="lbl">'+ico+' '+lbl+(sub?'<small>'+sub+'</small>':'')+'</div>'+seg(name,val,opts)+'</div>'}
+var OPTF=[["ign","Ignorer"],["souple","Si possible"],["oblig","Obligatoire"]];
+function ouvert(k,def){return S.ouvert&&k in S.ouvert?S.ouvert[k]:def}
+document.addEventListener("toggle",function(ev){var d=ev.target;if(d&&d.dataset&&d.dataset.ouv){S.ouvert=S.ouvert||{};S.ouvert[d.dataset.ouv]=d.open}},true);
+function fillesSeules(){if(S.data.p.fseule!=="non")return "";var F=S.el.filter(function(e){return info(e.id).s==="f"});
+ if(!F.length)return '<p class="small muted">Indique d\'abord les filles dans Élèves › Profils.</p>';
+ return '<div style="margin:2px 0 8px"><div class="small muted">Ces filles peuvent quand même être seules :</div><div class="chips" style="margin-top:4px">'+F.map(function(e){return '<button class="chip" data-act="fsok" data-sid="'+e.id+'" aria-pressed="'+(!!info(e.id).fs)+'">'+esc(e.n)+'</button>'}).join("")+'</div></div>'}
+function vueCreer(eleve){var p=S.data.p,h="";
+ if(S.acces!=="ok"&&!S.el.length)return zoneReservee();
+ var abs=absentsDuJour(),nAct=S.data.comps.filter(function(k){return p.comp[k.id]&&p.comp[k.id]!=="ign"}).length;
+ h+='<div class="card"><div class="row" style="justify-content:space-between">'+seg("mode",p.mode,[["nb","Nombre de groupes"],["taille","Élèves par groupe"]])+
+  '<div class="step"><button data-act="pas" data-v="-1" aria-label="moins">−</button><b>'+(p.mode==="nb"?p.nb:p.taille)+'</b><button data-act="pas" data-v="1" aria-label="plus">+</button></div></div>'+
+  (p.mode==="taille"?'<div class="row small" style="margin-top:8px">S\'il reste des élèves : '+seg("arr",p.arr,[["plus","groupes plus petits"],["moins","groupes plus grands"]])+'</div>':'')+
+  '<p class="muted small" style="margin:8px 0">'+esc(planTxt())+' · <button class="chip" data-act="voirabs">Absents : '+abs.length+' ✎</button></p>'+
+  (S.showAbs?'<div class="chips" style="margin-bottom:8px">'+S.el.map(function(e){return '<button class="chip abs" data-act="abs" data-sid="'+e.id+'" aria-pressed="'+(abs.indexOf(e.id)>=0)+'">'+esc(e.n)+'</button>'}).join("")+'</div><p class="small muted">Les absences s\'effacent automatiquement le lendemain.</p>':'');
+ if(eleve){h+=crit("🏫","CM1 et CM2","",'niv',p.niv,[["ign","Indifférent"],["mix","Mélanger"],["sep","Séparer"]])+crit("👧","Filles et garçons",(function(){var n=S.el.filter(function(e){return info(e.id).s}).length;return n<S.el.length?n+"/"+S.el.length+" renseignés (Élèves › Profils)":"Des groupes mixtes"})(),'sexe',p.sexe,[["ign","Peu importe"],["mix","Mixtes"]])+crit("👭","Fille seule dans un groupe","Interdite = au moins 2 filles ensemble (groupes sans garçon acceptés)",'fseule',p.fseule,[["ok","Autorisée"],["non","Interdite"]])}
+ else{h+='<details data-ouv="crit" '+(ouvert("crit",!S.data.cur)?"open":"")+' style="margin:6px 0"><summary>🎛️ Critères de répartition</summary>'+
+  crit("🏫","CM1 et CM2","",'niv',p.niv,[["ign","Indifférent"],["mix","Mélanger"],["sep","Séparer"]])+
+  crit("👧","Filles et garçons",(function(){var n=S.el.filter(function(e){return info(e.id).s}).length;return n<S.el.length?n+"/"+S.el.length+" renseignés (Élèves › Profils)":"Des groupes mixtes"})(),'sexe',p.sexe,[["ign","Peu importe"],["mix","Mixtes"]])+crit("👭","Fille seule dans un groupe","Interdite = au moins 2 filles ensemble (groupes sans garçon acceptés)",'fseule',p.fseule,[["ok","Autorisée"],["non","Interdite"]])+fillesSeules()+
+  crit("🗣️","Aisance à l'oral","Répartir les grands et petits parleurs",'oral',p.oral,[["ign","Ignorer"],["mix","Répartir"],["homo","Par profil"]])+
+  crit("⚠️","Comportement","Au plus un élève ⚠️ par groupe",'compt',p.compt,OPTF)+
+  crit("✂️","À séparer","Paires et groupes notés dans Élèves",'sep',p.sep,OPTF)+
+  crit("💞","Amis","Copains et groupes d'amis notés dans Élèves",'ami',p.ami,[["ign","Ignorer"],["ens","Ensemble si possible"],["obl","Groupes d'amis"],["sep","Séparer"]])+
+  crit("🕘","Historique","Éviter de refaire les mêmes groupes (4 dernières fois)",'hist',p.hist,[["ign","Ignorer"],["souple","Éviter"]])+
+  '<details data-ouv="comp" '+(ouvert("comp",!!nAct)?"open":"")+' style="margin-top:8px"><summary>🧠 Compétences ('+nAct+' utilisée'+(nAct>1?'s':'')+')</summary>'+
+  S.data.comps.map(function(k){var n=S.el.filter(function(e){return niveau(e.id,k)}).length;
+   return crit(k.i,esc(k.t),n+"/"+S.el.length+" élèves notés"+(k.src&&!MODE_APP?" · prérempli par Lecture":""),'comp.'+k.id,p.comp[k.id]||"ign",[["ign","Ignorer"],["mix","Mélanger"],["homo","Par niveau"]])}).join("")+
+  '<p class="small muted">Les niveaux se notent dans Élèves › 🧠 Compétences.</p></details></details>'}
+ h+='<div class="crit"><div class="lbl">🎭 Rôles</div><div>'+seg("roles",p.roles?"on":"off",[["off","Pas de rôles auto"],["on","Rôles auto"]])+
+  (p.roles?'<div class="chips" style="margin-top:6px">'+S.data.roles.map(function(r){return '<button class="chip" data-act="roleon" data-id="'+r.id+'" aria-pressed="'+(p.rolesOn.indexOf(r.id)>=0)+'">'+r.i+' '+esc(r.t)+'</button>'}).join("")+'</div>':'<div class="small muted" style="margin-top:4px">Tu pourras toujours en donner à la main avec le rond à côté d\'un prénom.</div>')+'</div></div>'+
+  '<button class="btn pri big" data-act="creer" style="margin-top:8px">🎲 '+(S.data.cur?"Créer de nouveaux groupes":"Créer les groupes")+'</button></div>';
+ return h+vueResultat(eleve)}
+function vueResultat(V){var c=S.data.cur;if(!c||!c.g.length)return "";var h='<section id="resultat">';
+ h+='<h2>'+(V?'👥 Les groupes':'Groupes du '+fmtD(c.d))+'</h2><div class="toolbar"><button class="btn pri" data-act="projeter">🖥️ Plein écran</button>'+(V?'':'<button class="btn" data-act="enregistrer">💾 Enregistrer</button>')+
+  (S.data.roles.length?'<button class="btn" data-act="rolesauto">🎭 Rôles auto</button><button class="btn" data-act="rolesreset">🧹 Effacer les rôles</button>':'')+(V?'':'<button class="btn" data-act="plusgrp">＋ Groupe</button>')+'</div>';
+ if(!V){var w=alertes(c.g);h+=w.length?'<div class="warns">⚠️ À vérifier<ul>'+w.map(function(x){return '<li>'+esc(x)+'</li>'}).join("")+'</ul></div>':'<div class="ok">✓ Toutes les règles obligatoires sont respectées.</div>'}
+ h+='<p class="small muted">'+(S.sel?'<b>'+esc(nom(S.sel))+'</b> sélectionné·e : touche un autre élève pour les échanger, ou « Mettre ici ».':'Glisse un élève par sa poignée ⠿ vers un autre groupe (sur un élève = échange). Touche le rond pour donner un rôle.')+'</p>';
+ var kl=compLect();
+ h+='<div class="grid'+(V?' vel':'')+'">'+c.g.map(function(g,gi){return '<div class="grp" data-g="'+gi+'" style="--gc:'+couleur(gi)+'"><h3>'+esc(nomGroupe(gi))+' <span class="muted small">('+g.m.length+')</span></h3>'+(V?'':'<div class="sum">'+esc(resume(g))+'</div>')+
+  alpha(g.m).map(function(s){var e=E(s),f=info(s),r=rolePar(g.r[s]),nl=kl?niveau(s,kl):0;
+   var marks=V?'':((e&&e.niv==="CM1"?'<span class="tag">CM1</span>':'')+(nl?'<span class="tag pg'+nl+'">G'+nl+'</span>':'')+(f.c?' ⚠️':'')+(f.o==="g"?' 🗣️':f.o==="p"?' 🤐':''));
+   return '<div class="mem'+(S.sel===s?" sel":"")+'" data-sid="'+s+'"><span class="dh" data-drag="'+s+'" aria-label="Glisser">⠿</span><button class="nm" data-act="pick" data-sid="'+s+'">'+esc(nom(s))+marks+'</button>'+
+    '<button class="rp'+(r?" on":"")+'"'+(r?' style="--rc:'+roleCoul(r)+'"':'')+' data-act="role" data-sid="'+s+'" data-g="'+gi+'" title="'+(r?esc(r.t):"Donner un rôle")+'">'+(r?'<span class="ic">'+r.i+'</span> '+esc(r.t):'＋ rôle')+'</button></div>'}).join("")+
+  (S.sel&&groupeDe(S.sel)!==gi?'<button class="here" data-act="moveto" data-g="'+gi+'">➜ Mettre ici</button>':'')+'</div>'}).join("")+'</div>'+legendeRoles(c.g)+'</section>';
+ return h}
+function rolePar(id){for(var i=0;i<S.data.roles.length;i++)if(S.data.roles[i].id===id)return S.data.roles[i];return null}
+function zoneReservee(){return '<div class="card"><h2>🔒 Zone réservée</h2><p>'+(S.acces==="attente"?"Chargement des élèves…":S.acces==="erreur"?"La base ne répond pas.":"Les élèves ne sont lisibles qu'en ouvrant Classe dans Claude, connecté à ton compte.")+'</p>'+(S.acces==="erreur"?'<button class="btn pri" data-act="reessayer">Réessayer</button>':'')+'</div>'}
+function listeGroupes(titre,cle,vide,ajout){var L=S.data[cle];return '<div class="card"><h2 style="margin-top:0">'+titre+'</h2>'+(L.length?L.map(function(g){return '<div class="erow"><span style="flex:1">'+alpha(g.m).map(function(s){return esc(nom(s))}).join(" · ")+'</span><button class="btn sm" data-act="editsep" data-k="'+cle+'" data-id="'+g.id+'">Modifier</button></div>'}).join(""):'<p class="muted small">'+vide+'</p>')+
+  '<button class="btn" data-act="editsep" data-k="'+cle+'" data-id="">'+ajout+'</button></div>'}
+function vueEleves(){if(!S.el.length)return zoneReservee();var h='<div class="row" style="margin:4px 0 6px">'+seg("elMode",S.elMode,[["profils","🧒 Profils"],["comp","🧠 Compétences"],["liens","💞 Amis et ✂️"]])+'</div>';
+ if(S.elMode==="comp")return h+vueComp();
+ if(S.elMode==="liens")return h+listeGroupes("💞 Groupes d'amis","amisG","Aucun. Note les bandes de copains : avec le critère « Amis › Groupes d'amis », ils seront mis ensemble.","＋ Groupe d'amis")+
+  listeGroupes("✂️ À séparer","sep","Aucun. Ajoute une paire ou un petit groupe d'élèves à ne pas mettre ensemble.","＋ Paire ou groupe à séparer")+
+  '<p class="small muted">Les copains deux à deux se notent aussi dans la fiche de chaque élève (onglet Profils, touche un prénom).</p>';
+ h+='<div class="card"><h2 style="margin-top:0">🧒 Profils</h2><p class="small muted">'+(MODE_APP?'':'G1 à G4 : groupe de fluence (onglet Lecture) · ')+'👧 / 👦 : touche « ? » pour choisir · 🗣️ grand parleur · 🙂 « normal » · 🤐 petit parleur · ⚠️ vigilance comportement. Touche un prénom pour ses copains et ses compétences.</p>';
+ S.el.forEach(function(e){var f=info(e.id),nk=Object.keys(f.k||{}).length,na=S.data.amis.filter(function(a){return a.indexOf(e.id)>=0}).length+S.data.amisG.filter(function(g){return g.m.indexOf(e.id)>=0}).length;
+  var kl=compLect(),nl=kl?niveau(e.id,kl):0;h+='<div class="erow"><button class="nm" data-act="fiche" data-sid="'+e.id+'">'+esc(e.n)+(nl?' <span class="tag pg'+nl+'">G'+nl+'</span>':'')+'<small>'+esc(e.g)+' · 📖 '+(e.est?"pas de score":e.score+" mots/min")+(na?" · 💞"+na:"")+(nk?" · 🧠"+nk+"/"+S.data.comps.length:"")+'</small></button>'+
+   '<button class="ob" data-act="sexe" data-sid="'+e.id+'" aria-pressed="'+(!!f.s)+'" title="Fille ou garçon">'+(f.s==="f"?"👧":f.s==="g"?"👦":"?")+'</button><span style="width:6px"></span>'+
+   [["g","🗣️"],["n","🙂"],["p","🤐"]].map(function(o){return '<button class="ob" data-act="oral" data-sid="'+e.id+'" data-v="'+o[0]+'" aria-pressed="'+((f.o||"n")===o[0])+'" title="'+o[0]+'">'+o[1]+'</button>'}).join("")+
+   '<button class="ob c" data-act="compt" data-sid="'+e.id+'" aria-pressed="'+(!!f.c)+'" title="Comportement">⚠️</button></div>'});
+ return h+'</div>'}
+function boutonsNiveau(sid,k){var M=compMax(k),v=niveau(sid,k),auto=estAuto(sid,k),lab=M===4?["G1","G2","G3","G4"]:["1 À aider","2 Ça va","3 Expert"];
+ return lab.map(function(t,i){var n=i+1;return '<button class="chip'+(auto?' auto':'')+'" data-act="note" data-sid="'+sid+'" data-k="'+k.id+'" data-v="'+n+'" aria-pressed="'+(v===n)+'"'+(auto&&v===n?' title="Repris de Lecture"':'')+'>'+t+'</button>'}).join("")+
+  (k.src&&!auto&&(info(sid).k||{})[k.id]?'<button class="chip" data-act="noteauto" data-sid="'+sid+'" data-k="'+k.id+'" title="Reprendre le groupe de Lecture">↺</button>':'')}
+function vueComp(){var d=S.data,p=d.p;if(!d.comps.length)return '<div class="card"><p>Aucune compétence. Ajoute-en dans ⚙️ Réglages.</p></div>';
+ if(!S.compSel||!d.comps.some(function(k){return k.id===S.compSel}))S.compSel=d.comps[0].id;
+ var k=d.comps.filter(function(x){return x.id===S.compSel})[0],n=S.el.filter(function(e){return niveau(e.id,k)}).length;
+ var h='<div class="card"><h2 style="margin-top:0">🧠 Compétences</h2><p class="small muted">Choisis une compétence, puis note tous les élèves d\'affilée. ✓ = compétence utilisée pour faire les groupes.</p><div class="chips">'+
+  d.comps.map(function(x){var on=p.comp[x.id]&&p.comp[x.id]!=="ign",nb=S.el.filter(function(e){return niveau(e.id,x)}).length;return '<button class="chip" data-act="compsel" data-id="'+x.id+'" aria-pressed="'+(x.id===k.id)+'">'+x.i+' '+esc(x.t)+' <small>'+nb+'/'+S.el.length+'</small>'+(on?' ✓':'')+'</button>'}).join("")+'</div></div>';
+ h+='<div class="card"><h2 style="margin:0 0 6px">'+k.i+' '+esc(k.t)+' <small class="muted">'+n+'/'+S.el.length+'</small></h2>'+
+  (k.src&&!MODE_APP?'<p class="small muted">Prérempli avec le groupe de fluence de l\'onglet Lecture (pointillés) et mis à jour automatiquement. Touche un autre niveau pour le changer à la main ; ↺ reprend celui de Lecture.</p>':'')+
+  '<div class="crit"><div class="lbl">Pour faire les groupes</div>'+seg('comp.'+k.id,p.comp[k.id]||"ign",[["ign","Ne pas utiliser"],["mix","Mélanger"],["homo","Par niveau"]])+'</div>'+
+  '<p class="row small">'+(k.src?'':'<button class="btn sm" data-act="compall" data-v="2">Mettre « Ça va » aux non notés</button>')+'<button class="btn sm danger" data-act="compall" data-v="0">'+(k.src&&!MODE_APP?'Tout reprendre de Lecture':'Tout effacer')+'</button></p>';
+ S.el.forEach(function(e){h+='<div class="erow"><span style="flex:1;min-width:0">'+esc(e.n)+'</span>'+boutonsNiveau(e.id,k)+'</div>'});
+ return h+'</div>'}
+function vueEnreg(){var h='<div class="card"><h2 style="margin-top:0">💾 Groupes enregistrés</h2>';
+ h+=S.data.saved.length?S.data.saved.map(function(s){return '<div class="erow"><span style="flex:1"><b>'+esc(s.nom)+'</b><br><small class="muted">'+s.g.length+' groupes · '+fmtD(s.d)+'</small></span><button class="btn sm" data-act="ouvrir" data-id="'+s.id+'">Afficher</button><button class="btn sm" data-act="ouvrirproj" data-id="'+s.id+'">📺</button><button class="btn sm danger" data-act="suppr" data-id="'+s.id+'" aria-label="Supprimer">🗑️</button></div>'}).join(""):'<p class="muted">Aucun. Après avoir créé des groupes, touche « 💾 Enregistrer » pour les garder (ex. « Sciences P2 »).</p>';
+ h+='</div><div class="card"><h2 style="margin-top:0">🕘 Historique</h2><p class="small muted">Rempli par « ✓ Valider » et « 📺 Projeter ». Sert au critère « Historique » et à faire tourner les rôles.</p>';
+ h+=S.data.hist.length?S.data.hist.map(function(x,i){return '<div class="erow"><span style="flex:1">'+fmtD(x.d)+' · '+x.g.length+' groupes<br><small class="muted">'+esc(x.g.map(function(g){return alpha(g.m).map(nom).join(", ")}).join(" | ")).slice(0,140)+'…</small></span><button class="btn sm" data-act="ouvrirh" data-i="'+i+'">Afficher</button></div>'}).join("")+'<p><button class="btn danger" data-act="effhist">Effacer l\'historique</button></p>':'<p class="muted">Vide pour l\'instant.</p>';
+ return h+'</div>'}
+function vueReglages(){var d=S.data,h='';
+ h+='<div class="card"><h2 style="margin-top:0">🏷️ Noms des groupes</h2><p class="small muted">Un nom par ligne, dans l\'ordre.</p><textarea data-f="noms">'+esc(d.noms.join("\n"))+'</textarea></div>';
+ h+='<div class="card"><h2 style="margin-top:0">🎭 Rôles</h2>'+d.roles.map(function(r,i){return '<div class="erow"><input type="text" data-f="role.i" data-i="'+i+'" value="'+esc(r.i)+'" style="width:3.2em;text-align:center"><input type="text" data-f="role.t" data-i="'+i+'" value="'+esc(r.t)+'" style="flex:1;min-width:0">'+
+  '<input type="color" data-f="role.c" data-i="'+i+'" value="'+roleCoul(r)+'" title="Couleur" style="width:44px;height:42px;padding:2px;border-radius:10px">'+
+  '<select data-f="role.pref" data-i="'+i+'"><option value="">Au hasard</option><option value="oral"'+(r.pref==="oral"?" selected":"")+'>À l\'aise à l\'oral</option><option value="lect"'+(r.pref==="lect"?" selected":"")+'>Bon lecteur</option><option value="calme"'+(r.pref==="calme"?" selected":"")+'>Élève ⚠️ (responsabiliser)</option></select>'+
+  '<button class="btn sm danger" data-act="delrole" data-i="'+i+'" aria-label="Supprimer">🗑️</button></div>'}).join("")+'<p><button class="btn" data-act="addrole">＋ Ajouter un rôle</button></p></div>';
+ h+='<div class="card"><h2 style="margin-top:0">🧠 Compétences</h2><p class="small muted">Notées de 1 (à aider) à 3 (expert·e) dans la fiche de chaque élève.</p>'+d.comps.map(function(k,i){return '<div class="erow"><input type="text" data-f="comp.i" data-i="'+i+'" value="'+esc(k.i)+'" style="width:3.2em;text-align:center"><input type="text" data-f="comp.t" data-i="'+i+'" value="'+esc(k.t)+'" style="flex:1;min-width:0"><button class="btn sm danger" data-act="delcomp" data-i="'+i+'" aria-label="Supprimer">🗑️</button></div>'}).join("")+'<p><button class="btn" data-act="addcomp">＋ Ajouter une compétence</button></p></div>';
+ h+='<div class="card"><h2 style="margin-top:0">🎨 Affichage</h2>'+seg("theme",d.theme,[["auto","Auto"],["light","Clair"],["dark","Sombre"]])+'</div>';
+ h+='<div class="card"><h2 style="margin-top:0">📦 Sauvegarde</h2><div class="row">'+(S.dl?'<button class="btn" data-act="export">⬇️ Exporter (JSON)</button>':'<span class="small muted">Export indisponible ici.</span>')+'<label class="btn">⬆️ Importer<input type="file" accept=".json,application/json" id="imp" hidden></label></div><p class="small muted">Données privées (zone réservée de Classe). Version '+VERSION+'.</p></div>';
+ return h}
+function rendre(){var V={creer:function(){return vueCreer(false)},classe:function(){return vueCreer(true)},eleves:vueEleves,enreg:vueEnreg,reglages:vueReglages};
+ document.getElementById("tabs").innerHTML=ONGLETS.map(function(o){return '<button data-act="tab" data-v="'+o[0]+'"'+(S.vue===o[0]?' aria-current="page"':'')+'>'+o[1]+'</button>'}).join("");
+ document.getElementById("app").innerHTML=V[S.vue]();
+ var imp=document.getElementById("imp");if(imp)imp.onchange=function(){if(imp.files[0])importer(imp.files[0])}}
+function appliquerTheme(){var t=S.data.theme;if(t==="auto")delete document.documentElement.dataset.theme;else document.documentElement.dataset.theme=t}
+
+/* ---------- Fenêtres ---------- */
+function ouvrirSheet(html,o){o=o||{};document.getElementById("sheetzone").innerHTML='<div class="ov" data-act="'+(o.nofermer?"":"fermer-ov")+'"><div class="sheet" role="dialog">'+html+(o.nofermer?'':'<p style="margin-bottom:0"><button class="btn" data-act="fermer">Fermer</button></p>')+'</div></div>';
+ if(!S.sheetOpen){S.sheetOpen=true;history.pushState({sheet:1},"")}}
+function fermerSheet(back){document.getElementById("sheetzone").innerHTML="";if(S.sheetOpen){S.sheetOpen=false;if(!back){S.skipPop=true;history.back()}}S.ficheSid=null;S.sepEdit=null;rendre()}
+function confirmer(txt,ok){S._ok=ok;ouvrirSheet('<h2>Confirmer</h2><p>'+txt+'</p><p class="row"><button class="btn danger" data-act="okconf">Oui, confirmer</button><button class="btn" data-act="fermer">Annuler</button></p>',{nofermer:true})}
+function fiche(sid){S.ficheSid=sid;var e=E(sid),f=info(sid),h='<h2>'+esc(e.n)+' <small class="muted">'+esc(e.g)+(e.p?' · groupe '+e.p:'')+' · 📖 '+(e.est?'pas de score':e.score)+'</small></h2>';
+ if(f.s==="f")h+='<p><button class="chip" data-act="fsok" data-sid="'+sid+'" aria-pressed="'+(!!f.fs)+'">👭 Peut être la seule fille d\'un groupe</button></p>';
+ h+='<h3>💞 Copains</h3><div class="chips">'+S.el.filter(function(x){return x.id!==sid}).map(function(x){var on=S.data.amis.some(function(a){return a.indexOf(sid)>=0&&a.indexOf(x.id)>=0});return '<button class="chip" data-act="ami" data-a="'+sid+'" data-b="'+x.id+'" aria-pressed="'+on+'">'+esc(x.n)+'</button>'}).join("")+'</div>';
+ h+='<h3 style="margin-top:14px">🧠 Compétences</h3>'+S.data.comps.map(function(k){return '<div class="rt"><b>'+k.i+' '+esc(k.t)+'</b>'+boutonsNiveau(sid,k)+'</div>'}).join("");
+ var open=!!document.querySelector("#sheetzone .sheet");if(open){document.querySelector("#sheetzone .sheet").innerHTML=h+'<p style="margin-bottom:0"><button class="btn" data-act="fermer">Fermer</button></p>'}else ouvrirSheet(h)}
+function editSep(id,cle){cle=cle||(S.sepEdit&&S.sepEdit.cle)||"sep";var g=null;S.data[cle].forEach(function(x){if(x.id===id)g=x});S.sepEdit=S.sepEdit&&S.sepEdit.id===id?S.sepEdit:{id:id||uid(),cle:cle,m:g?g.m.slice():[],neuf:!g};
+ var ami=cle==="amisG";
+ var h='<h2>'+(ami?"💞 Groupe d'amis":"✂️ À séparer")+'</h2><p class="small muted">'+(ami?"Touche les copains qui pourront travailler ensemble (2 ou plus).":"Touche les élèves qui ne doivent pas être dans le même groupe (2 ou plus).")+'</p><div class="chips">'+S.el.map(function(x){return '<button class="chip" data-act="sepm" data-sid="'+x.id+'" aria-pressed="'+(S.sepEdit.m.indexOf(x.id)>=0)+'">'+esc(x.n)+'</button>'}).join("")+'</div>'+
+  '<p class="row"><button class="btn pri" data-act="sepok">Enregistrer</button>'+(S.sepEdit.neuf?'':'<button class="btn danger" data-act="sepdel">Supprimer</button>')+'<button class="btn" data-act="fermer">Annuler</button></p>';
+ var sh=document.querySelector("#sheetzone .sheet");if(sh)sh.innerHTML=h;else ouvrirSheet(h,{nofermer:true})}
+function choixRole(sid,gi){var g=S.data.cur.g[gi],cur=g.r[sid];
+ ouvrirSheet('<h2>Rôle de '+esc(nom(sid))+'</h2><div class="chips"><button class="chip" data-act="setrole" data-sid="'+sid+'" data-g="'+gi+'" data-v="" aria-pressed="'+(!cur)+'">Aucun</button>'+S.data.roles.map(function(r){var pris=Object.keys(g.r).filter(function(s){return g.r[s]===r.id&&s!==sid}).map(nom);return '<button class="chip" data-act="setrole" data-sid="'+sid+'" data-g="'+gi+'" data-v="'+r.id+'" aria-pressed="'+(cur===r.id)+'">'+r.i+' '+esc(r.t)+(pris.length?' <small>('+esc(pris.join(", "))+')</small>':'')+'</button>'}).join("")+'</div>')}
+
+/* ---------- Projection ---------- */
+function projeter(){if(!S.data.cur)return;noterHist();S.proj=true;history.pushState({proj:1},"");rendreProj();try{document.documentElement.requestFullscreen&&document.documentElement.requestFullscreen().catch(function(){})}catch(e){}}
+var ROLECOUL=["#7c3aed","#0e7490","#c2410c","#be185d","#15803d","#1d4ed8","#a16207","#475569"];
+function roleCoul(r){if(r.c)return r.c;var i=S.data.roles.indexOf(r);return ROLECOUL[(i<0?0:i)%ROLECOUL.length]}
+function legendeRoles(gs){var ids={};gs.forEach(function(g){Object.keys(g.r||{}).forEach(function(s){ids[g.r[s]]=1})});var L=S.data.roles.filter(function(r){return ids[r.id]});
+ return L.length?'<div class="leg">'+L.map(function(r){return '<span class="rpp" style="--rc:'+roleCoul(r)+'">'+r.i+' '+esc(r.t)+'</span>'}).join("")+'</div>':''}
+function rendreProj(){var c=S.data.cur,n=c.g.length,cols=n<=2?n:n<=4?2:n<=6?3:n<=8?4:5,t=tmCfg();
+ document.getElementById("projzone").innerHTML='<div id="proj"><div class="pbar"><input class="cons" data-f="cons" placeholder="Consigne (touche pour écrire)" value="'+esc(c.cons||"")+'">'+
+  '<span class="tm row"><select data-f="tm.dur" aria-label="Durée">'+[1,2,3,4,5,6,7,8,10,12,15,20,25,30,35,40,45,50,55,60].map(function(m){return '<option value="'+m+'"'+(t.dur===m?' selected':'')+'>'+m+' min</option>'}).join("")+'</select>'+
+  '<button class="btn sm" id="tmgo" data-act="tmgo">▶</button><button class="btn sm" data-act="tmreset" title="Remettre à zéro">↺</button>'+
+  '<button class="btn sm" data-act="tmcfg" title="Sonneries">🔔 '+esc(warnTxt(t.warn,true))+'</button></span>'+
+  '<div class="tmbox" id="tmr"><svg viewBox="0 0 36 36"><circle cx="18" cy="18" r="15.9" class="tmbg" pathLength="100"/><circle cx="18" cy="18" r="15.9" class="tmring" pathLength="100"/></svg><span class="tmt"></span></div>'+
+  '<button class="btn sm" data-act="imprimer">🖨️</button><button class="btn sm" data-act="fermerproj">✕ Fermer</button></div>'+
+  '<div class="tmban" id="tmban" hidden></div>'+
+  '<div class="pgrid" style="--cols:'+cols+'">'+c.g.map(function(g,gi){return '<div class="pg" style="--gc:'+couleur(gi)+'"><h3>'+esc(nomGroupe(gi))+'</h3><ul>'+alpha(g.m).map(function(s){var r=rolePar(g.r[s]);return '<li><span class="pn">'+esc(nom(s))+'</span>'+(r?'<span class="rpp" style="--rc:'+roleCoul(r)+'">'+r.i+' '+esc(r.t)+'</span>':'')+'</li>'}).join("")+'</ul></div>'}).join("")+'</div>'+legendeRoles(c.g)+'</div>';
+ majTimer()}
+function fermerProj(back){S.proj=false;document.getElementById("projzone").innerHTML="";try{document.fullscreenElement&&document.exitFullscreen()}catch(e){}if(!back)history.back()}
+/* Minuteur : durée par menu, sonnerie d'avertissement N min avant la fin (réglable), sonnerie de fin, sons synthétisés (Web Audio, sans fichier) */
+function tmCfg(){var p=S.data.p;if(!p.tm||typeof p.tm!=="object")p.tm={};var d={dur:20,warn:2,sEnd:"gong",sWarn:"carillon",vol:0.8,msg:"On termine et on range !"};for(var k in d)if(p.tm[k]===undefined)p.tm[k]=d[k];return p.tm}
+function warnTxt(w,court){if(!w)return court?"aucune":"Pas de sonnerie avant la fin";return (w<1?Math.round(w*60)+" s":w+" min")+(court?" avant":" avant la fin")}
+var AC=null;
+function ac(){if(!AC){var C=window.AudioContext||window.webkitAudioContext;if(C)AC=new C()}if(AC&&AC.state==="suspended")AC.resume();return AC}
+function note(f,t0,dur,type,vol){var a=ac();if(!a||vol<=0)return;var o=a.createOscillator(),g=a.createGain(),t=a.currentTime+t0;o.type=type;o.frequency.value=f;g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(vol,t+0.02);g.gain.exponentialRampToValueAtTime(0.0001,t+dur);o.connect(g);g.connect(a.destination);o.start(t);o.stop(t+dur+0.05)}
+var SONS={carillon:["🎶 Carillon",function(v){[659,784,988,1319].forEach(function(f,i){note(f,i*.32,1.3,"sine",v)})}],
+ gong:["🥁 Gong",function(v){note(98,0,4,"sine",v);note(196,0,3,"triangle",v*.45);note(294,.02,2.2,"sine",v*.25)}],
+ cloche:["🔔 Cloche",function(v){[0,.9].forEach(function(t){note(1046,t,1.6,"sine",v);note(2093,t,.9,"sine",v*.3)})}],
+ bips:["📟 Bips",function(v){[0,.25,.5,1,1.25,1.5].forEach(function(t){note(880,t,.16,"square",v*.35)})}],
+ douce:["🎵 Douce",function(v){[523,659].forEach(function(f,i){note(f,i*.5,1.8,"sine",v*.7)})}],
+ aucun:["🔇 Aucun",function(){}]};
+function jouer(id){var s=SONS[id];if(s)s[1](Number(tmCfg().vol))}
+function tmGo(){var T=S.timer;ac();if(T&&!T.fini&&T.pause==null){T.pause=Math.max(0,T.end-Date.now());clearInterval(S._ti);majTimer();return}
+ if(T&&!T.fini&&T.pause!=null){T.end=Date.now()+T.pause;T.pause=null}else{var c=tmCfg();S.timer={total:c.dur*60000,end:Date.now()+c.dur*60000,pause:null,warned:false,fini:false}}
+ clearInterval(S._ti);S._ti=setInterval(majTimer,250);majTimer()}
+function tmReset(){clearInterval(S._ti);S.timer=null;majTimer()}
+function majTimer(){var el=document.getElementById("tmr");if(!el)return;var c=tmCfg(),T=S.timer,tot=T?T.total:c.dur*60000,rest=T?(T.pause!=null?T.pause:Math.max(0,T.end-Date.now())):tot,w=Number(c.warn)*60000;
+ var sec=Math.ceil(rest/1000);el.querySelector(".tmt").textContent=Math.floor(sec/60)+":"+String(sec%60).padStart(2,"0");el.querySelector(".tmring").style.strokeDashoffset=String(100-100*rest/tot);
+ var run=T&&T.pause==null&&!T.fini;
+ if(run&&!T.warned&&w>0&&w<T.total&&rest<=w&&rest>0){T.warned=true;jouer(c.sWarn)}
+ if(run&&rest<=0){T.fini=true;clearInterval(S._ti);jouer(c.sEnd);if(navigator.vibrate)navigator.vibrate([300,100,300])}
+ var etat=!T?"":rest<=0?"fin":(w>0&&w<tot&&rest<=w)?"warn":"";el.className="tmbox "+etat;
+ var b=document.getElementById("tmban");if(b){b.hidden=!etat;b.className="tmban "+etat;b.textContent=etat==="fin"?"⏰ Temps écoulé !":"⏳ Plus que "+(rest>=60000?Math.ceil(rest/60000)+" min":sec+" s")+" · "+c.msg}
+ var g=document.getElementById("tmgo");if(g)g.textContent=(T&&!T.fini&&T.pause==null)?"⏸ Pause":(T&&T.pause!=null?"▶ Reprendre":"▶ Démarrer")}
+function tmReglages(){var c=tmCfg(),sel=function(f,v){return '<select data-f="'+f+'">'+Object.keys(SONS).map(function(k){return '<option value="'+k+'"'+(v===k?' selected':'')+'>'+SONS[k][0]+'</option>'}).join("")+'</select>'};
+ ouvrirSheet('<h2>🔔 Sonneries du minuteur</h2>'+
+  '<div class="crit"><div class="lbl">⏳ Sonnerie avant la fin<small>Pour prévenir de terminer et ranger</small></div><select data-f="tm.warn">'+[[0,"Pas de sonnerie"],[0.5,"30 s avant"],[1,"1 min avant"],[2,"2 min avant"],[3,"3 min avant"],[4,"4 min avant"],[5,"5 min avant"],[6,"6 min avant"],[7,"7 min avant"],[8,"8 min avant"],[10,"10 min avant"],[15,"15 min avant"]].map(function(o){return '<option value="'+o[0]+'"'+(Number(c.warn)===o[0]?' selected':'')+'>'+o[1]+'</option>'}).join("")+'</select></div>'+
+  '<div class="crit"><div class="lbl">Son de l\'avertissement</div><div class="row">'+sel("tm.sWarn",c.sWarn)+'<button class="btn sm" data-act="tmtest" data-v="sWarn">▶ Écouter</button></div></div>'+
+  '<div class="crit"><div class="lbl">Message affiché</div><input type="text" data-f="tm.msg" value="'+esc(c.msg)+'" style="width:100%"></div>'+
+  '<div class="crit"><div class="lbl">⏰ Son de fin</div><div class="row">'+sel("tm.sEnd",c.sEnd)+'<button class="btn sm" data-act="tmtest" data-v="sEnd">▶ Écouter</button></div></div>'+
+  '<div class="crit"><div class="lbl">🔊 Volume</div><input type="range" min="0" max="1" step="0.05" data-f="tm.vol" value="'+c.vol+'"></div>'+
+  '<p class="small muted">Réglages gardés pour les prochaines fois.</p>')}
+
+/* ---------- Export / import ---------- */
+function exporter(){if(!S.dl){toast("Export indisponible ici");return}S.dl.save({filename:"groupes-sauvegarde-"+today()+".json",data:JSON.stringify(S.data,null,1)}).then(function(){toast("Sauvegarde exportée")}).catch(function(){})}
+function importer(f){f.text().then(function(t){var d=migrer(JSON.parse(t));confirmer("Remplacer tous les réglages, élèves notés et groupes par ceux du fichier ?",function(){var ts=S.data.ts;S.data=d;S.data.ts=ts;sauver();appliquerTheme();rendre();toast("Sauvegarde restaurée")})}).catch(function(){toast("Fichier illisible")})}
+
+/* ---------- Événements ---------- */
+function setParam(k,v){var p=S.data.p;
+ if(k.indexOf("comp.")===0)p.comp[k.slice(5)]=v;else if(k==="roles")p.roles=v==="on";else if(k==="theme"){S.data.theme=v;appliquerTheme()}else if(k==="elMode"){S.elMode=v;rendre();return}else p[k]=v;
+ sauver();rendre()}
+document.addEventListener("click",function(ev){var t=ev.target.closest("[data-act]");if(!t)return;var a=t.dataset.act,d=t.dataset,p=S.data.p;
+ if(a==="fermer-ov"){if(ev.target===t)fermerSheet();return}
+ switch(a){
+ case "tab":S.vue=d.v;S.sel=null;history.replaceState({},"","#"+d.v);rendre();scrollTo(0,0);break;
+ case "set":setParam(d.k,d.v);break;
+ case "pas":if(p.mode==="nb")p.nb=Math.max(1,Math.min(15,p.nb+Number(d.v)));else p.taille=Math.max(2,Math.min(12,p.taille+Number(d.v)));sauver();rendre();break;
+ case "voirabs":S.showAbs=!S.showAbs;rendre();break;
+ case "abs":var ab=absentsDuJour(),i=ab.indexOf(d.sid);if(i>=0)ab.splice(i,1);else ab.push(d.sid);sauver();rendre();break;
+ case "roleon":var j=p.rolesOn.indexOf(d.id);if(j>=0)p.rolesOn.splice(j,1);else p.rolesOn.push(d.id);sauver();rendre();break;
+ case "creer":creer();break;
+ case "pick":choisir(d.sid);break;
+ case "moveto":deplacer(Number(d.g));break;
+ case "plusgrp":ajouterGroupe();break;
+ case "role":choixRole(d.sid,Number(d.g));break;
+ case "setrole":var g=S.data.cur.g[Number(d.g)];delete g.r[d.sid];if(d.v){Object.keys(g.r).forEach(function(s){if(g.r[s]===d.v)delete g.r[s]});g.r[d.sid]=d.v}sauver();fermerSheet();break;
+ case "rolesauto":if(!p.rolesOn.length){toast("Choisis d'abord les rôles à distribuer, au-dessus du bouton Créer");break}attribuerRoles(S.data.cur.g);sauver();rendre();toast("Rôles distribués");break;
+ case "projeter":projeter();break;
+ case "enregistrer":ouvrirSheet('<h2>💾 Enregistrer ces groupes</h2><p><input type="text" id="nomsave" placeholder="Ex. Sciences P2" style="width:100%"></p><p class="row"><button class="btn pri" data-act="saveok">Enregistrer</button></p>');setTimeout(function(){var x=document.getElementById("nomsave");if(x)x.focus()},50);break;
+ case "saveok":var nm=(document.getElementById("nomsave").value||"").trim()||("Groupes du "+new Date().toLocaleDateString("fr-FR"));S.data.saved.unshift({id:uid(),nom:nm,d:Date.now(),g:JSON.parse(JSON.stringify(S.data.cur.g))});noterHist();fermerSheet();toast("Enregistré : "+nm);break;
+ case "ouvrir":case "ouvrirproj":var sv=S.data.saved.filter(function(x){return x.id===d.id})[0];if(!sv)break;S.data.cur={d:Date.now(),g:JSON.parse(JSON.stringify(sv.g)),cons:""};sauver();S.vue="creer";rendre();if(a==="ouvrirproj")projeter();break;
+ case "ouvrirh":var hh=S.data.hist[Number(d.i)];S.data.cur={d:Date.now(),g:JSON.parse(JSON.stringify(hh.g)),cons:""};sauver();S.vue="creer";rendre();break;
+ case "suppr":var s2=S.data.saved.filter(function(x){return x.id===d.id})[0];confirmer("Supprimer « "+esc(s2.nom)+" » ? Seul cet enregistrement est supprimé.",function(){S.data.saved=S.data.saved.filter(function(x){return x.id!==d.id});sauver()});break;
+ case "effhist":confirmer("Effacer tout l'historique ("+S.data.hist.length+" entrées) ? Le critère « Historique » repartira de zéro.",function(){S.data.hist=[];sauver()});break;
+ case "okconf":var f=S._ok;S._ok=null;fermerSheet();if(f)f();rendre();break;
+ case "fermer":fermerSheet();break;
+ case "fsok":setInfo(d.sid,"fs",info(d.sid).fs?null:1);sauver();if(S.ficheSid)fiche(d.sid);else rendre();break;
+ case "sexe":var sx=info(d.sid).s;setInfo(d.sid,"s",!sx?"f":sx==="f"?"g":null);sauver();rendre();break;
+ case "oral":setInfo(d.sid,"o",d.v==="n"?null:d.v);sauver();rendre();break;
+ case "compt":setInfo(d.sid,"c",info(d.sid).c?null:1);sauver();rendre();break;
+ case "fiche":fiche(d.sid);break;
+ case "ami":var ia=-1;S.data.amis.forEach(function(x,k){if(x.indexOf(d.a)>=0&&x.indexOf(d.b)>=0)ia=k});if(ia>=0)S.data.amis.splice(ia,1);else S.data.amis.push([d.a,d.b]);sauver();fiche(d.a);break;
+ case "noteauto":var ka=Object.assign({},info(d.sid).k||{});delete ka[d.k];setInfo(d.sid,"k",Object.keys(ka).length?ka:null);sauver();if(S.ficheSid)fiche(d.sid);else rendre();break;
+ case "note":var kobj=S.data.comps.filter(function(x){return x.id===d.k})[0];if(kobj&&estAuto(d.sid,kobj)&&niveau(d.sid,kobj)===Number(d.v)){toast("Déjà repris de Lecture");break}var kk=Object.assign({},info(d.sid).k||{});if(kk[d.k]===Number(d.v))delete kk[d.k];else kk[d.k]=Number(d.v);setInfo(d.sid,"k",Object.keys(kk).length?kk:null);sauver();if(S.ficheSid)fiche(d.sid);else rendre();break;
+ case "editsep":S.sepEdit=null;editSep(d.id,d.k);break;
+ case "sepm":var m=S.sepEdit.m,q=m.indexOf(d.sid);if(q>=0)m.splice(q,1);else m.push(d.sid);editSep(S.sepEdit.id);break;
+ case "sepok":if(S.sepEdit.m.length<2){toast("Choisis au moins 2 élèves");break}var se=S.sepEdit;S.data[se.cle]=S.data[se.cle].filter(function(x){return x.id!==se.id});S.data[se.cle].push({id:se.id,m:se.m});sauver();fermerSheet();break;
+ case "sepdel":var se2=S.sepEdit;S.data[se2.cle]=S.data[se2.cle].filter(function(x){return x.id!==se2.id});sauver();fermerSheet();break;
+ case "compsel":S.compSel=d.id;rendre();break;
+ case "compall":var kc=S.compSel,fill=function(){S.el.forEach(function(e){var o=Object.assign({},info(e.id).k||{});if(d.v==="0")delete o[kc];else if(!o[kc]&&!estAuto(e.id,{id:kc,src:(compLect()||{}).id===kc?"fluence":""}))o[kc]=2;setInfo(e.id,"k",Object.keys(o).length?o:null)});sauver();rendre()};if(d.v==="0")confirmer((compLect()||{}).id===kc?"Reprendre le groupe de Lecture pour tous les élèves (les changements faits à la main seront perdus) ?":"Effacer les niveaux de tous les élèves pour cette compétence ?",fill);else fill();break;
+ case "rolesreset":if(!S.data.cur)break;S.data.cur.g.forEach(function(g){g.r={}});sauver();rendre();toast("Rôles effacés : touche ○ à côté d'un prénom pour en donner un");break;
+ case "garder":if(d.v==="base"){S.data=S._remote;S.base=S._remote.ts;S.dirty=false;lsSet(LS,JSON.stringify(S.data));lsSet(LSB,String(S.base))}else{S.base=S._remote.ts;S.data.ts=Date.now();lsSet(LS,JSON.stringify(S.data));envoyer()}fermerSheet();appliquerTheme();break;
+ case "addrole":S.data.roles.push({id:uid(),t:"Nouveau rôle",i:"⭐",pref:""});sauver();rendre();break;
+ case "delrole":var r=S.data.roles[Number(d.i)];confirmer("Supprimer le rôle « "+esc(r.t)+" » ? Il disparaît aussi des groupes en cours.",function(){S.data.roles.splice(Number(d.i),1);p.rolesOn=p.rolesOn.filter(function(x){return x!==r.id});sauver()});break;
+ case "addcomp":S.data.comps.push({id:uid(),t:"Nouvelle compétence",i:"⭐"});sauver();rendre();break;
+ case "delcomp":var k=S.data.comps[Number(d.i)];confirmer("Supprimer « "+esc(k.t)+" » ? Les niveaux notés pour cette compétence seront effacés.",function(){S.data.comps.splice(Number(d.i),1);delete p.comp[k.id];Object.keys(S.data.eleves).forEach(function(s){var e=S.data.eleves[s];if(e.k&&e.k[k.id]){var o=Object.assign({},e.k);delete o[k.id];setInfo(s,"k",Object.keys(o).length?o:null)}});sauver()});break;
+ case "export":exporter();break;
+ case "tmgo":tmGo();break;
+ case "tmreset":tmReset();break;
+ case "tmcfg":tmReglages();break;
+ case "tmtest":jouer(tmCfg()[d.v]);break;
+ case "imprimer":window.print();break;
+ case "fermerproj":fermerProj();break;
+ case "statut":if(S.loaded)envoyer();else demarrer();break;
+ case "reessayer":demarrer();break;
+ }});
+document.addEventListener("change",function(ev){var t=ev.target,f=t.dataset&&t.dataset.f;if(!f)return;var i=Number(t.dataset.i);
+ if(f==="noms"){var l=t.value.split("\n").map(function(x){return x.trim()}).filter(Boolean);S.data.noms=l.length?l:defaut().noms}
+ else if(f==="cons"){S.data.cur.cons=t.value}
+ else if(f.indexOf("tm.")===0){var tc=tmCfg(),kf=f.slice(3);tc[kf]=(kf==="dur"||kf==="warn"||kf==="vol")?Number(t.value):t.value;sauver();if(kf==="dur")tmReset();if(S.proj)rendreProj();return}
+ else if(f.indexOf("role.")===0)S.data.roles[i][f.slice(5)]=t.value;
+ else if(f.indexOf("comp.")===0)S.data.comps[i][f.slice(5)]=t.value;
+ sauver();if(f!=="cons")rendre()});
+/* Glisser-déposer : poignée ⠿ (touch-action:none) ; lâcher sur un élève = échange, sur un groupe = déplacement */
+var DR=null;
+document.addEventListener("pointerdown",function(ev){var h=ev.target.closest("[data-drag]");if(!h||!S.data.cur)return;ev.preventDefault();var row=h.closest(".mem"),rc=row.getBoundingClientRect(),gh=row.cloneNode(true);
+ gh.classList.add("ghost");gh.style.width=rc.width+"px";gh.style.left=rc.left+"px";gh.style.top=rc.top+"px";document.body.appendChild(gh);row.classList.add("dragging");
+ DR={sid:h.dataset.drag,gh:gh,row:row,dx:ev.clientX-rc.left,dy:ev.clientY-rc.top,cible:null};try{h.setPointerCapture(ev.pointerId)}catch(e){}});
+document.addEventListener("pointermove",function(ev){if(!DR)return;DR.gh.style.left=(ev.clientX-DR.dx)+"px";DR.gh.style.top=(ev.clientY-DR.dy)+"px";
+ var el=document.elementFromPoint(ev.clientX,ev.clientY),m=el&&el.closest(".mem[data-sid]"),g=el&&el.closest(".grp[data-g]"),c=(m&&m.dataset.sid!==DR.sid)?m:g;
+ if(DR.cible!==c){if(DR.cible)DR.cible.classList.remove("dropok");if(c)c.classList.add("dropok");DR.cible=c}
+ if(ev.clientY<70)scrollBy(0,-14);else if(ev.clientY>innerHeight-70)scrollBy(0,14)});
+function finDrag(){if(!DR)return;var c=DR.cible,sid=DR.sid;DR.gh.remove();DR.row.classList.remove("dragging");if(c)c.classList.remove("dropok");DR=null;if(!c)return;
+ S.sel=sid;if(c.dataset.sid)choisir(c.dataset.sid);else deplacer(Number(c.dataset.g))}
+document.addEventListener("pointerup",finDrag);document.addEventListener("pointercancel",finDrag);
+addEventListener("popstate",function(){if(S.skipPop){S.skipPop=false;return}if(S.sheetOpen){fermerSheet(true);return}if(S.proj){fermerProj(true);return}});
+S.dirty=S.data.ts>S.base;
+var h0=(location.hash||"").slice(1);if(["creer","classe","eleves","enreg","reglages"].indexOf(h0)>=0)S.vue=h0;
+demarrer();
+</script><script>if(!MODE_APP)document.write('<script src="side-nav.js" defer><\/script>');</script>
+</body></html>

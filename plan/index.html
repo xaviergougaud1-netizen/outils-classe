@@ -1,0 +1,1170 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Plan de classe</title>
+<script>/* Kit « Outils de classe partagés » (github.io ou ?mode=app) : élèves de « Ma classe », données sur l'appareil (commun/kit-db.js). */
+var MODE_APP=/github\.io$/.test(location.hostname)||/[?&]mode=app/.test(location.search);
+if(MODE_APP)document.write('<link rel="manifest" href="../manifest.webmanifest"><link rel="icon" href="../icon-192.png"><script src="../commun/ma-classe.js"><\/script><script src="../commun/kit-db.js"><\/script>');</script>
+
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+<!-- TECHNIQUE
+15/11/2026 : colonne commune de Classe (side-nav.js) à gauche sur ordinateur, effacée en projection (body.proj) ; liens de la barre du haut masqués.
+Fiche d'identité :
+  Rôle : placer les élèves sur les tables de la salle selon des règles (séparer, éloigner, tutorat, mixité F/G, CM1/CM2, places imposées, rotation des voisins).
+  Quand : préparer à la maison ou en classe ; projeter au TBI ; imprimer pour le classeur du remplaçant.
+  Où : ordi maison, ordi de classe / TBI, téléphone (retouches).
+  Écran n° 1 : le plan actif, bouton « 🎲 Placer les élèves ».
+  Ce qu'il ne fait pas : les groupes de travail (groupes.html), les profils d'élèves (onglet Élèves de Groupes), la fluence (lecture.html).
+Version : constante VERSION ci-dessous.
+  1.6 (21/11/2026) : un seul fichier pour Classe (plan.html) et le kit « Outils de classe partagés » (dépôt outils-classe, plan/index.html) ;
+       dans le kit : élèves de « Ma classe », données sur l'appareil (commun/kit-db.js imite la base), barre Outils / Ma classe / Groupes / Plan de classe.
+  1.5 (14/11/2026) : charte « Repères » : Atkinson Hyperlegible, couleurs de la charte (CM1 vert, CM2 orange), en-tête bleu pâle, barre des pages de Classe.
+  1.4 (10/11/2026) : placement à la main plus simple : glisser-déposer à la souris ou au stylet (un élève vers une place, ou un prénom « À placer » vers une place ; au doigt : toucher puis toucher) ;
+       correctif : sur un appareil neuf, le plan de départ n'était pas complété et « 🎲 » plantait ;
+       ce qui est placé à la main est figé 🔒 automatiquement (réglage aff.fige, Oui par défaut) pour que « 🎲 » place les autres autour ; « 🧹 Vider » (tout, ou en gardant les 🔒).
+  1.3 (09/11/2026) : places imposées multiples (fixes{sid:[z]}) + « centre » (face au tableau) ; gauchers (gauche{sid:1}, R.gauche) ; onglet 📝 Fiches : fiche élève PDF (jsPDF cdnjs, 2 A5 par A4, fcfg), saisie fiches{sid:{bav,vue,place,main,aide[],aider[],mal[],bien[]}}, « Appliquer » → bav, fixes, gauche, nivx{sid:{comp:f|a}}, liens (f:1), tutorats ; R.avis = si-absent|prio|ign.
+  1.2 (09/11/2026) : plusieurs tutorats (R.tutos[{id,comp,m,w}]) ; bavardage par élève (D.bav{sid:1 parfois|2 bavard}, absent = calme) + règle R.bav.
+  1.1 (09/11/2026) : oral = grands (g) / petits (p) parleurs → « pas deux grands parleurs côte à côte » ; ⚠️ = comportement → « loin les uns des autres » (ou jamais voisins).
+  1.0 (09/11/2026) : première version.
+Données :
+  lit  lecture/main (state.students : id, n prénom, g CM1/CM2…, p groupe de fluence 1-4) et lecture/groupes (eleves[sid] : s f|g, o g|n|p, c:1 ⚠️, k{comp:niveau} ; comps ; sep ✂️) : lecture seule.
+  écrit lecture/plan (privé, règle « lecture » = admin) : {v, ts, salles[], plans[], actif, R règles, fixes{sid:z}, liens[], hist[], aff}
+        lecture/planfond-<idSalle> : {img dataURL JPEG ≤ 240 Ko, ts} (photo ou dessin en fond de la salle).
+  copie locale : localStorage classe-plan-v1 (+ -meta {dirty,lastDb}, -secours, -eleves).
+Géométrie : 1 unité = 1 place (largeur 1, profondeur 0,8). Tables : ind, duo, trio, il4, il6 ; x,y = centre, r = degrés ; res:1 = place à part (pas remplie sauf 📌 « place à part »).
+  Voisins = distance entre places ≤ 1,25 (poids 1) ; devant/derrière ≤ 1,9 (poids 0,35). « Loin » = distance < R.loinD.
+Algorithme : coût pondéré (importance 1 souhaitée = 4, 2 importante = 15, 3 obligatoire = 300) + recuit simulé par échanges, 6 essais, garde le meilleur. Places 🔒 jamais déplacées.
+Synchro : affichage immédiat de la copie locale, puis la base ; la plus récente gagne ; si les deux ont changé, fenêtre de choix avec les dates. Jamais d'envoi de l'état par défaut si la copie locale est illisible.
+Impression : window.print est bloqué dans les artéfacts → image PNG via la capacité downloads.
+-->
+<style>
+:root{--bg:#EDF1F7;--fg:#111A2C;--muted:#475166;--card:#FFFFFF;--line:#D3DAE5;--accent:#2453C7;--accbg:#E3EBFD;--danger:#B42318;--warn:#9a6700;--warnbg:#fff4d6;--cm1:#DFF2E7;--cm1b:#2E8B57;--cm2:#FCEBDC;--cm2b:#D9772B;--table:#e9dfc9;--tableb:#b59f74;--seat:#fff;--entete:#E2EAF7;--entete-ink:#15244A;--entete-doux:#4A5A7C;--entete-ctl:#FFFFFF;--entete-bd:#C7D3EA;--entete-on:#2E5BBA;--entete-on-ink:#FFFFFF}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]){--bg:#0F1522;--fg:#E9EEF7;--muted:#A3AEC2;--card:#172033;--line:#2C3852;--accent:#7EA2FF;--accbg:#1F2D52;--danger:#f2b8b5;--warn:#f0c674;--warnbg:#3a3220;--cm1:#1C3A2A;--cm1b:#5CC48A;--cm2:#4a2d17;--cm2b:#F2A35E;--table:#3b352a;--tableb:#7d6b4a;--seat:#1E2940;--entete:#1A2440;--entete-ink:#E9EEF7;--entete-doux:#AAB6CF;--entete-ctl:#222E4D;--entete-bd:#34436B;--entete-on:#7EA2FF;--entete-on-ink:#0F1522}}
+:root[data-theme=dark]{--bg:#0F1522;--fg:#E9EEF7;--muted:#A3AEC2;--card:#172033;--line:#2C3852;--accent:#7EA2FF;--accbg:#1F2D52;--danger:#f2b8b5;--warn:#f0c674;--warnbg:#3a3220;--cm1:#1C3A2A;--cm1b:#5CC48A;--cm2:#4a2d17;--cm2b:#F2A35E;--table:#3b352a;--tableb:#7d6b4a;--seat:#1E2940;--entete:#1A2440;--entete-ink:#E9EEF7;--entete-doux:#AAB6CF;--entete-ctl:#222E4D;--entete-bd:#34436B;--entete-on:#7EA2FF;--entete-on-ink:#0F1522}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.4 "Atkinson Hyperlegible",system-ui,sans-serif;padding:env(safe-area-inset-top,0) env(safe-area-inset-right,0) env(safe-area-inset-bottom,0) env(safe-area-inset-left,0)}
+header.top{display:flex;align-items:center;gap:10px;padding:8px 14px 4px;background:var(--entete);color:var(--entete-ink)}
+.hubnav{display:flex;gap:6px;align-items:center;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}.hubnav::-webkit-scrollbar{display:none}
+.hubnav a{flex:none;color:var(--entete-ink);text-decoration:none;border:1px solid var(--entete-bd);border-radius:999px;padding:0 14px;min-height:36px;display:inline-flex;align-items:center;font-weight:700;font-size:14px;background:var(--entete-ctl);white-space:nowrap}
+.hubnav a:hover{border-color:var(--entete-on)}.hubnav a.on{background:var(--entete-on);color:var(--entete-on-ink);border-color:var(--entete-on)}
+.hubnav a:first-child{background:none;border-color:transparent;color:var(--entete-on);padding-left:4px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+@media (max-width:600px){#sync{max-width:38vw;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}}
+#sync{margin-left:auto;flex:none;font-size:12px;color:var(--entete-doux)}
+nav#tabs{display:flex;gap:4px;overflow-x:auto;padding:6px 10px 8px;background:var(--entete);border-bottom:1px solid var(--entete-bd);position:sticky;top:0;z-index:5}
+nav#tabs button{flex:0 0 auto;min-height:40px;padding:0 14px;border-radius:20px;border:1px solid var(--entete-bd);background:var(--entete-ctl);color:var(--entete-ink);font:inherit;cursor:pointer}
+nav#tabs button[aria-current=page]{background:var(--entete-on);border-color:var(--entete-on);color:var(--entete-on-ink);font-weight:700}
+main{max-width:1200px;margin:0 auto;padding:12px 12px 80px}
+.btn{min-height:42px;padding:0 14px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--fg);font:inherit;display:inline-flex;align-items:center;gap:6px;cursor:pointer;white-space:nowrap}
+.btn.pri{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:700}
+.btn.sm{min-height:34px;padding:0 10px;font-size:14px;border-radius:10px}
+.btn.danger{color:var(--danger)}
+.btn[disabled]{opacity:.45;cursor:default}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:8px 0}
+.muted{color:var(--muted)}.small{font-size:13px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:12px 14px;margin:10px 0}
+.card h2{font-size:16px;margin:0 0 8px}
+details.card>summary{cursor:pointer;font-weight:600;list-style:none}
+details.card>summary::before{content:"▸ ";color:var(--muted)}details.card[open]>summary::before{content:"▾ "}
+select,input[type=text],input[type=number]{font:inherit;min-height:38px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--fg);padding:0 8px}
+.seg{display:inline-flex;flex-wrap:wrap;max-width:100%;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.seg button{border:0;background:none;color:var(--fg);font:inherit;min-height:36px;padding:0 10px;cursor:pointer;border-right:1px solid var(--line)}
+.seg button:last-child{border-right:0}
+.seg button.on{background:var(--accent);color:#fff;font-weight:700}
+.rule{display:grid;grid-template-columns:1fr;gap:6px;padding:10px 0;border-top:1px solid var(--line)}
+.rule:first-of-type{border-top:0}
+.rule .lbl{font-weight:600}
+.imp{font-size:13px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{border:1px solid var(--line);background:var(--card);color:var(--fg);border-radius:16px;min-height:34px;padding:0 10px;font:inherit;font-size:14px;cursor:pointer}
+.chip.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.chip.cm1{box-shadow:inset 3px 0 0 var(--cm1b)}.chip.cm2{box-shadow:inset 3px 0 0 var(--cm2b)}
+.wrap{background:var(--card);border:1px solid var(--line);border-radius:16px;overflow:auto;touch-action:pan-x pan-y;position:relative}
+svg.room{display:block;user-select:none;-webkit-user-select:none}
+svg.room.edit{touch-action:none}
+svg text{font-family:"Atkinson Hyperlegible",system-ui,sans-serif}
+.selbar{position:sticky;bottom:8px;z-index:6;background:var(--card);border:1px solid var(--accent);border-radius:14px;padding:8px 10px;box-shadow:0 6px 20px rgba(0,0,0,.15);display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:8px}
+.issues{list-style:none;padding:0;margin:0}
+.issues li{padding:7px 8px;border-radius:10px;margin:4px 0;cursor:pointer;background:var(--bg)}
+.issues li.o{border-left:4px solid var(--danger)}.issues li.i{border-left:4px solid var(--warn)}.issues li.s{border-left:4px solid var(--line)}
+.ok{color:var(--accent);font-weight:600}
+.stu{display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px solid var(--line)}
+.stu:first-child{border-top:0}.stu .n{flex:1}
+#toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:12px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:50;max-width:90vw}
+#modal{position:fixed;inset:0;background:rgba(10,15,20,.5);z-index:40;display:flex;align-items:center;justify-content:center;padding:16px}
+#modal[hidden]{display:none}
+#modal .box{background:var(--card);color:var(--fg);border-radius:16px;padding:16px;max-width:520px;width:100%;max-height:90vh;overflow:auto}
+#modal h3{margin:0 0 8px}
+.tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px}
+.tile{border:1px solid var(--line);border-radius:12px;background:var(--bg);padding:10px;text-align:center;cursor:pointer;font:inherit;color:var(--fg)}
+.tile b{display:block;font-size:22px}
+.banner{padding:10px 12px;border-radius:12px;background:var(--warnbg);color:var(--warn);margin:8px 0}
+/* Projection */
+body.proj header.top,body.proj nav#tabs,body.proj .noproj{display:none!important}
+body.proj main{max-width:none;padding:0}
+body.proj .wrap{border:0;border-radius:0;height:100vh;display:flex;align-items:center;justify-content:center;overflow:hidden}
+body.proj .wrap svg{width:100%!important;height:100%!important}
+.ghost{position:fixed;z-index:60;pointer-events:none;transform:translate(-50%,-130%);background:var(--accent);color:#fff;font-weight:600;padding:6px 12px;border-radius:12px;box-shadow:0 6px 18px rgba(0,0,0,.25);white-space:nowrap}
+body.dragging,body.dragging *{cursor:grabbing!important}
+g.dropon rect{stroke:var(--accent);stroke-width:7px;stroke-dasharray:none;opacity:1}
+@media (pointer:fine){svg.room:not(.edit) g[data-s]{cursor:grab}}
+#projx{position:fixed;top:10px;right:10px;z-index:30;opacity:.35}
+#projx:hover{opacity:1}
+@media (max-width:600px){.btn{padding:0 11px}.hide-s{display:none}}
+</style></head><body>
+<header class="top">
+  <h1 class="sr">Plan de classe</h1>
+  <nav class="hubnav" aria-label="Pages de Classe"><a href="index.html">← Classe</a><a href="maths.html">Maths</a><a href="copies.html">Photocopies</a><a href="groupes.html">Groupes</a><a href="plan.html" class="on" aria-current="page">Plan de classe</a><a href="lecture.html">Fluence</a></nav><script>if(MODE_APP)document.querySelectorAll(".hubnav").forEach(function(n){n.setAttribute("aria-label","Outils");n.innerHTML='<a href="../">← Outils</a><a href="../ma-classe/">Ma classe</a><a href="../groupes/">Groupes</a><a href="../plan/" class="on" aria-current="page">Plan de classe</a>'});</script>
+  <span id="sync">⏳ Connexion…</span>
+</header>
+<nav id="tabs"></nav>
+<main id="app"></main>
+<div id="modal" hidden><div class="box" id="mbox"></div></div>
+<div id="toast" role="status"></div>
+<script>
+var VERSION = "1.6";
+var LKEY = "classe-plan-v1";
+var U = 60;                 // unités SVG par place
+var PW = 1, PD = 0.8;       // largeur, profondeur d'une place
+var WT = {0:0, 1:4, 2:15, 3:300};
+var IMP = [[1,"Souhaitée"],[2,"Importante"],[3,"Obligatoire"]];
+var TYPES = {ind:{c:1,r:1,t:"Individuelle"}, duo:{c:2,r:1,t:"Table de 2"}, trio:{c:3,r:1,t:"Table de 3"}, il4:{c:2,r:2,t:"Îlot de 4"}, il6:{c:3,r:2,t:"Îlot de 6"}};
+var OBJ = {tab:{t:"Tableau",w:5,h:0.3}, bur:{t:"Bureau",w:1.8,h:0.9}, porte:{t:"Porte",w:1.2,h:0.25}, fen:{t:"Fenêtres",w:4,h:0.2}, txt:{t:"Coin",w:2,h:1}};
+var FIXES = [["devant","👓 Près du tableau"],["centre","🎯 Face au tableau"],["fond","🔙 Au fond"],["bureau","🧑‍🏫 Près du bureau"],["porte","🚪 Près de la porte"],["apart","🏝️ Place à part"]];
+var DOMK = {lect:"Lire", ecr:"Écrire", calc:"Calculer", pb:"Problèmes", orga:"M'organiser", angl:"Anglais", auto:"Travailler seul", coop:"Travailler en groupe", num:"Ordinateur", dess:"Dessin, schéma", crea:"Créer, inventer"};
+function fxArr(sid){ var v=D.fixes[sid]; return !v ? [] : (Array.isArray(v) ? v : [v]); }
+
+var D = null;          // données du plan
+var EL = {list:[], by:{}, comps:[], sep:[]};
+var UI = {vue:"plan", sel:null, selSeat:null, pick:null, eleve:false, zoom:1, edit:null, lienSel:[], lienT:"loin", lienW:2, lastIssues:[], hi:{}, fonds:{}, fondReq:{}};
+var SY = {db:null, ref:null, dirty:false, lastDb:0, gotDb:false, localBad:false, writing:false, again:false, timer:null, ro:false, conflict:false};
+
+/* ---------- utilitaires ---------- */
+function uid(){ return Math.random().toString(36).slice(2,9); }
+function esc(s){ return String(s==null?"":s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];}); }
+function clone(o){ return JSON.parse(JSON.stringify(o)); }
+function toast(t){ var el=document.getElementById("toast"); el.textContent=t; el.style.opacity=1; clearTimeout(el._t); el._t=setTimeout(function(){el.style.opacity=0;},2600); }
+function fmtD(ts){ if(!ts) return "—"; var d=new Date(ts); return d.toLocaleDateString("fr-FR",{day:"numeric",month:"short"})+" "+d.toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"}); }
+function r1(x){ return Math.round(x*10)/10; }
+function snap(v){ return Math.round(v*4)/4; }
+function shuffle(a){ for(var i=a.length-1;i>0;i--){ var j=Math.floor(Math.random()*(i+1)), t=a[i]; a[i]=a[j]; a[j]=t; } return a; }
+
+/* ---------- modèles de salle ---------- */
+function T(k,x,y,r){ return {id:uid(), k:k, x:x, y:y, r:r||0, res:0}; }
+function O(k,x,y,w,h,r){ return {id:uid(), k:k, x:x, y:y, w:w, h:h, r:r||0, t:""}; }
+function salleModele(m,n){
+  var t=[], W=12, H=10, i, nom="Salle", k, rows;
+  n = n || 26;
+  if(m==="rangees2"){ nom="Rangées par 2"; k=Math.ceil(n/2); rows=Math.ceil(k/3); H=Math.max(8, 3.2+rows*1.8); for(i=0;i<k;i++) t.push(T("duo",[2.2,6,9.8][i%3], 3.2+Math.floor(i/3)*1.8)); }
+  else if(m==="rangees3"){ nom="Rangées par 3"; W=13; k=Math.ceil(n/3); rows=Math.ceil(k/3); H=Math.max(8,3.2+rows*1.8); for(i=0;i<k;i++) t.push(T("trio",[2.1,6.5,10.9][i%3], 3.2+Math.floor(i/3)*1.8)); }
+  else if(m==="u" || m==="ucentre"){
+    nom = m==="u" ? "En U" : "En U + tables de 2 au centre";
+    k = Math.ceil(n/2); var centre = 0;
+    if(m==="ucentre"){ centre = Math.max(2, Math.round(k*0.35)); k -= centre; }
+    var side = Math.ceil(k/3), bottom = Math.max(0, k-2*side);
+    W = Math.max(12, 2.8 + bottom*2.1 + 1.6);
+    H = 3 + side*2.1 + 1.4;
+    for(i=0;i<side;i++){ t.push(T("duo",0.9, 3.4+i*2.1, 90)); t.push(T("duo",W-0.9, 3.4+i*2.1, 90)); }
+    for(i=0;i<bottom;i++) t.push(T("duo", (W-(bottom-1)*2.1)/2 + i*2.1, H-0.9, 0));
+    for(i=0;i<centre;i++) t.push(T("duo", W/2 + (i%2? 1.3 : -1.3), 3.6+Math.floor(i/2)*1.8));
+  }
+  else if(m==="ilots4"){ nom="Îlots de 4"; k=Math.ceil(n/4); rows=Math.ceil(k/3); H=Math.max(8,3.4+rows*2.8); for(i=0;i<k;i++) t.push(T("il4",[2.2,6,9.8][i%3], 3.6+Math.floor(i/3)*2.8)); }
+  else if(m==="ilots6"){ nom="Îlots de 6"; W=13; k=Math.ceil(n/6); rows=Math.ceil(k/3); H=Math.max(8,3.4+rows*2.8); for(i=0;i<k;i++) t.push(T("il6",[2.4,6.5,10.6][i%3], 3.6+Math.floor(i/3)*2.8)); }
+  else { nom="Salle vide"; }
+  var o=[O("tab",W/2,0.35,Math.min(6,W-3),0.3), O("bur",W-1.6,1.5,1.8,0.9), O("porte",0.9,0.2,1.2,0.25)];
+  return {id:uid(), nom:nom, W:r1(W), H:r1(H), t:t, o:o, fond:{on:0, op:0.45}};
+}
+var MODELES = [["rangees2","▭▭","Rangées par 2"],["rangees3","▭▭▭","Rangées par 3"],["u","⊔","En U"],["ucentre","⊔▭","U + tables de 2 au centre"],["ilots4","⊞","Îlots de 4"],["ilots6","⊞⊞","Îlots de 6"],["vide","□","Salle vide"]];
+
+/* ---------- données ---------- */
+function defRegles(){ return {sepG:2, loinD:3, sexe:{m:"mix",w:1}, niv:{m:"mix",w:1}, oral:{m:"gg",w:2}, alerte:{m:"loin",w:2}, rv:3, tutos:[{id:"t1",comp:"lect",m:"tuto",w:1}], bav:{m:"sep",w:2}, gauche:{m:"on",w:1}, avis:"absent", rot:{n:2,w:1}}; }
+function defaut(){
+  var s = salleModele("rangees2", 26);
+  var p = {id:uid(), nom:"Plan 1", salle:s.id, d:Date.now(), a:{}, lk:{}};
+  return {v:1, ts:0, salles:[s], plans:[p], actif:p.id, R:defRegles(), fixes:{}, liens:[], hist:[], aff:{niv:1, sexe:0, taille:1, theme:"auto", fige:1}};
+}
+function migrer(d){
+  var base = defaut();
+  if(!d || typeof d!=="object") return base;
+  var o = Object.assign({}, base, d);
+  o.R = Object.assign(defRegles(), d.R||{});
+  if(d.R){
+    var rv = d.R.rv || 1;
+    if(rv<2){ if(o.R.oral.m==="ign"||o.R.oral.m==="grp") o.R.oral={m:"gg",w:2}; if(o.R.alerte.m==="sep") o.R.alerte.m="loin"; }
+    if(rv<3){ var t0=d.R.tuto; o.R.tutos = (t0 && t0.m!=="ign") ? [{id:"t1", comp:t0.comp||"lect", m:t0.m==="homog"?"homog":"tuto", w:t0.w||1}] : []; delete o.R.tuto; }
+    o.R.rv = 3;
+  }
+  if(!Array.isArray(o.R.tutos)) o.R.tutos=[];
+  o.aff = Object.assign(base.aff, d.aff||{});
+  if(!Array.isArray(o.salles) || !o.salles.length){ o.salles = base.salles; o.plans = base.plans; o.actif = base.actif; }
+  if(!Array.isArray(o.plans) || !o.plans.length){ o.plans=[{id:uid(), nom:"Plan 1", salle:o.salles[0].id, d:Date.now(), a:{}, lk:{}}]; }
+  o.salles.forEach(function(s){ s.t=s.t||[]; s.o=s.o||[]; s.fond=Object.assign({on:0,op:0.45}, s.fond||{}); });
+  o.plans.forEach(function(p){ p.a=p.a||{}; p.lk=p.lk||{}; if(!salleDe(o,p)) p.salle=o.salles[0].id; });
+  if(!o.plans.some(function(p){return p.id===o.actif;})) o.actif = o.plans[0].id;
+  o.bav = o.bav||{}; o.aff.bav = o.aff.bav==null ? 1 : o.aff.bav;
+  o.fixes = o.fixes||{}; Object.keys(o.fixes).forEach(function(k){ var v=o.fixes[k]; if(!v || (Array.isArray(v)&&!v.length)) delete o.fixes[k]; else if(!Array.isArray(v)) o.fixes[k]=[v]; });
+  o.gauche=o.gauche||{}; o.fiches=o.fiches||{}; o.nivx=o.nivx||{};
+  o.fcfg=Object.assign({bav:1,vue:1,place:1,main:1,aide:1,mal:1,bien:1,doms:["lect","ecr","calc","pb","orga","angl"]}, o.fcfg||{});
+  o.liens = o.liens||[]; o.hist = o.hist||[];
+  o.v = 1;
+  return o;
+}
+function salleDe(d,p){ for(var i=0;i<d.salles.length;i++) if(d.salles[i].id===p.salle) return d.salles[i]; return null; }
+function planA(){ for(var i=0;i<D.plans.length;i++) if(D.plans[i].id===D.actif) return D.plans[i]; return D.plans[0]; }
+function salleA(){ return salleDe(D, planA()) || D.salles[0]; }
+function salleE(){ for(var i=0;i<D.salles.length;i++) if(D.salles[i].id===UI.salleEdit) return D.salles[i]; return salleA(); }
+
+function chargerLocal(){
+  var t = null;
+  try{ t = localStorage.getItem(LKEY); }catch(e){ return null; }
+  if(!t) return null;
+  try{ return migrer(JSON.parse(t)); }
+  catch(e){ SY.localBad = true; try{ localStorage.setItem(LKEY+"-secours", t); }catch(x){} return null; }
+}
+function metaLire(){ try{ var m=JSON.parse(localStorage.getItem(LKEY+"-meta")||"{}"); SY.dirty=!!m.dirty; SY.lastDb=m.lastDb||0; }catch(e){} }
+function metaSauver(){ try{ localStorage.setItem(LKEY+"-meta", JSON.stringify({dirty:SY.dirty, lastDb:SY.lastDb})); }catch(e){} }
+function sauverLocal(){ try{ localStorage.setItem(LKEY, JSON.stringify(D)); }catch(e){} metaSauver(); }
+
+/* Toute modification passe par ici */
+function modifie(){ D.ts = Date.now(); SY.dirty = true; sauverLocal(); planifierEcriture(); majSync(); }
+function planifierEcriture(){ clearTimeout(SY.timer); SY.timer = setTimeout(ecrire, 1200); }
+function ecrire(){
+  if(!SY.ref || !SY.gotDb || SY.ro || SY.conflict) return;
+  if(SY.writing){ SY.again = true; return; }
+  SY.writing = true; var ts = D.ts;
+  SY.ref.set(clone(D)).then(function(){
+    SY.writing=false; SY.lastDb = ts; if(D.ts===ts) SY.dirty=false; metaSauver(); majSync();
+    if(SY.again){ SY.again=false; ecrire(); }
+  }).catch(function(e){
+    SY.writing=false;
+    if(e && e.code==="invalid_argument"){ SY.ro=true; toast("Lecture seule : tes changements restent sur cet appareil."); }
+    else if(e && e.code==="quota_exceeded"){ toast("Base pleine : enregistrement impossible."); }
+    else setTimeout(ecrire, 3000 + Math.random()*2000);
+    majSync();
+  });
+}
+function majSync(){
+  var el=document.getElementById("sync"); if(!el) return;
+  if(!SY.db) el.textContent = SY.dbNull ? "📱 Sur cet appareil seulement" : (SY.slow ? "🐢 Base lente…" : "⏳ Connexion…");
+  else if(SY.conflict) el.textContent = "⚠️ Deux versions";
+  else if(SY.ro) el.textContent = "🔒 Lecture seule";
+  else if(SY.dirty || SY.writing) el.textContent = "⏳ Enregistrement…";
+  else el.textContent = (MODE_APP ? "✓ Sur cet appareil · " : "✓ Synchronisé · ") + fmtD(D.ts || SY.lastDb);
+}
+
+function recevoirBase(snap){
+  SY.gotDb = true;
+  if(!snap.exists){
+    if(SY.localBad){ majSync(); return; }               // jamais d'état par défaut vers la base
+    if(SY.dirty || D.ts) planifierEcriture();
+    majSync(); return;
+  }
+  var data = snap.data(); var dts = data.ts||0;
+  if(dts === D.ts){ SY.lastDb = dts; SY.dirty=false; metaSauver(); majSync(); return; }
+  if(snap.metadata && snap.metadata.hasPendingWrites) return;
+  if(SY.conflict) return;
+  if(!SY.dirty){ D = migrer(clone(data)); SY.lastDb = dts; SY.localBad=false; sauverLocal(); rendre(); return; }   // la base fait foi
+  if(dts === SY.lastDb){ planifierEcriture(); majSync(); return; }   // la base n'a pas bougé : on envoie nos changements
+  conflit(data);                                                     // les deux ont changé : on demande
+}
+function conflit(data){
+  SY.conflict = true; majSync();
+  modal("<h3>⚠️ Deux versions du plan</h3><p>Le plan a été modifié sur cet appareil <b>et</b> sur un autre appareil.</p>"+
+    "<p>📱 Cet appareil : <b>"+fmtD(D.ts)+"</b><br>☁️ Base (autre appareil) : <b>"+fmtD(data.ts)+"</b></p><p class='muted small'>L'autre version est gardée en copie de secours sur cet appareil.</p>"+
+    "<div class='row'><button class='btn pri' data-act='cf-local'>Garder cet appareil</button><button class='btn' data-act='cf-base'>Garder la base</button></div>");
+  UI.cfData = data;
+}
+
+/* ---------- élèves (lecture seule) ---------- */
+function fusionEleves(main, gr){
+  var st = (main && main.state && main.state.students) || [];
+  var ev = (gr && gr.eleves) || {};
+  var list = st.map(function(s){
+    var e = ev[s.id] || {};
+    var g = String(s.g||"");
+    return {id:s.id, n:s.n||s.id, niv: /^CM1/i.test(g)?1:(/^CM2/i.test(g)?2:0), gl:g, sx:e.s||"", or:e.o||"", al:e.c?1:0, k:e.k||{}, fl:s.p||0};
+  });
+  list.sort(function(a,b){ return a.n.localeCompare(b.n,"fr"); });
+  var by={}; list.forEach(function(e){ by[e.id]=e; });
+  var comps = (gr && gr.comps) || [{id:"lect",t:"Lecture",i:"📖",max:4,src:"fluence"}];
+  var sep = ((gr && gr.sep) || []).filter(function(x){ return x && x.m && x.m.length>1; });
+  EL = {list:list, by:by, comps:comps, sep:sep};
+  try{ localStorage.setItem(LKEY+"-eleves", JSON.stringify(EL)); }catch(e){}
+}
+function elevesLocal(){ try{ var e=JSON.parse(localStorage.getItem(LKEY+"-eleves")||"null"); if(e && e.list) EL=e; }catch(x){} }
+function chargerEleves(){
+  if(!SY.db) return;
+  Promise.all([SY.db.doc("lecture/main").get(), SY.db.doc("lecture/groupes").get()]).then(function(r){
+    var m = r[0].exists ? r[0].data() : null, g = r[1].exists ? r[1].data() : null;
+    if(m){ fusionEleves(m, g); rendre(); }
+  }).catch(function(){ toast("Élèves non chargés : vérifie la connexion."); });
+}
+function niveauComp(e, cid){
+  var c = null; EL.comps.forEach(function(x){ if(x.id===cid) c=x; });
+  if(!c) return null;
+  var max = c.max || 3, v;
+  if(c.src==="fluence") v = e.fl; else v = e.k ? e.k[cid] : null;
+  var avis = D && D.nivx && D.nivx[e.id] ? D.nivx[e.id][cid] : null, mode = D && D.R ? D.R.avis : "absent";
+  if(avis && mode!=="ign" && (mode==="prio" || !v)) return avis==="f" ? 0 : 1;
+  if(!v) return null;
+  return (v-1)/(max-1);
+}
+function nom(sid){ return EL.by[sid] ? EL.by[sid].n : "?"; }
+
+/* ---------- géométrie ---------- */
+function rot(x,y,deg){ var a=deg*Math.PI/180, c=Math.cos(a), s=Math.sin(a); return [x*c-y*s, x*s+y*c]; }
+function dimT(t){ var ty=TYPES[t.k]||TYPES.duo; return [ty.c*PW, ty.r*PD]; }
+function sieges(salle){
+  var out=[];
+  salle.t.forEach(function(t){
+    var ty=TYPES[t.k]||TYPES.duo, d=dimT(t), n=0;
+    for(var j=0;j<ty.r;j++) for(var i=0;i<ty.c;i++){
+      var lx=-d[0]/2+PW*(i+0.5), ly=-d[1]/2+PD*(j+0.5), p=rot(lx,ly,t.r||0);
+      out.push({id:t.id+"-"+n, x:t.x+p[0], y:t.y+p[1], t:t.id, res:t.res?1:0}); n++;
+    }
+  });
+  return out;
+}
+function dist(a,b){ var dx=a.x-b.x, dy=a.y-b.y; return Math.sqrt(dx*dx+dy*dy); }
+function rangs(seats, objs){
+  // rang 0 = le plus proche des objets donnés (0..1) ; null si aucun objet
+  if(!objs.length || seats.length<2) return null;
+  var d = seats.map(function(s,i){ var m=1e9; objs.forEach(function(o){ var v=Math.hypot(s.x-o.x, s.y-o.y); if(v<m) m=v; }); return [m,i]; });
+  d.sort(function(a,b){ return a[0]-b[0]; });
+  var r = new Array(seats.length); d.forEach(function(x,k){ r[x[1]] = k/(seats.length-1); });
+  return r;
+}
+
+function rangsLat(seats, tabs, salle){
+  if(seats.length<2) return seats.map(function(){return 0;});
+  var t=tabs[0], ux=1, uy=0, cx=salle.W/2, cy=0;
+  if(t){ var a=(t.r||0)*Math.PI/180; ux=Math.cos(a); uy=Math.sin(a); cx=t.x; cy=t.y; }
+  var d=seats.map(function(s,i){ return [Math.abs((s.x-cx)*ux+(s.y-cy)*uy), i]; });
+  d.sort(function(a,b){ return a[0]-b[0]; });
+  var r=new Array(seats.length); d.forEach(function(x,k){ r[x[1]]=k/(seats.length-1); }); return r;
+}
+/* ---------- moteur ---------- */
+function pairKey(a,b){ return a<b ? a+"|"+b : b+"|"+a; }
+function prep(salle){
+  var R=D.R, S=sieges(salle), n=S.length, i, j;
+  var DM=[], NB=[], nb1=[];
+  for(i=0;i<n;i++){ DM.push(new Array(n)); nb1.push([]); }
+  for(i=0;i<n;i++){ DM[i][i]=0; for(j=i+1;j<n;j++){ var d=dist(S[i],S[j]); DM[i][j]=DM[j][i]=d; if(d<=1.9){ var w=d<=1.25?1:0.35; NB.push([i,j,w]); if(w===1){ nb1[i].push(j); nb1[j].push(i); } } } }
+  var tab = salle.o.filter(function(o){return o.k==="tab";}), bur=salle.o.filter(function(o){return o.k==="bur";}), por=salle.o.filter(function(o){return o.k==="porte";});
+  var rkT = rangs(S, tab) || S.map(function(s){ return s.y/(salle.H||1); });
+  var rkB = rangs(S, bur), rkP = rangs(S, por), rkC = rangsLat(S, tab, salle);
+  // côté gauche de chaque élève (regard vers le tableau) pour les gauchers
+  var LEFT={};
+  NB.forEach(function(p){ if(p[2]!==1) return; [[p[0],p[1]],[p[1],p[0]]].forEach(function(q){ var a=S[q[0]], b=S[q[1]], fx=0, fy=-1;
+    if(tab.length){ fx=tab[0].x-a.x; fy=tab[0].y-a.y; var n=Math.hypot(fx,fy)||1; fx/=n; fy/=n; }
+    var vx=b.x-a.x, vy=b.y-a.y, nv=Math.hypot(vx,vy)||1;
+    if((vx*fy - vy*fx)/nv > 0.5) LEFT[q[0]+"<"+q[1]]=1; }); });
+  var st = EL.list.map(function(e){return e.id;}), ix={}; st.forEach(function(s,k){ ix[s]=k; });
+  var E = EL.list;
+  var TU = (R.tutos||[]).map(function(t){ return {comp:t.comp, m:t.m, wl:t.w, W:WT[t.w], L:E.map(function(e){ return niveauComp(e, t.comp); })}; });
+  var BV = E.map(function(e){ return (D.bav||{})[e.id]||0; });
+  var loin=[], pasv={}, ens=[];
+  function grpPairs(m, cb){ for(var a=0;a<m.length;a++) for(var b=a+1;b<m.length;b++){ if(ix[m[a]]!=null && ix[m[b]]!=null) cb(ix[m[a]], ix[m[b]]); } }
+  if(R.alerte.m==="loin"){ var al=E.filter(function(e){return e.al;}).map(function(e){return e.id;}); grpPairs(al, function(a,b){ loin.push([a,b,WT[R.alerte.w],"al"]); }); }
+  if(R.sepG) EL.sep.forEach(function(g){ grpPairs(g.m, function(a,b){ loin.push([a,b,WT[R.sepG],"sep"]); }); });
+  D.liens.forEach(function(l){ var w=WT[l.w||2]; grpPairs(l.m, function(a,b){ if(l.t==="loin") loin.push([a,b,w,"loin"]); else if(l.t==="pasv") pasv[pairKey(a,b)]=w; else ens.push([a,b,w]); }); });
+  var hist={}; D.hist.slice(-(R.rot.n||0)).forEach(function(h){ (h.p||[]).forEach(function(k){ var x=k.split("|"); if(ix[x[0]]!=null && ix[x[1]]!=null) hist[pairKey(ix[x[0]],ix[x[1]])]=1; }); });
+  var fx = E.map(function(e){ return fxArr(e.id); });
+  var GA = E.map(function(e){ return D.gauche[e.id]?1:0; });
+  return {S:S, n:n, DM:DM, NB:NB, nb1:nb1, rkT:rkT, rkB:rkB, rkP:rkP, rkC:rkC, LEFT:LEFT, GA:GA, st:st, ix:ix, E:E, TU:TU, BV:BV, loin:loin, pasv:pasv, ens:ens, hist:hist, fx:fx};
+}
+function cout(c, A, detail){
+  var R=D.R, E=c.E, sum=0, P=new Array(E.length).fill(-1), i, out=detail?[]:null;
+  for(i=0;i<A.length;i++) if(A[i]>=0) P[A[i]]=i;
+  var Ws=WT[R.sexe.w], Wn=WT[R.niv.w], Wo=WT[R.oral.w], Wa=WT[R.alerte.w], Wb=WT[R.bav.w], Wr=WT[R.rot.w];
+  var cnt={sexe:[0,0], niv:[0,0], oral:[0,0], bav:[0,0]};
+  var BVC=[[0,0,0],[0,0.3,0.7],[0,0.7,1.6]];
+  for(var q=0;q<c.NB.length;q++){
+    var p=c.NB[q], a=A[p[0]], b=A[p[1]], w=p[2]; if(a<0||b<0) continue;
+    var ea=E[a], eb=E[b];
+    if(R.sexe.m!=="ign" && ea.sx && eb.sx){ var s1=ea.sx===eb.sx, bad1 = R.sexe.m==="mix"?s1:!s1; if(bad1) sum+=w*Ws; if(w===1){ cnt.sexe[1]++; if(bad1) cnt.sexe[0]++; } }
+    if(R.niv.m!=="ign" && ea.niv && eb.niv){ var s2=ea.niv===eb.niv, bad2 = R.niv.m==="mix"?s2:!s2; if(bad2) sum+=w*Wn; if(w===1){ cnt.niv[1]++; if(bad2) cnt.niv[0]++; } }
+    if(R.oral.m==="gg" && ea.or==="g" && eb.or==="g"){ sum+=w*Wo*1.5; if(w===1){ cnt.oral[0]++; if(out) out.push({w:R.oral.w, txt:"🗣️ "+ea.n+" et "+eb.n+" (grands parleurs) sont voisins", s:[p[0],p[1]]}); } }
+    if(R.oral.m==="gg" && w===1 && (ea.or==="g" || eb.or==="g")) cnt.oral[1]++;
+    if(R.oral.m==="mix" && /[gp]/.test(ea.or) && /[gp]/.test(eb.or) && ea.or && eb.or){ var s3=ea.or===eb.or, bad3 = R.oral.m==="mix"?s3:!s3; if(bad3) sum+=w*Wo; if(w===1){ cnt.oral[1]++; if(bad3) cnt.oral[0]++; } }
+    if(R.alerte.m==="sep" && ea.al && eb.al){ sum+=w*Wa*1.5; if(out && w===1) out.push({w:R.alerte.w, txt:"⚠️ "+ea.n+" et "+eb.n+" sont voisins", s:[p[0],p[1]]}); }
+    for(var u=0;u<c.TU.length;u++){ var tu=c.TU[u], la=tu.L[a], lb=tu.L[b]; if(la==null || lb==null) continue;
+      if(tu.m==="homog") sum+=w*Math.abs(la-lb)*tu.W*1.5; else if(la<0.45 && lb<0.45) sum+=w*tu.W; }
+    if(R.gauche.m==="on" && w===1 && c.GA[a]!==c.GA[b]){ var g=c.GA[a]?a:b, gs=c.GA[a]?p[0]:p[1], os=c.GA[a]?p[1]:p[0];
+      if(c.LEFT[gs+"<"+os]){ sum+=WT[R.gauche.w]; if(out) out.push({w:R.gauche.w, txt:"✍️ "+E[g].n+" (gaucher) a un voisin à sa gauche", s:[gs,os]}); } }
+    if(R.bav.m==="sep"){ var ba=c.BV[a], bb=c.BV[b]; if(ba && bb){ sum+=w*Wb*BVC[ba][bb]; if(w===1){ if(ba===2&&bb===2){ cnt.bav[0]++; if(out) out.push({w:R.bav.w, txt:"💬 "+ea.n+" et "+eb.n+" (bavards) sont voisins", s:[p[0],p[1]]}); } else cnt.bav[1]++; } } }
+    var key=pairKey(a,b);
+    if(Wr && c.hist[key]){ sum+=w*Wr; if(out && w===1) out.push({w:R.rot.w, txt:"🔄 "+ea.n+" et "+eb.n+" étaient déjà voisins", s:[p[0],p[1]]}); }
+    if(c.pasv[key] && w===1){ sum+=c.pasv[key]*2; if(out) out.push({w:wLvl(c.pasv[key]), txt:"🚫 "+ea.n+" et "+eb.n+" sont voisins", s:[p[0],p[1]]}); }
+  }
+  var Dm=R.loinD||3;
+  c.loin.forEach(function(l){ var pa=P[l[0]], pb=P[l[1]]; if(pa<0||pb<0) return; var d=c.DM[pa][pb]; if(d<Dm){ sum+=l[2]*(1+(Dm-d)); if(out) out.push({w:wLvl(l[2]), txt:({sep:"✂️ ",al:"⚠️ "}[l[3]]||"↔️ ")+E[l[0]].n+" et "+E[l[1]].n+" : "+String(r1(d)).replace(".",",")+" place"+(d>=2?"s":"")+" d'écart (voulu ≥ "+Dm+")", s:[pa,pb]}); } });
+  c.ens.forEach(function(l){ var pa=P[l[0]], pb=P[l[1]]; if(pa<0||pb<0) return; if(c.nb1[pa].indexOf(pb)<0){ sum+=l[2]*(1+Math.min(c.DM[pa][pb]-1,4)*0.3); if(out) out.push({w:wLvl(l[2]), txt:"🤝 "+E[l[0]].n+" et "+E[l[1]].n+" ne sont pas côte à côte", s:[pa,pb]}); } });
+  c.TU.forEach(function(tu){
+    if(tu.m!=="tuto") return;
+    for(var k=0;k<E.length;k++){ var si=P[k]; if(si<0 || tu.L[k]==null || tu.L[k]>=0.45) continue;
+      var ok=c.nb1[si].some(function(j){ var o=A[j]; return o>=0 && tu.L[o]!=null && tu.L[o]>=0.6; });
+      if(!ok){ sum+=tu.W*1.2; if(out) out.push({w:tu.wl, txt:"🧑‍🏫 "+E[k].n+" n'a pas de voisin à l'aise en "+compNom(tu.comp).toLowerCase(), s:[si]}); } }
+  });
+  for(i=0;i<E.length;i++){
+    var zs=c.fx[i], s=P[i]; if(!zs.length || s<0) continue;
+    zs.forEach(function(z){
+      var pen=0;
+      if(z==="devant"){ pen=Math.max(0,c.rkT[s]-0.3); }
+      else if(z==="centre"){ pen=Math.max(0,c.rkC[s]-0.35); }
+      else if(z==="fond"){ pen=Math.max(0,0.7-c.rkT[s]); }
+      else if(z==="bureau" && c.rkB){ pen=Math.max(0,c.rkB[s]-0.25); }
+      else if(z==="porte" && c.rkP){ pen=Math.max(0,c.rkP[s]-0.25); }
+      else if(z==="apart"){ pen = c.S[s].res ? 0 : 1; }
+      if(pen>0){ sum+=WT[3]*(0.3+pen*2); if(out) out.push({w:3, txt:"📌 "+E[i].n+" n'est pas « "+fixLbl(z)+" »", s:[s]}); }
+    });
+  }
+  for(i=0;i<A.length;i++){ if(A[i]>=0 && c.S[i].res && c.fx[A[i]].indexOf("apart")<0) sum+=40; }
+  if(out){ out.cnt=cnt; return out; }
+  return sum;
+}
+function wLvl(w){ return w>=WT[3]?3:(w>=WT[2]?2:1); }
+function fixLbl(z){ for(var i=0;i<FIXES.length;i++) if(FIXES[i][0]===z) return FIXES[i][1].replace(/^\S+\s/,"").toLowerCase(); return z; }
+function compNom(id){ var t=id; EL.comps.forEach(function(c){ if(c.id===id) t=c.t; }); return t; }
+
+function tableauA(c, plan){
+  var A = new Array(c.n).fill(-1);
+  c.S.forEach(function(s,i){ var sid=plan.a[s.id]; if(sid && c.ix[sid]!=null) A[i]=c.ix[sid]; });
+  // élève placé deux fois (données anciennes) : on garde la première place
+  var vu={}; for(var i=0;i<A.length;i++){ if(A[i]<0) continue; if(vu[A[i]]) A[i]=-1; else vu[A[i]]=1; }
+  return A;
+}
+function optimiser(plan, salle){
+  var c = prep(salle), n=c.n, nE=c.E.length;
+  var A0 = tableauA(c, plan), lk = plan.lk || {};
+  var fixe = c.S.map(function(s,i){ return !!lk[s.id] && A0[i]>=0; });
+  var placed={}; A0.forEach(function(a,i){ if(fixe[i]) placed[a]=1; else A0[i]=-1; });
+  var M=[]; for(var i=0;i<n;i++) if(!fixe[i]) M.push(i);
+  if(!M.length) return {A:A0, c:c};
+  var best=null, bestC=1e18;
+  var essais=6, iters=Math.min(20000, 3000+ M.length*400);
+  for(var e=0;e<essais;e++){
+    var A=A0.slice();
+    var apart=[], autres=[]; for(var s=0;s<nE;s++){ if(placed[s]) continue; (c.fx[s].indexOf("apart")>=0?apart:autres).push(s); }
+    shuffle(apart); shuffle(autres);
+    var resS=M.filter(function(i){return c.S[i].res;}), norm=shuffle(M.filter(function(i){return !c.S[i].res;}));
+    shuffle(resS);
+    apart.forEach(function(s){ var k=resS.length?resS.shift():norm.shift(); if(k!=null) A[k]=s; });
+    autres.forEach(function(s){ var k=norm.length?norm.shift():resS.shift(); if(k!=null) A[k]=s; });
+    var cur=cout(c,A), T=Math.max(10,cur*0.05), Tend=0.05, alpha=Math.pow(Tend/T, 1/iters);
+    var bA=A.slice(), bC=cur;
+    for(var it=0;it<iters;it++){
+      var x=M[(Math.random()*M.length)|0], y=M[(Math.random()*M.length)|0];
+      if(x===y || (A[x]<0 && A[y]<0)) { T*=alpha; continue; }
+      var t=A[x]; A[x]=A[y]; A[y]=t;
+      var nc=cout(c,A);
+      if(nc<=cur || Math.random()<Math.exp((cur-nc)/T)){ cur=nc; if(cur<bC){ bC=cur; bA=A.slice(); } }
+      else { t=A[x]; A[x]=A[y]; A[y]=t; }
+      T*=alpha;
+    }
+    if(bC<bestC){ bestC=bC; best=bA; }
+  }
+  return {A:best, c:c, cost:bestC};
+}
+
+/* ---------- vues ---------- */
+var ONGLETS = [["plan","🪑 Plan"],["salle","📐 Salle"],["regles","🎯 Règles"],["fiches","📝 Fiches"],["plans","💾 Plans"],["reglages","⚙️ Réglages"]];
+function aller(v){ if(v===UI.vue) return; UI.vue=v; UI.sel=null; UI.selSeat=null; UI.pick=null; try{ history.pushState({v:v},"","#"+v); }catch(e){} rendre(); scrollTo(0,0); }
+addEventListener("popstate", function(e){
+  if(document.body.classList.contains("proj")){ finProj(); return; }
+  if(!document.getElementById("modal").hidden){ fermerModal(); return; }
+  UI.vue = (e.state && e.state.v) || "plan"; rendre();
+});
+function modal(html){ document.getElementById("mbox").innerHTML=html; document.getElementById("modal").hidden=false; }
+function fermerModal(){ document.getElementById("modal").hidden=true; }
+
+function rendre(){
+  if(D.aff.theme==="auto") delete document.documentElement.dataset.theme; else document.documentElement.dataset.theme = D.aff.theme;
+  document.getElementById("tabs").innerHTML = ONGLETS.map(function(o){ return "<button data-tab='"+o[0]+"'"+(UI.vue===o[0]?" aria-current='page'":"")+">"+o[1]+"</button>"; }).join("");
+  var f = VUES[UI.vue] || VUES.plan;
+  document.getElementById("app").innerHTML = f();
+  apresRendu();
+  majSync();
+}
+
+/* SVG du plan */
+function svgSalle(salle, plan, opt){
+  opt = opt || {};
+  var W=salle.W, H=salle.H, el=opt.eleve, edit=opt.edit;
+  function P(x,y){ return el ? [(W-x)*U,(H-y)*U] : [x*U,y*U]; }
+  var h=[], tz = D.aff.taille||1;
+  h.push("<svg class='room"+(edit?" edit":"")+"' id='room' xmlns='http://www.w3.org/2000/svg' viewBox='"+(-0.3*U)+" "+(-0.3*U)+" "+((W+0.6)*U)+" "+((H+0.6)*U)+"' "+(opt.w?"width='"+opt.w+"' height='"+opt.h+"'":"style='width:"+(100*(UI.zoom||1))+"%;min-width:"+(opt.minw||320)+"px'")+">");
+  h.push("<rect x='0' y='0' width='"+W*U+"' height='"+H*U+"' rx='8' fill='"+(opt.print?"#fff":"var(--bg)")+"' stroke='"+(opt.print?"#999":"var(--line)")+"' stroke-width='2'/>");
+  var fond = UI.fonds[salle.id];
+  if(salle.fond.on && fond && !opt.noFond){ h.push("<image href='"+fond+"' x='0' y='0' width='"+W*U+"' height='"+H*U+"' preserveAspectRatio='none' opacity='"+salle.fond.op+"'"+(el?" transform='rotate(180 "+W*U/2+" "+H*U/2+")'":"")+"/>"); }
+  if(edit){ for(var gx=1;gx<W;gx++) h.push("<line x1='"+gx*U+"' y1='0' x2='"+gx*U+"' y2='"+H*U+"' stroke='var(--line)' stroke-width='1' opacity='.6'/>"); for(var gy=1;gy<H;gy++) h.push("<line x1='0' y1='"+gy*U+"' x2='"+W*U+"' y2='"+gy*U+"' stroke='var(--line)' stroke-width='1' opacity='.6'/>"); }
+  var col = opt.print ? {tab:"#2f5d4a",bur:"#8a6a3f",porte:"#666",fen:"#7fb3d5",txt:"#999",table:"#efe6d2",tableb:"#a08860",seat:"#fff",fg:"#111"} : {tab:"#2f5d4a",bur:"#8a6a3f",porte:"var(--muted)",fen:"#7fb3d5",txt:"var(--muted)",table:"var(--table)",tableb:"var(--tableb)",seat:"var(--seat)",fg:"var(--fg)"};
+  salle.o.forEach(function(o){
+    var p=P(o.x,o.y), r=(o.r||0)+(el?180:0), sel=edit && UI.sel===o.id;
+    var fill = o.k==="txt" ? "none" : col[o.k]||col.txt;
+    h.push("<g data-o='"+o.id+"' transform='translate("+p[0]+" "+p[1]+") rotate("+r+")' style='cursor:"+(edit?"move":"default")+"'>");
+    h.push("<rect x='"+(-o.w*U/2)+"' y='"+(-o.h*U/2)+"' width='"+o.w*U+"' height='"+Math.max(o.h*U,6)+"' rx='4' fill='"+fill+"' stroke='"+(sel?"var(--accent)":(o.k==="txt"?col.txt:"none"))+"' stroke-width='"+(sel?4:2)+"' "+(o.k==="txt"?"stroke-dasharray='8 6'":"")+"/>");
+    h.push("</g>");
+    var lbl = o.t || OBJ[o.k].t; var lp=P(o.x, o.y + (o.k==="tab"||o.k==="fen"||o.k==="porte" ? (o.y<salle.H/2?0.45:-0.45) : 0));
+    var white = o.k==="bur";
+    h.push("<text x='"+lp[0]+"' y='"+(lp[1]+5)+"' text-anchor='middle' font-size='"+(14*tz)+"' fill='"+(white?"#fff":col.fg)+"' opacity='"+(white?1:.75)+"' pointer-events='none'>"+esc(lbl)+"</text>");
+  });
+  salle.t.forEach(function(t){
+    var d=dimT(t), p=P(t.x,t.y), r=(t.r||0)+(el?180:0), sel=edit && UI.sel===t.id;
+    h.push("<g data-t='"+t.id+"' transform='translate("+p[0]+" "+p[1]+") rotate("+r+")' style='cursor:"+(edit?"move":"default")+"'>");
+    h.push("<rect x='"+(-d[0]*U/2)+"' y='"+(-d[1]*U/2)+"' width='"+d[0]*U+"' height='"+d[1]*U+"' rx='6' fill='"+(t.res?(opt.print?"#f3e6f7":"var(--warnbg)"):col.table)+"' stroke='"+(sel?"var(--accent)":col.tableb)+"' stroke-width='"+(sel?5:2)+"' "+(t.res?"stroke-dasharray='8 5'":"")+"/>");
+    h.push("</g>");
+  });
+  var S = sieges(salle), A = plan ? plan.a : {}, lk = plan ? plan.lk : {};
+  S.forEach(function(s,i){
+    var p=P(s.x,s.y), sid=A[s.id], e=sid?EL.by[sid]:null;
+    var w=PW*U*0.9, hh=PD*U*0.78, isSel = UI.selSeat===s.id, hi = UI.hi[s.id];
+    if(edit){ h.push("<circle cx='"+p[0]+"' cy='"+p[1]+"' r='"+(U*0.16)+"' fill='"+col.seat+"' stroke='"+col.tableb+"' pointer-events='none'/>"); return; }
+    var fill=col.seat, stroke="transparent";
+    if(e && D.aff.niv && e.niv) { fill = opt.print ? (e.niv===1?"#DFF2E7":"#FCEBDC") : (e.niv===1?"var(--cm1)":"var(--cm2)"); stroke = opt.print ? (e.niv===1?"#2E8B57":"#D9772B") : (e.niv===1?"var(--cm1b)":"var(--cm2b)"); }
+    if(hi) stroke = hi===3 ? "#d93025" : "#e8a200";
+    if(isSel) stroke = "var(--accent)";
+    h.push("<g data-s='"+s.id+"' style='cursor:pointer'>");
+    h.push("<rect x='"+(p[0]-w/2)+"' y='"+(p[1]-hh/2)+"' width='"+w+"' height='"+hh+"' rx='8' fill='"+fill+"' stroke='"+stroke+"' stroke-width='"+(isSel||hi?5:2)+"' "+(!e?"stroke-dasharray='4 4' opacity='.55'":"")+"/>");
+    if(e){
+      var label = e.n + (D.aff.sexe && e.sx ? (e.sx==="f"?" ♀":" ♂") : "");
+      var fs = Math.min(17*tz, (w-6)/(Math.max(label.length,3)*0.52));
+      h.push("<text x='"+p[0]+"' y='"+(p[1]+fs*0.35)+"' text-anchor='middle' font-size='"+fs.toFixed(1)+"' font-weight='600' fill='"+col.fg+"' pointer-events='none'>"+esc(label)+"</text>");
+      if(D.aff.bav && !opt.print && !document.body.classList.contains("proj") && !UI.eleve && D.bav[e.id]) h.push("<circle cx='"+(p[0]-w/2+7)+"' cy='"+(p[1]-hh/2+7)+"' r='5' fill='"+(D.bav[e.id]===2?"#d93025":"#f29900")+"' pointer-events='none'/>");
+      if(lk[s.id] && !opt.print) h.push("<text x='"+(p[0]+w/2-2)+"' y='"+(p[1]-hh/2+12)+"' text-anchor='end' font-size='11' pointer-events='none'>🔒</text>");
+    }
+    h.push("</g>");
+  });
+  h.push("</svg>");
+  return h.join("");
+}
+
+function nonPlaces(plan){
+  var pl={}; Object.keys(plan.a).forEach(function(k){ pl[plan.a[k]]=1; });
+  var S=sieges(salleA()), ids={}; S.forEach(function(s){ ids[s.id]=1; });
+  Object.keys(plan.a).forEach(function(k){ if(!ids[k]) delete pl[plan.a[k]]; });
+  return EL.list.filter(function(e){ return !pl[e.id]; });
+}
+function nettoyerPlan(plan){
+  var S=sieges(salleDe(D,plan)), ids={}; S.forEach(function(s){ ids[s.id]=1; });
+  Object.keys(plan.a).forEach(function(k){ if(!ids[k] || !EL.by[plan.a[k]] && EL.list.length) delete plan.a[k]; });
+  Object.keys(plan.lk).forEach(function(k){ if(!plan.a[k]) delete plan.lk[k]; });
+}
+
+var VUES = {};
+VUES.plan = function(){
+  var plan=planA(), salle=salleA(), S=sieges(salle), np=nonPlaces(plan);
+  var h=[];
+  if(!EL.list.length) h.push("<div class='banner'>⏳ Chargement des élèves… (ils viennent de Lecture et de Groupes)</div>");
+  if(S.length < EL.list.length) h.push("<div class='banner'>Il manque "+(EL.list.length-S.length)+" place(s) pour "+EL.list.length+" élèves : ajoute des tables dans 📐 Salle.</div>");
+  h.push("<div class='row noproj'><select id='selPlan' aria-label='Plan'>"+D.plans.map(function(p){ return "<option value='"+p.id+"'"+(p.id===D.actif?" selected":"")+">"+esc(p.nom)+"</option>"; }).join("")+"</select><span class='muted small'>"+esc(salle.nom)+" · "+S.length+" places</span></div>");
+  h.push("<div class='row noproj'><button class='btn pri' data-act='calc'>🎲 Placer les élèves</button><button class='btn' data-act='proj'>⛶ Projeter</button><button class='btn' data-act='vue'>"+(UI.eleve?"🧑‍🏫 Vue enseignant":"🧒 Vue élèves")+"</button><button class='btn' data-act='png'>⬇ Image à imprimer</button><button class='btn' data-act='vider'>🧹 Vider</button><span class='seg'><button data-act='zm'>−</button><button data-act='zp'>+</button></span></div>");
+  h.push("<p class='muted small noproj'>"+(UI.eleve?"Vue élèves : tableau en bas, comme vu depuis les tables.":"Vue enseignant : tableau en haut.")+" À la main : touche un élève puis une autre place (ou glisse-le à la souris) ; "+(figeMain()?"ce que tu places est figé 🔒, puis « 🎲 » place les autres autour.":"« 🎲 » peut ensuite tout redistribuer.")+"</p>");
+  h.push("<div class='wrap'>"+svgSalle(salle, plan, {eleve:UI.eleve})+"</div>");
+  if(UI.selSeat){
+    var sid=plan.a[UI.selSeat];
+    h.push("<div class='selbar noproj'><b>"+(sid?esc(nom(sid)):"Place vide")+"</b> <span class='muted small'>Touche une autre place pour échanger.</span>"+
+      (sid?"<button class='btn sm' data-act='lock'>"+(plan.lk[UI.selSeat]?"🔓 Libérer":"🔒 Figer ici")+"</button><button class='btn sm' data-act='unseat'>✖ Retirer</button>":"")+
+      "<button class='btn sm' data-act='desel'>Fermer</button></div>");
+  }
+  if(np.length){
+    h.push("<div class='card noproj'><h2>À placer ("+np.length+")</h2><p class='muted small'>Touche un prénom puis une place, ou glisse-le sur une place.</p><div class='chips'>"+np.map(function(e){ return "<button class='chip "+(e.niv===1?"cm1":e.niv===2?"cm2":"")+(UI.pick===e.id?" on":"")+"' data-pick='"+e.id+"'>"+esc(e.n)+"</button>"; }).join("")+"</div></div>");
+  }
+  h.push(blocAnalyse(plan, salle));
+  h.push("<p class='muted small noproj'>"+(D.aff.niv?"<span style='color:var(--cm1b)'>■</span> CM1 · <span style='color:var(--cm2b)'>■</span> CM2 · ":"")+"🔒 = figé (ne bouge pas au prochain calcul)</p>");
+  return h.join("");
+};
+function blocAnalyse(plan, salle){
+  if(!Object.keys(plan.a).length || !EL.list.length) return "";
+  var c=prep(salle), A=tableauA(c,plan), out=cout(c,A,true);
+  out.sort(function(a,b){ return b.w-a.w; });
+  UI.lastIssues = out.map(function(o){ return o.s.map(function(i){ return c.S[i].id; }); });
+  var h=["<div class='card noproj'><h2>Règles</h2>"];
+  var nO=out.filter(function(o){return o.w===3;}).length;
+  h.push(nO ? "<p style='color:var(--danger);font-weight:600'>"+nO+" règle(s) obligatoire(s) non respectée(s)</p>" : "<p class='ok'>✅ Toutes les règles obligatoires sont respectées.</p>");
+  var cnt=out.cnt, R=D.R, lines=[];
+  function ligne(ic, lab, r, k){ if(r.m==="ign" || !cnt[k][1]) return; var ok=cnt[k][1]-cnt[k][0]; lines.push(ic+" "+lab+" : "+ok+" paire"+(ok>1?"s":"")+" de voisins sur "+cnt[k][1]+" "+(r.m==="mix"?"mélangées":"regroupées")); }
+  ligne("👧👦","Filles / garçons",R.sexe,"sexe"); ligne("🎓","CM1 / CM2",R.niv,"niv");
+  if(R.oral.m==="mix") ligne("🗣️","Grands / petits parleurs",R.oral,"oral");
+  if(R.oral.m==="gg") lines.push("🗣️ Grands parleurs côte à côte : "+cnt.oral[0]);
+  if(R.bav.m==="sep") lines.push("💬 Deux bavards 🔴 côte à côte : "+cnt.bav[0]+" · 🔴/🟠 ou 🟠/🟠 : "+cnt.bav[1]);
+  if(lines.length) h.push("<p class='small'>"+lines.join("<br>")+"</p>");
+  if(out.length){
+    h.push("<p class='muted small'>Touche une ligne pour voir les places concernées.</p><ul class='issues'>");
+    out.slice(0,40).forEach(function(o,i){ h.push("<li class='"+(o.w===3?"o":o.w===2?"i":"s")+"' data-iss='"+i+"'>"+esc(o.txt)+" <span class='muted small'>· "+IMP[o.w-1][1].toLowerCase()+"</span></li>"); });
+    h.push("</ul>");
+  }
+  h.push("</div>");
+  return h.join("");
+}
+
+VUES.salle = function(){
+  var salle=salleE(), h=[];
+  var plans=D.plans.filter(function(p){return p.salle===salle.id;}).length;
+  h.push("<div class='row'><select id='selSalle' aria-label='Salle'>"+D.salles.map(function(s){ return "<option value='"+s.id+"'"+(s.id===salle.id?" selected":"")+">"+esc(s.nom)+"</option>"; }).join("")+"</select>"+
+    "<button class='btn sm' data-act='s-new'>➕ Nouvelle disposition</button><button class='btn sm' data-act='s-ren'>✏️ Renommer</button><button class='btn sm danger' data-act='s-del'>🗑</button></div>");
+  h.push("<p class='muted small'>Disposition utilisée par "+plans+" plan(s). Glisse les tables ; touche une table pour la tourner, la copier ou la supprimer.</p>");
+  h.push("<div class='row'><span class='small'>Ajouter :</span>"+Object.keys(TYPES).map(function(k){ return "<button class='btn sm' data-add='"+k+"'>"+TYPES[k].t+"</button>"; }).join("")+
+    "<button class='btn sm' data-addo='tab'>Tableau</button><button class='btn sm' data-addo='bur'>Bureau</button><button class='btn sm' data-addo='porte'>Porte</button><button class='btn sm' data-addo='fen'>Fenêtres</button><button class='btn sm' data-addo='txt'>Coin…</button></div>");
+  h.push("<div class='wrap'>"+svgSalle(salle, null, {edit:true})+"</div>");
+  if(UI.sel){
+    var t=salle.t.filter(function(x){return x.id===UI.sel;})[0], o=salle.o.filter(function(x){return x.id===UI.sel;})[0];
+    if(t) h.push("<div class='selbar'><b>"+TYPES[t.k].t+"</b><button class='btn sm' data-act='rl'>↺</button><button class='btn sm' data-act='rr'>↻</button><button class='btn sm' data-act='r45'>45°</button><button class='btn sm' data-act='dup'>⧉ Copier</button>"+
+      "<button class='btn sm' data-act='res'>"+(t.res?"✅ Place à part":"Place à part ?")+"</button><button class='btn sm danger' data-act='del'>🗑</button><button class='btn sm' data-act='desel'>OK</button></div>");
+    if(o) h.push("<div class='selbar'><b>"+esc(o.t||OBJ[o.k].t)+"</b><button class='btn sm' data-act='rl'>↺</button><button class='btn sm' data-act='rr'>↻</button><button class='btn sm' data-act='ow-'>↔ −</button><button class='btn sm' data-act='ow+'>↔ +</button><button class='btn sm' data-act='oh-'>↕ −</button><button class='btn sm' data-act='oh+'>↕ +</button>"+
+      "<button class='btn sm' data-act='oren'>✏️</button><button class='btn sm danger' data-act='del'>🗑</button><button class='btn sm' data-act='desel'>OK</button></div>");
+  }
+  h.push("<div class='card'><h2>Dimensions de la salle</h2><div class='row'><span>Largeur</span><span class='seg'><button data-act='w-'>−</button><button disabled>"+salle.W+"</button><button data-act='w+'>+</button></span>"+
+    "<span>Profondeur</span><span class='seg'><button data-act='h-'>−</button><button disabled>"+salle.H+"</button><button data-act='h+'>+</button></span></div><p class='muted small'>En nombre de places (1 place ≈ 60 cm).</p></div>");
+  h.push("<div class='card'><h2>📷 Photo ou dessin en fond</h2><p class='muted small'>Prends en photo un plan dessiné (vu de dessus) ou une capture : il s'affiche en transparence pour placer les tables par-dessus.</p>"+
+    "<div class='row'><label class='btn sm'>Choisir une image<input type='file' accept='image/*' id='fondIn' hidden></label>"+
+    (UI.fonds[salle.id]||salle.fond.on?"<button class='btn sm' data-act='f-on'>"+(salle.fond.on?"🙈 Masquer":"👁 Afficher")+"</button><button class='btn sm danger' data-act='f-del'>Retirer</button>":"")+"</div>"+
+    (salle.fond.on?"<div class='row'><span class='small'>Transparence</span><input type='range' id='fondOp' min='0.1' max='1' step='0.05' value='"+salle.fond.op+"'></div>":"")+"</div>");
+  return h.join("");
+};
+
+function segHtml(id, opts, cur){ return "<span class='seg' data-seg='"+id+"'>"+opts.map(function(o){ return "<button data-v='"+o[0]+"' class='"+(String(cur)===String(o[0])?"on":"")+"'>"+o[1]+"</button>"; }).join("")+"</span>"; }
+function impHtml(id, cur){ return "<select class='imp' data-imp='"+id+"'>"+IMP.map(function(o){ return "<option value='"+o[0]+"'"+(o[0]===cur?" selected":"")+">"+o[1]+"</option>"; }).join("")+"</select>"; }
+VUES.regles = function(){
+  var R=D.R, h=[];
+  h.push("<div class='card'><h2>Mélanges entre voisins</h2>");
+  h.push("<div class='rule'><span class='lbl'>👧👦 Filles / garçons</span><div class='row'>"+segHtml("sexe",[["mix","Mélanger"],["ign","Indifférent"],["grp","Regrouper"]],R.sexe.m)+impHtml("sexe",R.sexe.w)+"</div></div>");
+  h.push("<div class='rule'><span class='lbl'>🎓 CM1 / CM2</span><div class='row'>"+segHtml("niv",[["mix","Mélanger"],["ign","Indifférent"],["grp","Regrouper"]],R.niv.m)+impHtml("niv",R.niv.w)+"</div></div>");
+  var nG=EL.list.filter(function(e){return e.or==="g";}).length, nP=EL.list.filter(function(e){return e.or==="p";}).length, nA=EL.list.filter(function(e){return e.al;});
+  h.push("<div class='rule'><span class='lbl'>🗣️ Grands / petits parleurs ("+nG+" grands, "+nP+" petits)</span><div class='row'>"+segHtml("oral",[["gg","Pas deux grands parleurs côte à côte"],["mix","Grand à côté de petit"],["ign","Indifférent"]],R.oral.m)+impHtml("oral",R.oral.w)+"</div><span class='muted small'>Profil « oral » saisi dans Groupes › Élèves.</span></div>");
+  h.push("<div class='rule'><span class='lbl'>⚠️ Comportement : à séparer ("+nA.length+")</span><div class='row'>"+segHtml("alerte",[["loin","Loin les uns des autres"],["sep","Jamais voisins"],["ign","Indifférent"]],R.alerte.m)+impHtml("alerte",R.alerte.w)+"</div><span class='muted small'>"+(nA.length?esc(nA.map(function(e){return e.n;}).join(", "))+" · « loin » = au moins la distance réglée plus bas.":"Aucun élève ⚠️ : ils se cochent dans Groupes › Élèves.")+"</span></div>");
+  var nB=0, nPB=0; EL.list.forEach(function(e){ var v=D.bav[e.id]||0; if(v===2) nB++; else if(v===1) nPB++; });
+  h.push("<div class='rule'><span class='lbl'>💬 Bavardage ("+nB+" 🔴 bavards, "+nPB+" 🟠 parfois)</span><div class='row'>"+segHtml("bav",[["sep","Séparer les bavards"],["ign","Indifférent"]],R.bav.m)+impHtml("bav",R.bav.w)+"</div>"+
+    "<span class='muted small'>Touche un prénom pour changer : 🟢 Calme → 🟠 Parfois bavard → 🔴 Bavard. Deux 🔴 côte à côte = à éviter en priorité ; 🔴 + 🟠 = à éviter si possible.</span>"+
+    "<div class='chips'>"+EL.list.map(function(e){ var v=D.bav[e.id]||0; return "<button class='chip' data-bav='"+e.id+"'>"+["🟢","🟠","🔴"][v]+" "+esc(e.n)+"</button>"; }).join("")+"</div></div>");
+  var gs=EL.list.filter(function(e){return D.gauche[e.id];});
+  h.push("<div class='rule'><span class='lbl'>✍️ Gauchers ("+gs.length+") : à gauche de leur voisin</span><div class='row'>"+segHtml("gauche",[["on","Oui"],["ign","Indifférent"]],R.gauche.m)+impHtml("gauche",R.gauche.w)+"</div><span class='muted small'>Évite les coudes qui se cognent. Touche les prénoms des gauchers.</span>"+
+    "<div class='chips'>"+EL.list.map(function(e){ return "<button class='chip"+(D.gauche[e.id]?" on":"")+"' data-gau='"+e.id+"'>"+esc(e.n)+"</button>"; }).join("")+"</div></div>");
+  h.push("<div class='rule'><span class='lbl'>🧑‍🏫 Tutorats ("+R.tutos.length+")</span>");
+  R.tutos.forEach(function(t){
+    h.push("<div class='row'><select data-tcomp='"+t.id+"'>"+EL.comps.map(function(c){ return "<option value='"+esc(c.id)+"'"+(c.id===t.comp?" selected":"")+">"+esc((c.i||"")+" "+c.t)+"</option>"; }).join("")+"</select>"+
+      segHtml("tu:"+t.id,[["tuto","Fragile à côté d'un élève à l'aise"],["homog","Niveaux proches"]],t.m)+impHtml("T:"+t.id,t.w)+"<button class='btn sm danger' data-tdel='"+t.id+"' aria-label='Supprimer'>🗑</button></div>");
+  });
+  h.push("<div class='row'><button class='btn sm' data-act='tu-add'>➕ Ajouter un tutorat</button></div><span class='muted small'>Niveaux saisis dans Groupes (Compétences) ; Lecture = groupe de fluence. Plusieurs tutorats se combinent : un élève peut aider en lecture et être aidé en maths.</span>"+
+    "<div class='row'><span class='small'>Avis des élèves (📝 Fiches) :</span>"+segHtml("avis",[["absent","Si pas de niveau"],["prio","Prioritaire"],["ign","Ignorer"]],R.avis)+"</div></div>");
+  h.push("<div class='rule'><span class='lbl'>🔄 Rotation</span><div class='row'>Ne pas remettre les voisins des "+segHtml("rotn",[[0,"0"],[1,"1"],[2,"2"],[3,"3"],[5,"5"]],R.rot.n)+" derniers plans validés "+impHtml("rot",R.rot.w)+"</div><span class='muted small'>Valide un plan dans 💾 Plans pour qu'il compte.</span></div>");
+  h.push("</div>");
+
+  h.push("<div class='card'><h2>Éloigner, séparer, rapprocher</h2>");
+  h.push("<div class='rule'><span class='lbl'>✂️ Les « à séparer » de Groupes ("+EL.sep.length+")</span><div class='row'>"+segHtml("sepG",[[0,"Ignorer"],[1,"Souhaitée"],[2,"Importante"],[3,"Obligatoire"]],R.sepG)+"</div>"+
+    (EL.sep.length?"<span class='muted small'>"+EL.sep.map(function(g){ return g.m.map(nom).join(", "); }).map(esc).join(" · ")+"</span>":"<span class='muted small'>Aucun : ils se règlent dans Groupes › Élèves › Amis et ✂️.</span>")+"</div>");
+  h.push("<div class='rule'><span class='lbl'>📏 « Loin », c'est au moins</span><div class='row'>"+segHtml("loinD",[[2,"2"],[3,"3"],[4,"4"],[5,"5"]],R.loinD)+" places d'écart</div></div>");
+  h.push("<div class='rule'><span class='lbl'>➕ Ajouter une règle entre élèves</span><div class='row'>"+segHtml("lienT",[["loin","↔️ Loin"],["pasv","🚫 Pas voisins"],["ens","🤝 Côte à côte"]],UI.lienT)+impHtml("lienW",UI.lienW)+"</div>"+
+    "<div class='chips'>"+EL.list.map(function(e){ return "<button class='chip "+(e.niv===1?"cm1":e.niv===2?"cm2":"")+(UI.lienSel.indexOf(e.id)>=0?" on":"")+"' data-lsel='"+e.id+"'>"+esc(e.n)+"</button>"; }).join("")+"</div>"+
+    "<div class='row'><button class='btn pri sm' data-act='lien-add' "+(UI.lienSel.length<2?"disabled":"")+">Ajouter ("+UI.lienSel.length+" élèves)</button>"+(UI.lienSel.length?"<button class='btn sm' data-act='lien-clr'>Effacer la sélection</button>":"")+"</div></div>");
+  if(D.liens.length){
+    h.push("<div class='rule'><span class='lbl'>Tes règles</span>");
+    D.liens.forEach(function(l){ h.push("<div class='stu'><span class='n'>"+(l.f?"📝 ":"")+({loin:"↔️ Loin",pasv:"🚫 Pas voisins",ens:"🤝 Côte à côte"}[l.t])+" : "+esc(l.m.map(nom).join(", "))+"</span>"+impHtml("L:"+l.id,l.w||2)+"<button class='btn sm danger' data-ldel='"+l.id+"'>🗑</button></div>"); });
+    h.push("</div>");
+  }
+  h.push("</div>");
+
+  var nf=EL.list.filter(function(e){return fxArr(e.id).length;}).length;
+  h.push("<details class='card'"+(UI.openFix?" open":"")+" id='dFix'><summary>📌 Places imposées ("+nf+" élèves)</summary><p class='muted small'>Toujours obligatoire. Tu peux en cocher plusieurs : 👓 + 🎯 = devant, face au tableau. « Place à part » = une table marquée « place à part » dans 📐 Salle.</p>");
+  EL.list.forEach(function(e){ var v=fxArr(e.id); h.push("<div class='stu' style='flex-wrap:wrap'><span class='n' style='min-width:120px'>"+esc(e.n)+" <span class='muted small'>"+esc(e.gl)+(e.al?" ⚠️":"")+(e.or==="g"?" 🗣️":"")+(D.gauche[e.id]?" ✍️G":"")+"</span></span><span class='chips'>"+FIXES.map(function(f){ return "<button class='chip"+(v.indexOf(f[0])>=0?" on":"")+"' data-fixc='"+e.id+"|"+f[0]+"' title='"+f[1]+"'>"+f[1].split(" ")[0]+"</button>"; }).join("")+"</span></div>"); });
+  h.push("<p class='muted small'>"+FIXES.map(function(f){return f[1];}).join(" · ")+"</p></details>");
+  h.push("<p class='muted small'>Après un changement, retourne dans 🪑 Plan et touche « 🎲 Placer les élèves ».</p>");
+  return h.join("");
+};
+
+VUES.plans = function(){
+  var h=["<div class='row'><button class='btn pri' data-act='p-new'>➕ Nouveau plan</button></div>"];
+  D.plans.forEach(function(p){
+    var s=salleDe(D,p), n=Object.keys(p.a).length;
+    h.push("<div class='card'><div class='row' style='margin:0'><b style='flex:1'>"+(p.id===D.actif?"⭐ ":"")+esc(p.nom)+"</b><span class='muted small'>"+esc(s?s.nom:"?")+" · "+n+" élèves placés"+(p.val?" · ✅ validé le "+new Date(p.val).toLocaleDateString("fr-FR"):"")+"</span></div>"+
+      "<div class='row'>"+(p.id!==D.actif?"<button class='btn sm pri' data-pact='open' data-pid='"+p.id+"'>Ouvrir</button>":"")+
+      "<button class='btn sm' data-pact='ren' data-pid='"+p.id+"'>✏️ Renommer</button><button class='btn sm' data-pact='dup' data-pid='"+p.id+"'>⧉ Dupliquer</button>"+
+      "<button class='btn sm' data-pact='val' data-pid='"+p.id+"' "+(n?"":"disabled")+">✅ Valider (rotation)</button>"+
+      "<button class='btn sm danger' data-pact='del' data-pid='"+p.id+"' "+(D.plans.length<2?"disabled":"")+">🗑</button></div></div>");
+  });
+  h.push("<div class='card'><h2>🔄 Historique de rotation</h2><p class='small'>"+D.hist.length+" plan(s) validé(s)"+(D.hist.length?" : "+D.hist.slice(-6).map(function(x){return esc(x.nom)+" ("+new Date(x.d).toLocaleDateString("fr-FR")+")";}).join(", "):"")+".</p>"+
+    "<p class='muted small'>« Valider » mémorise qui était voisin de qui, pour ne pas les remettre ensemble aux prochains plans (réglage dans 🎯 Règles).</p>"+(D.hist.length?"<button class='btn sm danger' data-act='h-clr'>Effacer l'historique</button>":"")+"</div>");
+  return h.join("");
+};
+
+VUES.reglages = function(){
+  var a=D.aff;
+  return "<div class='card'><h2>Affichage du plan</h2>"+
+    "<div class='rule'><span class='lbl'>Couleur CM1 / CM2</span>"+segHtml("a-niv",[[1,"Oui"],[0,"Non"]],a.niv)+"</div>"+
+    "<div class='rule'><span class='lbl'>♀ / ♂ après le prénom</span>"+segHtml("a-sexe",[[1,"Oui"],[0,"Non"]],a.sexe)+"</div>"+
+    "<div class='rule'><span class='lbl'>Pastille 🔴/🟠 bavardage sur le plan (jamais en projection ni à l'impression)</span>"+segHtml("a-bav",[[1,"Oui"],[0,"Non"]],a.bav)+"</div>"+
+    "<div class='rule'><span class='lbl'>Figer 🔒 ce que je place à la main (« 🎲 » place alors les autres autour)</span>"+segHtml("a-fige",[[1,"Oui"],[0,"Non"]],a.fige==null?1:a.fige)+"</div>"+
+    "<div class='rule'><span class='lbl'>Taille des prénoms</span>"+segHtml("a-taille",[[0.8,"Petite"],[1,"Normale"],[1.25,"Grande"]],a.taille)+"</div>"+
+    "<div class='rule'><span class='lbl'>Thème</span>"+segHtml("a-theme",[["auto","Auto"],["light","Clair"],["dark","Sombre"]],a.theme)+"</div></div>"+
+    "<div class='card'><h2>Sauvegarde</h2><div class='row'><button class='btn' data-act='exp'>⬇ Exporter (JSON)</button><label class='btn'>⬆ Importer<input type='file' accept='.json,application/json' id='impIn' hidden></label></div>"+
+    "<p class='muted small'>Données privées (prénoms) : enregistrées dans la base de « Classe », visible par toi seul. Ne partage pas « Classe » par lien public.</p></div>"+
+    "<p class='muted small'>Plan de classe · version "+VERSION+"</p>";
+};
+
+/* ---------- après rendu : liaisons ---------- */
+function apresRendu(){
+  var sp=document.getElementById("selPlan"); if(sp) sp.onchange=function(){ D.actif=sp.value; UI.selSeat=null; modifie(); rendre(); };
+  var ss=document.getElementById("selSalle"); if(ss) ss.onchange=function(){ UI.salleEdit=ss.value; UI.sel=null; rendre(); };
+  document.querySelectorAll("[data-tcomp]").forEach(function(sel){ sel.onchange=function(){ D.R.tutos.forEach(function(t){ if(t.id===sel.dataset.tcomp) t.comp=sel.value; }); modifie(); }; });
+  document.querySelectorAll("[data-imp]").forEach(function(s){ s.onchange=function(){ var id=s.dataset.imp, v=+s.value;
+    if(id==="lienW"){ UI.lienW=v; return; }
+    if(id.indexOf("T:")===0){ D.R.tutos.forEach(function(t){ if(t.id===id.slice(2)) t.w=v; }); }
+    else if(id.indexOf("L:")===0){ D.liens.forEach(function(l){ if(l.id===id.slice(2)) l.w=v; }); }
+    else D.R[id].w=v; modifie(); }; });
+
+  var dF=document.getElementById("dFix"); if(dF) dF.addEventListener("toggle",function(){ UI.openFix=dF.open; });
+  var fi=document.getElementById("fondIn"); if(fi) fi.onchange=function(){ if(fi.files[0]) chargerFond(fi.files[0]); };
+  var fo=document.getElementById("fondOp");
+  if(fo){ fo.oninput=function(){ salleE().fond.op=+fo.value; var im=document.querySelector("#room image"); if(im) im.setAttribute("opacity",fo.value); }; fo.onchange=function(){ modifie(); }; }
+  var ii=document.getElementById("impIn"); if(ii) ii.onchange=function(){ if(ii.files[0]) importer(ii.files[0]); };
+  var room=document.getElementById("room"); if(room && UI.vue==="salle") lierEditeur(room);
+  var s=UI.vue==="salle"?salleE():salleA(); if(s.fond.on && !UI.fonds[s.id]) chargerFondBase(s.id);
+}
+
+/* ---------- éditeur de salle ---------- */
+function ptSvg(svg, e){ var pt=svg.createSVGPoint(); pt.x=e.clientX; pt.y=e.clientY; var m=svg.getScreenCTM(); if(!m) return {x:0,y:0}; var p=pt.matrixTransform(m.inverse()); return {x:p.x/U, y:p.y/U}; }
+function lierEditeur(svg){
+  var drag=null;
+  svg.addEventListener("pointerdown", function(e){
+    var g=e.target.closest("[data-t],[data-o]"); if(!g){ if(UI.sel){ UI.sel=null; rendre(); } return; }
+    var id=g.dataset.t||g.dataset.o, salle=salleE(), it=(g.dataset.t?salle.t:salle.o).filter(function(x){return x.id===id;})[0]; if(!it) return;
+    var p=ptSvg(svg,e); drag={it:it, g:g, dx:p.x-it.x, dy:p.y-it.y, x0:it.x, y0:it.y, moved:false};
+    try{ svg.setPointerCapture(e.pointerId); }catch(x){} e.preventDefault();
+  });
+  svg.addEventListener("pointermove", function(e){
+    if(!drag) return; var p=ptSvg(svg,e), s=salleE();
+    var nx=Math.max(0,Math.min(s.W, snap(p.x-drag.dx))), ny=Math.max(0,Math.min(s.H, snap(p.y-drag.dy)));
+    if(Math.abs(nx-drag.x0)+Math.abs(ny-drag.y0)>0.2) drag.moved=true;
+    if(nx!==drag.it.x || ny!==drag.it.y){ drag.it.x=nx; drag.it.y=ny; drag.g.setAttribute("transform","translate("+nx*U+" "+ny*U+") rotate("+(drag.it.r||0)+")"); }
+  });
+  function fin(){ if(!drag) return; var d=drag; drag=null; if(d.moved){ UI.sel=d.it.id; modifie(); } else UI.sel = UI.sel===d.it.id ? null : d.it.id; rendre(); }
+  svg.addEventListener("pointerup", fin); svg.addEventListener("pointercancel", fin);
+}
+function itemSel(){ var s=salleE(); return s.t.filter(function(x){return x.id===UI.sel;})[0] || s.o.filter(function(x){return x.id===UI.sel;})[0]; }
+
+/* ---------- photo de fond ---------- */
+function chargerFond(file){
+  var url=URL.createObjectURL(file), img=new Image();
+  img.onload=function(){
+    var max=1400, w=img.naturalWidth, h=img.naturalHeight, k=Math.min(1,max/Math.max(w,h));
+    var cv=document.createElement("canvas"); cv.width=Math.round(w*k); cv.height=Math.round(h*k);
+    var cx=cv.getContext("2d"); cx.fillStyle="#fff"; cx.fillRect(0,0,cv.width,cv.height); cx.drawImage(img,0,0,cv.width,cv.height);
+    URL.revokeObjectURL(url);
+    var q=0.7, data=cv.toDataURL("image/jpeg",q);
+    while(data.length>240000 && q>0.25){ q-=0.1; data=cv.toDataURL("image/jpeg",q); }
+    if(data.length>240000){ var c2=document.createElement("canvas"); c2.width=Math.round(cv.width*0.6); c2.height=Math.round(cv.height*0.6); c2.getContext("2d").drawImage(cv,0,0,c2.width,c2.height); data=c2.toDataURL("image/jpeg",0.5); }
+    var s=salleE(); UI.fonds[s.id]=data; s.fond.on=1;
+    var ratio=h/w; modal("<h3>📷 Image ajoutée</h3><p>Adapter la profondeur de la salle aux proportions de l'image ("+s.W+" × "+r1(s.W*ratio)+" places) ?</p><div class='row'><button class='btn pri' data-act='f-ratio' data-r='"+ratio+"'>Oui, adapter</button><button class='btn' data-act='mclose'>Non</button></div>");
+    if(SY.db) SY.db.doc("lecture/planfond-"+s.id).set({img:data, ts:Date.now()}).catch(function(){ toast("Image non enregistrée dans la base (elle reste affichée ici)."); });
+    modifie(); rendre();
+  };
+  img.onerror=function(){ toast("Image illisible : essaie une photo JPEG ou PNG."); };
+  img.src=url;
+}
+function chargerFondBase(id){
+  if(!SY.db || UI.fondReq[id]) return; UI.fondReq[id]=1;
+  SY.db.doc("lecture/planfond-"+id).get().then(function(s){ if(s.exists && s.data().img){ UI.fonds[id]=s.data().img; rendre(); } }).catch(function(){ UI.fondReq[id]=0; });
+}
+
+/* ---------- impression (PNG) et export ---------- */
+function telecharger(nomF, blob){
+  if(!window.claude || !window.claude.use){ toast("Téléchargement indisponible ici."); return; }
+  window.claude.use("downloads").then(function(dl){
+    if(!dl){ toast("Téléchargement indisponible sur cet appareil."); return; }
+    return dl.save({filename:nomF, data:blob}).catch(function(){});
+  });
+}
+function imagePlan(){
+  var plan=planA(), salle=salleA(), W=2400, H=Math.round(W*(salle.H+0.6)/(salle.W+0.6))+140;
+  var svg=svgSalle(salle, plan, {eleve:UI.eleve, print:true, w:W, h:H-140, noFond:true});
+  svg = svg.replace("<svg ","<svg font-family='Arial, sans-serif' ").replace(/var\(--[a-z0-9]+\)/g,"#2453C7");
+  var img=new Image(), url=URL.createObjectURL(new Blob([svg],{type:"image/svg+xml"}));
+  img.onload=function(){
+    var cv=document.createElement("canvas"); cv.width=W; cv.height=H; var c=cv.getContext("2d");
+    c.fillStyle="#fff"; c.fillRect(0,0,W,H);
+    c.fillStyle="#111"; c.font="bold 48px Arial"; c.fillText("Plan de classe — "+plan.nom, 40, 70);
+    c.font="30px Arial"; c.fillStyle="#555"; c.fillText(salle.nom+" · "+new Date().toLocaleDateString("fr-FR")+(UI.eleve?" · vue élèves":" · vue enseignant"), 40, 115);
+    c.drawImage(img,0,140,W,H-140); URL.revokeObjectURL(url);
+    cv.toBlob(function(b){ telecharger("plan-de-classe-"+plan.nom.replace(/[^\wÀ-ÿ-]+/g,"-")+".png", b); },"image/png");
+  };
+  img.onerror=function(){ toast("Image impossible à fabriquer."); };
+  img.src=url;
+}
+function exporter(){ telecharger("plan-de-classe-sauvegarde.json", new Blob([JSON.stringify(D,null,1)],{type:"application/json"})); }
+function importer(f){ f.text().then(function(t){ var d=JSON.parse(t); if(!d.salles) throw 0; modal("<h3>Importer cette sauvegarde ?</h3><p>Elle remplacera tous les plans, salles et règles actuels.</p><div class='row'><button class='btn pri' data-act='imp-ok'>Remplacer</button><button class='btn' data-act='mclose'>Annuler</button></div>"); UI.impData=d; }).catch(function(){ toast("Fichier illisible."); }); }
+
+/* ---------- projection ---------- */
+function debutProj(){
+  document.body.classList.add("proj"); UI.selSeat=null;
+  var b=document.createElement("button"); b.id="projx"; b.className="btn"; b.textContent="✕ Quitter"; b.onclick=finProj; document.body.appendChild(b);
+  try{ history.pushState({v:UI.vue,proj:1},"","#"+UI.vue); }catch(e){}
+  try{ var r=document.documentElement.requestFullscreen && document.documentElement.requestFullscreen(); if(r && r.catch) r.catch(function(){}); }catch(e){}
+  rendre();
+}
+function finProj(){
+  document.body.classList.remove("proj"); var b=document.getElementById("projx"); if(b) b.remove();
+  try{ if(document.fullscreenElement) document.exitFullscreen(); }catch(e){}
+  rendre();
+}
+document.addEventListener("fullscreenchange", function(){ if(!document.fullscreenElement && document.body.classList.contains("proj")){ document.body.classList.remove("proj"); var b=document.getElementById("projx"); if(b) b.remove(); rendre(); } });
+document.addEventListener("keydown", function(e){ if(e.key==="Escape" && document.body.classList.contains("proj")) finProj(); });
+
+/* ---------- clics ---------- */
+document.addEventListener("click", function(e){
+  var t=e.target;
+  if(UI.noClick && Date.now()-UI.noClick<400){ UI.noClick=0; return; }
+  if(t.id==="modal"){ fermerModal(); return; }
+  var tab=t.closest("[data-tab]"); if(tab){ aller(tab.dataset.tab); return; }
+  var sf=t.closest("[data-seg-fc]"); if(sf){ D.fcfg[sf.dataset.segFc]=D.fcfg[sf.dataset.segFc]?0:1; modifie(); rendre(); return; }
+  var sg=t.closest("[data-seg] button"); if(sg){ segClic(sg.parentElement.dataset.seg, sg.dataset.v); return; }
+  if(UI.vue==="plan" && !document.body.classList.contains("proj")){
+    var seat=t.closest("[data-s]"); if(seat){ clicPlace(seat.dataset.s); return; }
+    var pk=t.closest("[data-pick]"); if(pk){ UI.pick = UI.pick===pk.dataset.pick ? null : pk.dataset.pick; UI.selSeat=null; rendre(); return; }
+    var is=t.closest("[data-iss]"); if(is){ var ids=UI.lastIssues[+is.dataset.iss]||[]; UI.hi={}; ids.forEach(function(x){ UI.hi[x]=3; }); rendre(); var r=document.getElementById("room"); if(r) r.scrollIntoView({behavior:"smooth",block:"center"}); setTimeout(function(){ UI.hi={}; if(UI.vue==="plan") rendre(); }, 4000); return; }
+  }
+  var ls=t.closest("[data-lsel]"); if(ls){ var id=ls.dataset.lsel, k=UI.lienSel.indexOf(id); if(k>=0) UI.lienSel.splice(k,1); else UI.lienSel.push(id); rendre(); return; }
+  var fc=t.closest("[data-fixc]"); if(fc){ var q=fc.dataset.fixc.split("|"), arr=fxArr(q[0]).slice(), k4=arr.indexOf(q[1]);
+    if(k4>=0) arr.splice(k4,1); else { arr.push(q[1]); if(q[1]==="devant") arr=arr.filter(function(x){return x!=="fond";}); if(q[1]==="fond") arr=arr.filter(function(x){return x!=="devant";}); }
+    if(arr.length) D.fixes[q[0]]=arr; else delete D.fixes[q[0]]; UI.openFix=true; modifie(); var y2=scrollY; rendre(); scrollTo(0,y2); return; }
+  var ga=t.closest("[data-gau]"); if(ga){ if(D.gauche[ga.dataset.gau]) delete D.gauche[ga.dataset.gau]; else D.gauche[ga.dataset.gau]=1; modifie(); var y3=scrollY; rendre(); scrollTo(0,y3); return; }
+  var fs=t.closest("[data-fs]"); if(fs){ ficheClic(fs.dataset.fs); return; }
+  var fd=t.closest("[data-fdom]"); if(fd){ var dd=D.fcfg.doms, kd=dd.indexOf(fd.dataset.fdom); if(kd>=0) dd.splice(kd,1); else dd.push(fd.dataset.fdom); modifie(); rendre(); return; }
+  var fe=t.closest("[data-fedit]"); if(fe){ ouvrirFiche(fe.dataset.fedit); return; }
+  var bv=t.closest("[data-bav]"); if(bv){ var k3=bv.dataset.bav, nv=((D.bav[k3]||0)+1)%3; if(nv) D.bav[k3]=nv; else delete D.bav[k3]; modifie(); var y=scrollY; rendre(); scrollTo(0,y); return; }
+  var td=t.closest("[data-tdel]"); if(td){ D.R.tutos=D.R.tutos.filter(function(x){ return x.id!==td.dataset.tdel; }); modifie(); rendre(); return; }
+  var ld=t.closest("[data-ldel]"); if(ld){ D.liens=D.liens.filter(function(l){ return l.id!==ld.dataset.ldel; }); modifie(); rendre(); return; }
+  var ad=t.closest("[data-add]"); if(ad){ var s=salleE(), it=T(ad.dataset.add, snap(s.W/2), snap(s.H/2)); s.t.push(it); UI.sel=it.id; modifie(); rendre(); return; }
+  var ao=t.closest("[data-addo]"); if(ao){ var s2=salleE(), k2=ao.dataset.addo, oo=O(k2, snap(s2.W/2), snap(s2.H/2), OBJ[k2].w, OBJ[k2].h); s2.o.push(oo); UI.sel=oo.id; modifie(); rendre(); return; }
+  var pa=t.closest("[data-pact]"); if(pa){ actionPlan(pa.dataset.pact, pa.dataset.pid); return; }
+  var a=t.closest("[data-act]"); if(a && !a.disabled) action(a.dataset.act, a);
+});
+function segClic(id, v){
+  var R=D.R;
+  if(["sexe","niv","oral","alerte","bav","gauche"].indexOf(id)>=0) R[id].m=v;
+  else if(id==="avis") R.avis=v;
+  else if(id.indexOf("fc-")===0){ D.fcfg[id.slice(3)]=+v; }
+  else if(id.indexOf("tu:")===0){ R.tutos.forEach(function(t){ if(t.id===id.slice(3)) t.m=v; }); }
+  else if(id==="a-bav") D.aff.bav=+v;
+  else if(id==="rotn") R.rot.n=+v;
+  else if(id==="sepG") R.sepG=+v;
+  else if(id==="loinD") R.loinD=+v;
+  else if(id==="lienT"){ UI.lienT=v; rendre(); return; }
+  else if(id==="a-niv") D.aff.niv=+v;
+  else if(id==="a-sexe") D.aff.sexe=+v;
+  else if(id==="a-taille") D.aff.taille=+v;
+  else if(id==="a-fige") D.aff.fige=+v;
+  else if(id==="a-theme") D.aff.theme=v;
+  modifie(); rendre();
+}
+function figeMain(){ return !D.aff || D.aff.fige!==0; }
+function clicPlace(sid){
+  var plan=planA();
+  if(UI.pick){
+    var occ=plan.a[sid];
+    Object.keys(plan.a).forEach(function(k){ if(plan.a[k]===UI.pick){ delete plan.a[k]; delete plan.lk[k]; } });
+    plan.a[sid]=UI.pick; if(figeMain()) plan.lk[sid]=1; else delete plan.lk[sid];
+    UI.pick=null; modifie(); rendre();
+    if(occ && occ!==plan.a[sid]) toast(nom(occ)+" retourne dans « À placer ».");
+    return;
+  }
+  if(!UI.selSeat){ UI.selSeat=sid; rendre(); return; }
+  if(UI.selSeat===sid){ UI.selSeat=null; rendre(); return; }
+  var a=plan.a[UI.selSeat], b=plan.a[sid];
+  if(!a && !b){ UI.selSeat=sid; rendre(); return; }
+  if(a) plan.a[sid]=a; else delete plan.a[sid];
+  if(b) plan.a[UI.selSeat]=b; else delete plan.a[UI.selSeat];
+  var la=plan.lk[UI.selSeat], lb=plan.lk[sid];
+  if(lb) plan.lk[UI.selSeat]=1; else delete plan.lk[UI.selSeat];
+  if(la) plan.lk[sid]=1; else delete plan.lk[sid];
+  if(figeMain()) [UI.selSeat, sid].forEach(function(k){ if(plan.a[k]) plan.lk[k]=1; else delete plan.lk[k]; });
+  UI.selSeat=null; modifie(); rendre();
+}
+/* glisser-déposer (souris, stylet) : un élève vers une autre place, ou un prénom « À placer » vers une place.
+   Au doigt, on garde « toucher puis toucher » pour pouvoir faire défiler la page. */
+var DR=null;
+document.addEventListener("pointerdown", function(e){
+  if(UI.vue!=="plan" || document.body.classList.contains("proj") || e.pointerType==="touch" || e.button!==0 || !e.target.closest) return;
+  var seat=e.target.closest("[data-s]"), chip=e.target.closest("[data-pick]"); if(!seat && !chip) return;
+  var sid = seat ? planA().a[seat.dataset.s] : chip.dataset.pick; if(!sid) return;
+  DR={from: seat ? seat.dataset.s : null, sid:sid, x:e.clientX, y:e.clientY, on:false, ghost:null};
+});
+document.addEventListener("pointermove", function(e){
+  if(!DR) return;
+  if(!DR.on){ if(Math.abs(e.clientX-DR.x)+Math.abs(e.clientY-DR.y)<8) return; DR.on=true; var g=document.createElement("div"); g.className="ghost"; g.textContent=nom(DR.sid); document.body.appendChild(g); DR.ghost=g; document.body.classList.add("dragging"); }
+  DR.ghost.style.left=e.clientX+"px"; DR.ghost.style.top=e.clientY+"px";
+  var o=document.elementFromPoint(e.clientX,e.clientY), s=o && o.closest && o.closest("[data-s]");
+  document.querySelectorAll(".dropon").forEach(function(x){ if(x!==s) x.classList.remove("dropon"); }); if(s) s.classList.add("dropon");
+  e.preventDefault();
+});
+function finDrag(e, annule){
+  if(!DR) return; var d=DR; DR=null; if(!d.on) return;
+  if(d.ghost) d.ghost.remove(); document.body.classList.remove("dragging"); UI.noClick=Date.now();
+  document.querySelectorAll(".dropon").forEach(function(x){ x.classList.remove("dropon"); });
+  var o=annule?null:document.elementFromPoint(e.clientX,e.clientY), s=o && o.closest && o.closest("[data-s]");
+  if(!s || s.dataset.s===d.from){ rendre(); return; }
+  if(d.from){ UI.pick=null; UI.selSeat=d.from; } else { UI.selSeat=null; UI.pick=d.sid; }
+  clicPlace(s.dataset.s);
+}
+document.addEventListener("pointerup", function(e){ finDrag(e,false); });
+document.addEventListener("pointercancel", function(e){ finDrag(e,true); });
+function action(act, el){
+  var plan=planA(), salle=UI.vue==="salle"?salleE():salleA(), it;
+  switch(act){
+    case "calc":
+      if(!EL.list.length){ toast("Les élèves ne sont pas encore chargés."); return; }
+      el.disabled=true; el.textContent="⏳ Calcul…";
+      setTimeout(function(){
+        var r=optimiser(plan, salle), a={};
+        Object.keys(plan.lk).forEach(function(k){ if(plan.a[k]) a[k]=plan.a[k]; });
+        r.A.forEach(function(s,i){ if(s>=0) a[r.c.S[i].id]=r.c.st[s]; });
+        plan.a=a; plan.d=Date.now(); UI.selSeat=null; modifie(); rendre(); toast("Élèves placés. Touche « 🎲 » à nouveau pour une autre proposition.");
+      }, 30);
+      return;
+    case "proj": debutProj(); return;
+    case "vider": modal("<h3>Vider le plan « "+esc(plan.nom)+" » ?</h3><p>Les élèves retournent dans « À placer ». Tu pourras les placer à la main, puis « 🎲 » pour le reste.</p><div class='row'><button class='btn danger' data-act='vider-all'>Tout vider</button>"+(Object.keys(plan.lk).length?"<button class='btn' data-act='vider-lk'>Vider, sauf les 🔒</button>":"")+"<button class='btn' data-act='mclose'>Annuler</button></div>"); return;
+    case "vider-all": plan.a={}; plan.lk={}; UI.selSeat=null; fermerModal(); modifie(); rendre(); toast("Plan vidé."); return;
+    case "vider-lk": Object.keys(plan.a).forEach(function(k){ if(!plan.lk[k]) delete plan.a[k]; }); UI.selSeat=null; fermerModal(); modifie(); rendre(); toast("Plan vidé, sauf les places figées."); return;
+    case "vue": UI.eleve=!UI.eleve; rendre(); return;
+    case "png": imagePlan(); return;
+    case "zm": UI.zoom=Math.max(1, (UI.zoom||1)-0.25); rendre(); return;
+    case "zp": UI.zoom=Math.min(3, (UI.zoom||1)+0.25); rendre(); return;
+    case "desel": UI.sel=null; UI.selSeat=null; rendre(); return;
+    case "lock": if(plan.lk[UI.selSeat]) delete plan.lk[UI.selSeat]; else plan.lk[UI.selSeat]=1; UI.selSeat=null; modifie(); rendre(); return;
+    case "unseat": delete plan.a[UI.selSeat]; delete plan.lk[UI.selSeat]; UI.selSeat=null; modifie(); rendre(); return;
+    case "rl": case "rr": case "r45": it=itemSel(); if(!it) return; it.r=(((it.r||0)+(act==="rl"?-90:act==="rr"?90:45))%360+360)%360; modifie(); rendre(); return;
+    case "dup": it=itemSel(); if(!it) return; var c=clone(it); c.id=uid(); c.x=Math.min(salle.W, it.x+0.5); c.y=Math.min(salle.H, it.y+1); salle.t.push(c); UI.sel=c.id; modifie(); rendre(); return;
+    case "res": it=itemSel(); if(!it) return; it.res=it.res?0:1; modifie(); rendre(); return;
+    case "del": it=itemSel(); if(!it) return; salle.t=salle.t.filter(function(x){return x!==it;}); salle.o=salle.o.filter(function(x){return x!==it;}); UI.sel=null; D.plans.forEach(function(p){ if(p.salle===salle.id) nettoyerPlan(p); }); modifie(); rendre(); toast("Supprimé."); return;
+    case "ow-": case "ow+": case "oh-": case "oh+": it=itemSel(); if(!it||it.w==null) return; var dk=act[1]==="w"?"w":"h", st=dk==="w"?0.5:0.1; it[dk]=Math.max(0.1, r1(it[dk]+(act[2]==="+"?st:-st))); modifie(); rendre(); return;
+    case "oren": it=itemSel(); if(!it) return; demanderTexte("Nom affiché", it.t||OBJ[it.k].t, function(v){ it.t=v; modifie(); rendre(); }); return;
+    case "w-": case "w+": salle.W=Math.max(4, Math.min(30, salle.W+(act==="w+"?1:-1))); modifie(); rendre(); return;
+    case "h-": case "h+": salle.H=Math.max(4, Math.min(30, salle.H+(act==="h+"?1:-1))); modifie(); rendre(); return;
+    case "s-new": modal("<h3>Nouvelle disposition</h3><p class='muted small'>Pour "+(EL.list.length||26)+" élèves. Tu pourras tout déplacer ensuite.</p><div class='tiles'>"+MODELES.map(function(m){ return "<button class='tile' data-act='s-mod' data-m='"+m[0]+"'><b>"+m[1]+"</b>"+m[2]+"</button>"; }).join("")+"</div><div class='row'><button class='btn' data-act='mclose'>Annuler</button></div>"); return;
+    case "s-mod": var ns=salleModele(el.dataset.m, EL.list.length||26); D.salles.push(ns);
+      var np={id:uid(), nom:ns.nom, salle:ns.id, d:Date.now(), a:{}, lk:{}}; D.plans.push(np); D.actif=np.id; UI.salleEdit=ns.id; fermerModal(); UI.sel=null; modifie(); rendre(); toast("Disposition « "+ns.nom+" » créée, avec un plan à son nom."); return;
+    case "s-ren": demanderTexte("Nom de la disposition", salle.nom, function(v){ salle.nom=v; modifie(); rendre(); }); return;
+    case "s-del":
+      if(D.salles.length<2){ toast("Il faut garder au moins une disposition."); return; }
+      var used=D.plans.filter(function(p){return p.salle===salle.id;});
+      modal("<h3>Supprimer « "+esc(salle.nom)+" » ?</h3><p>"+(used.length?"Les "+used.length+" plan(s) qui l'utilisent seront aussi supprimés : "+esc(used.map(function(p){return p.nom;}).join(", "))+".":"Aucun plan ne l'utilise.")+"</p><div class='row'><button class='btn danger' data-act='s-del-ok'>Supprimer</button><button class='btn' data-act='mclose'>Annuler</button></div>"); return;
+    case "s-del-ok":
+      var sid0=salle.id; D.salles=D.salles.filter(function(s){return s.id!==sid0;}); D.plans=D.plans.filter(function(p){return p.salle!==sid0;});
+      if(!D.plans.length) D.plans.push({id:uid(), nom:"Plan 1", salle:D.salles[0].id, d:Date.now(), a:{}, lk:{}});
+      if(!D.plans.some(function(p){return p.id===D.actif;})) D.actif=D.plans[0].id;
+      UI.salleEdit=null;
+      if(SY.db) SY.db.doc("lecture/planfond-"+sid0).delete().catch(function(){});
+      fermerModal(); modifie(); rendre(); return;
+    case "f-on": salle.fond.on=salle.fond.on?0:1; modifie(); rendre(); return;
+    case "f-del": salle.fond.on=0; delete UI.fonds[salle.id]; if(SY.db) SY.db.doc("lecture/planfond-"+salle.id).delete().catch(function(){}); modifie(); rendre(); return;
+    case "f-ratio": salle.H=Math.max(4, r1(salle.W*(+el.dataset.r))); fermerModal(); modifie(); rendre(); return;
+    case "lien-add": if(UI.lienSel.length<2) return; D.liens.push({id:uid(), t:UI.lienT, m:UI.lienSel.slice(), w:UI.lienW}); UI.lienSel=[]; modifie(); rendre(); toast("Règle ajoutée."); return;
+    case "tu-add":
+      var used=D.R.tutos.map(function(x){return x.comp;}), libre=EL.comps.filter(function(c){ return used.indexOf(c.id)<0; })[0] || EL.comps[0];
+      D.R.tutos.push({id:uid(), comp:libre?libre.id:"lect", m:"tuto", w:1}); modifie(); rendre(); return;
+    case "f-pdf": pdfFiches(false); return;
+    case "f-pdf0": pdfFiches(true); return;
+    case "f-close": fermerModal(); rendre(); return;
+    case "f-del": delete D.fiches[UI.ficheSid]; modifie(); fermerModal(); rendre(); return;
+    case "f-apply": modal("<h3>Appliquer les réponses des fiches ?</h3><ul class='small'>"+bilanFiches().lignes.map(function(l){return "<li>"+esc(l)+"</li>";}).join("")+"</ul><p class='muted small'>Tes réglages existants sont gardés ; les anciennes règles 📝 sont remplacées.</p><div class='row'><button class='btn pri' data-act='f-apply-ok'>Appliquer</button><button class='btn' data-act='mclose'>Annuler</button></div>"); return;
+    case "f-apply-ok": fermerModal(); appliquerFiches(); return;
+    case "lien-clr": UI.lienSel=[]; rendre(); return;
+    case "p-new": modal("<h3>Nouveau plan</h3><p>Sur quelle disposition ?</p><div class='row'>"+D.salles.map(function(s){ return "<button class='btn' data-act='p-new-s' data-s='"+s.id+"'>"+esc(s.nom)+"</button>"; }).join("")+"</div><div class='row'><button class='btn' data-act='mclose'>Annuler</button></div>"); return;
+    case "p-new-s": var p2={id:uid(), nom:"Plan "+(D.plans.length+1), salle:el.dataset.s, d:Date.now(), a:{}, lk:{}}; D.plans.push(p2); D.actif=p2.id; fermerModal(); modifie(); aller("plan"); return;
+    case "h-clr": modal("<h3>Effacer l'historique de rotation ?</h3><p>Les anciens voisinages ne seront plus évités.</p><div class='row'><button class='btn danger' data-act='h-clr-ok'>Effacer</button><button class='btn' data-act='mclose'>Annuler</button></div>"); return;
+    case "h-clr-ok": D.hist=[]; D.plans.forEach(function(p){ delete p.val; }); fermerModal(); modifie(); rendre(); return;
+    case "exp": exporter(); return;
+    case "imp-ok": D=migrer(UI.impData); UI.impData=null; fermerModal(); modifie(); rendre(); toast("Sauvegarde importée."); return;
+    case "mclose": fermerModal(); return;
+    case "txt-ok": var v=(document.getElementById("txtIn").value||"").trim(); fermerModal(); if(v && UI.txtCb) UI.txtCb(v); return;
+    case "cf-local": try{ localStorage.setItem(LKEY+"-secours", JSON.stringify(UI.cfData)); }catch(x){} SY.conflict=false; SY.lastDb=UI.cfData.ts; fermerModal(); modifie(); return;
+    case "cf-base": try{ localStorage.setItem(LKEY+"-secours", JSON.stringify(D)); }catch(x){} SY.conflict=false; D=migrer(clone(UI.cfData)); SY.lastDb=D.ts; SY.dirty=false; sauverLocal(); fermerModal(); rendre(); return;
+  }
+}
+function actionPlan(act, pid){
+  var p=D.plans.filter(function(x){return x.id===pid;})[0]; if(!p) return;
+  if(act==="open"){ D.actif=pid; modifie(); aller("plan"); }
+  else if(act==="ren") demanderTexte("Nom du plan", p.nom, function(v){ p.nom=v; modifie(); rendre(); });
+  else if(act==="dup"){ var c=clone(p); c.id=uid(); c.nom=p.nom+" (copie)"; delete c.val; c.d=Date.now(); D.plans.push(c); modifie(); rendre(); toast("Plan dupliqué."); }
+  else if(act==="val"){
+    var salle=salleDe(D,p), S=sieges(salle), ix={}; S.forEach(function(s,i){ ix[s.id]=i; });
+    var pairs=[], ids=Object.keys(p.a);
+    for(var i=0;i<ids.length;i++) for(var j=i+1;j<ids.length;j++){ var a=S[ix[ids[i]]], b=S[ix[ids[j]]]; if(a && b && dist(a,b)<=1.25) pairs.push(pairKey(p.a[ids[i]], p.a[ids[j]])); }
+    D.hist=D.hist.filter(function(h){ return h.id!==p.id; });
+    D.hist.push({id:p.id, nom:p.nom, d:Date.now(), p:pairs}); if(D.hist.length>8) D.hist=D.hist.slice(-8);
+    p.val=Date.now(); modifie(); rendre(); toast("Plan validé : "+pairs.length+" paires de voisins mémorisées.");
+  }
+  else if(act==="del"){ UI.delPid=pid; modal("<h3>Supprimer « "+esc(p.nom)+" » ?</h3><p>Les places de ce plan seront perdues (la disposition de la salle est gardée).</p><div class='row'><button class='btn danger' id='pdelok'>Supprimer</button><button class='btn' data-act='mclose'>Annuler</button></div>");
+    document.getElementById("pdelok").onclick=function(){ D.plans=D.plans.filter(function(x){return x.id!==pid;}); if(D.actif===pid) D.actif=D.plans[0].id; fermerModal(); modifie(); rendre(); }; }
+}
+function demanderTexte(titre, val, cb){
+  UI.txtCb=cb; modal("<h3>"+esc(titre)+"</h3><input type='text' id='txtIn' value='"+esc(val)+"' style='width:100%'><div class='row'><button class='btn pri' data-act='txt-ok'>OK</button><button class='btn' data-act='mclose'>Annuler</button></div>");
+  var i=document.getElementById("txtIn"); i.focus(); i.select(); i.onkeydown=function(e){ if(e.key==="Enter") action("txt-ok"); };
+}
+
+/* ---------- 📝 fiches élèves ---------- */
+var FQ = [
+  ["bav","En classe, je bavarde…",[[0,"presque jamais"],[1,"parfois"],[2,"souvent"]]],
+  ["vue","De ma place, je vois bien le tableau :",[[0,"oui"],[1,"pas toujours"],[2,"non"]]],
+  ["place","Pour bien me concentrer, je préfère être :",[["devant","devant"],["milieu","au milieu"],["fond","au fond"],["egal","ça m'est égal"]]],
+  ["main","J'écris de la main :",[["d","droite"],["g","gauche"]]]
+];
+function domsFiche(){ var ids=EL.comps.map(function(c){return c.id;}); return D.fcfg.doms.filter(function(d){ return ids.indexOf(d)>=0; }); }
+function domLbl(id){ return DOMK[id] || compNom(id); }
+VUES.fiches = function(){
+  var cfg=D.fcfg, h=[], nf=EL.list.filter(function(e){return D.fiches[e.id];}).length;
+  h.push("<div class='card'><h2>🖨 Fiche « Ma place en classe »</h2><p class='small'>Une demi-page A4 par élève (2 par feuille), prénom déjà écrit : les élèves cochent et entourent, 3 minutes suffisent. Ensuite, saisis les réponses ci-dessous ou envoie-moi les scans.</p>");
+  h.push("<div class='rule'><span class='lbl'>Questions</span><div class='chips'>"+
+    [["bav","💬 Bavardage"],["vue","👓 Vue du tableau"],["place","🎯 Place préférée"],["main","✍️ Main"],["aide","🧑‍🏫 Aide / aider"],["mal","↔️ Être loin de"],["bien","🤝 Travailler bien avec"]].map(function(q){ return "<button class='chip"+(cfg[q[0]]?" on":"")+"' data-seg-fc='"+q[0]+"'>"+q[1]+"</button>"; }).join("")+"</div></div>");
+  if(cfg.aide) h.push("<div class='rule'><span class='lbl'>Domaines « aide / aider » ("+domsFiche().length+")</span><div class='chips'>"+EL.comps.map(function(c){ return "<button class='chip"+(cfg.doms.indexOf(c.id)>=0?" on":"")+"' data-fdom='"+esc(c.id)+"'>"+esc(domLbl(c.id))+"</button>"; }).join("")+"</div><span class='muted small'>6 au plus pour rester rapide. Ce sont les compétences de Groupes : la réponse sert au tutorat.</span></div>");
+  h.push("<div class='row'><button class='btn pri' data-act='f-pdf'>⬇ PDF des "+EL.list.length+" fiches</button><button class='btn' data-act='f-pdf0'>⬇ 2 fiches vierges</button></div></div>");
+  h.push("<div class='card'><h2>✏️ Réponses ("+nf+" / "+EL.list.length+")</h2><p class='muted small'>Touche un prénom pour saisir sa fiche en quelques touches.</p><div class='chips'>"+
+    EL.list.map(function(e){ return "<button class='chip"+(D.fiches[e.id]?" on":"")+"' data-fedit='"+e.id+"'>"+(D.fiches[e.id]?"✅ ":"")+esc(e.n)+"</button>"; }).join("")+"</div></div>");
+  if(nf){
+    var b=bilanFiches();
+    h.push("<div class='card'><h2>✅ Utiliser les réponses</h2><ul class='small'>"+b.lignes.map(function(l){ return "<li>"+esc(l)+"</li>"; }).join("")+"</ul>"+
+      "<p class='muted small'>Ce que tu as déjà réglé toi-même (bavardage, places) est gardé. Les règles venues des fiches sont marquées 📝 dans 🎯 Règles ; tu peux les supprimer une par une. Tu peux relancer après de nouvelles fiches.</p>"+
+      "<button class='btn pri' data-act='f-apply'>Appliquer au plan</button></div>");
+  }
+  return h.join("");
+};
+function bilanFiches(){
+  var n={bav:0,vue:0,g:0,aide:0,aider:0,mal:0,bien:0,f:0};
+  EL.list.forEach(function(e){ var f=D.fiches[e.id]; if(!f) return; n.f++;
+    if(f.bav>0 && D.bav[e.id]==null) n.bav++; if(f.vue>=1) n.vue++; if(f.main==="g") n.g++;
+    n.aide+=(f.aide||[]).length; n.aider+=(f.aider||[]).length; n.mal+=(f.mal||[]).length; n.bien+=(f.bien||[]).length; });
+  var l=[n.f+" fiche(s) saisie(s)"];
+  if(n.bav) l.push("💬 "+n.bav+" élève(s) se disent bavards (parfois ou souvent)");
+  if(n.vue) l.push("👓 "+n.vue+" élève(s) voient mal le tableau → près du tableau (et face au tableau si « non »)");
+  if(n.g) l.push("✍️ "+n.g+" gaucher(s)");
+  if(n.aide||n.aider) l.push("🧑‍🏫 "+n.aide+" demandes d'aide, "+n.aider+" propositions d'aider → tutorats");
+  if(n.mal) l.push("↔️ "+n.mal+" « loin de » → règles « loin » (importantes)");
+  if(n.bien) l.push("🤝 "+n.bien+" « bien avec » → règles « côte à côte » (souhaitées)");
+  return {n:n, lignes:l};
+}
+function appliquerFiches(){
+  D.liens = D.liens.filter(function(l){ return !l.f; });
+  var mal={}, bien={};
+  EL.list.forEach(function(e){ var f=D.fiches[e.id]; if(!f) return;
+    if(f.bav>0 && D.bav[e.id]==null) D.bav[e.id]=f.bav;
+    if(f.vue>=1){ var a=fxArr(e.id).filter(function(z){return z!=="fond";}); if(a.indexOf("devant")<0) a.push("devant"); if(f.vue===2 && a.indexOf("centre")<0) a.push("centre"); D.fixes[e.id]=a; }
+    if(f.main==="g") D.gauche[e.id]=1; else if(f.main==="d") delete D.gauche[e.id];
+    var nx={}; (f.aider||[]).forEach(function(c){ nx[c]="a"; }); (f.aide||[]).forEach(function(c){ nx[c]="f"; });
+    if(Object.keys(nx).length) D.nivx[e.id]=nx; else delete D.nivx[e.id];
+    (f.mal||[]).forEach(function(o){ if(EL.by[o]) mal[pairKey(e.id,o)]=[e.id,o]; });
+    (f.bien||[]).forEach(function(o){ if(EL.by[o]) bien[pairKey(e.id,o)]=[e.id,o]; });
+  });
+  Object.keys(mal).forEach(function(k){ D.liens.push({id:uid(), t:"loin", m:mal[k], w:2, f:1}); });
+  Object.keys(bien).forEach(function(k){ if(!mal[k]) D.liens.push({id:uid(), t:"ens", m:bien[k], w:1, f:1}); });
+  var ajout=[];
+  domsFiche().forEach(function(c){
+    var f=0, a=0; Object.keys(D.nivx).forEach(function(s){ if(D.nivx[s][c]==="f") f++; if(D.nivx[s][c]==="a") a++; });
+    if(f && a && !D.R.tutos.some(function(t){return t.comp===c;})){ D.R.tutos.push({id:uid(), comp:c, m:"tuto", w:1}); ajout.push(domLbl(c)); }
+  });
+  modifie(); rendre();
+  toast("Réponses appliquées."+(ajout.length?" Tutorats ajoutés : "+ajout.join(", ")+".":"")+" Touche 🎲 dans 🪑 Plan.");
+}
+function ouvrirFiche(sid){
+  var e=EL.by[sid]; if(!e) return; UI.ficheSid=sid;
+  var f=D.fiches[sid]||{}, cfg=D.fcfg, h=["<h3>📝 "+esc(e.n)+"</h3>"];
+  FQ.forEach(function(q){ if(!cfg[q[0]]) return;
+    h.push("<p class='lbl' style='margin:10px 0 4px;font-weight:600'>"+esc(q[1])+"</p><div class='chips'>"+q[2].map(function(o){ return "<button class='chip"+(f[q[0]]===o[0]?" on":"")+"' data-fs='"+q[0]+"|"+o[0]+"'>"+esc(o[1])+"</button>"; }).join("")+"</div>"); });
+  if(cfg.aide){ var ds=domsFiche();
+    h.push("<p style='margin:10px 0 4px;font-weight:600'>J'ai besoin d'aide en…</p><div class='chips'>"+ds.map(function(d){ return "<button class='chip"+((f.aide||[]).indexOf(d)>=0?" on":"")+"' data-fs='aide|"+d+"'>"+esc(domLbl(d))+"</button>"; }).join("")+"</div>");
+    h.push("<p style='margin:10px 0 4px;font-weight:600'>Je peux aider en…</p><div class='chips'>"+ds.map(function(d){ return "<button class='chip"+((f.aider||[]).indexOf(d)>=0?" on":"")+"' data-fs='aider|"+d+"'>"+esc(domLbl(d))+"</button>"; }).join("")+"</div>"); }
+  [["mal","Je dois être loin de…"],["bien","Je travaille bien avec…"]].forEach(function(q){ if(!cfg[q[0]]) return;
+    h.push("<p style='margin:10px 0 4px;font-weight:600'>"+q[1]+" <span class='muted small'>(2 au plus)</span></p><div class='chips'>"+EL.list.filter(function(o){return o.id!==sid;}).map(function(o){ return "<button class='chip"+((f[q[0]]||[]).indexOf(o.id)>=0?" on":"")+"' data-fs='"+q[0]+"|"+o.id+"'>"+esc(o.n)+"</button>"; }).join("")+"</div>"); });
+  var i=EL.list.indexOf(e), nx=EL.list[i+1];
+  h.push("<div class='row' style='margin-top:14px'>"+(nx?"<button class='btn pri' data-fedit='"+nx.id+"'>Suivant : "+esc(nx.n)+" ▶</button>":"")+"<button class='btn' data-act='f-close'>Terminer</button>"+(D.fiches[sid]?"<button class='btn danger' data-act='f-del'>Effacer sa fiche</button>":"")+"</div>");
+  var box=document.getElementById("mbox"), st=(document.getElementById("modal").hidden || UI.ficheLast!==sid)?0:box.scrollTop;
+  modal(h.join("")); box.scrollTop=st; UI.ficheLast=sid;
+}
+function ficheClic(v){
+  var sid=UI.ficheSid, q=v.split("|"), k=q[0], val=q[1], f=D.fiches[sid]||{};
+  if(k==="bav"||k==="vue") val=+val;
+  if(["aide","aider","mal","bien"].indexOf(k)>=0){
+    var arr=(f[k]||[]).slice(), j=arr.indexOf(val);
+    if(j>=0) arr.splice(j,1); else { if((k==="mal"||k==="bien") && arr.length>=2){ toast("2 prénoms au plus."); return; } arr.push(val); if(k==="aide"||k==="aider"){ var o=k==="aide"?"aider":"aide"; f[o]=(f[o]||[]).filter(function(x){return x!==val;}); } }
+    f[k]=arr;
+  } else f[k] = f[k]===val ? null : val;
+  f.d=Date.now(); D.fiches[sid]=f; modifie(); ouvrirFiche(sid);
+}
+function chargerJsPDF(){
+  return new Promise(function(ok,ko){
+    if(window.jspdf && window.jspdf.jsPDF) return ok(window.jspdf.jsPDF);
+    var sc=document.createElement("script"); sc.src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js";
+    sc.onload=function(){ window.jspdf ? ok(window.jspdf.jsPDF) : ko(); }; sc.onerror=ko; document.head.appendChild(sc);
+  });
+}
+function ficheDessin(doc, ox, e){
+  var cfg=D.fcfg, x0=ox+9, W=130, y=15, i;
+  doc.setTextColor(0); doc.setDrawColor(60); doc.setLineWidth(0.3);
+  doc.setFont("helvetica","bold"); doc.setFontSize(14); doc.text("Ma place en classe", x0, y);
+  doc.setFontSize(13); doc.text(e ? e.n : "Prénom : ..................", x0+W, y, {align:"right"});
+  y+=5.5; doc.setFont("helvetica","normal"); doc.setFontSize(8.5); doc.setTextColor(90);
+  doc.text("Coche une seule case par ligne. Réponds franchement : cela m'aide à bien te placer.", x0, y); doc.setTextColor(0);
+  y+=7.5;
+  FQ.forEach(function(q){ if(!cfg[q[0]]) return;
+    doc.setFont("helvetica","bold"); doc.setFontSize(10.5); doc.text(q[1], x0, y); y+=5.5;
+    doc.setFont("helvetica","normal"); doc.setFontSize(10); var x=x0+2;
+    q[2].forEach(function(o){ doc.rect(x, y-3.6, 4.2, 4.2); doc.text(o[1], x+6, y); x+=6+doc.getTextWidth(o[1])+8; });
+    y+=8.5; });
+  var ds=domsFiche();
+  if(cfg.aide && ds.length){
+    var c1=x0+80, c2=x0+113;
+    doc.setFont("helvetica","bold"); doc.setFontSize(10.5); doc.text("Coche si c'est vrai :", x0, y);
+    doc.setFontSize(9); doc.text("J'ai besoin d'aide", c1, y, {align:"center"}); doc.text("Je peux aider", c2, y, {align:"center"}); y+=5.5;
+    doc.setFont("helvetica","normal"); doc.setFontSize(10);
+    ds.forEach(function(d,k){ if(k%2===0){ doc.setFillColor(242,242,238); doc.rect(x0, y-4.2, W, 5.6, "F"); }
+      doc.text(domLbl(d), x0+2, y); doc.rect(c1-2.1, y-3.5, 4.2, 4.2); doc.rect(c2-2.1, y-3.5, 4.2, 4.2); y+=5.6; });
+    y+=4;
+  }
+  var autres=EL.list.filter(function(o){ return !e || o.id!==e.id; });
+  var rows=Math.ceil(autres.length/4), lh = rows>8 ? 4.2 : 4.7;
+  [["mal","Je dois être loin de :"],["bien","Je travaille bien avec :"]].forEach(function(q){ if(!cfg[q[0]]) return;
+    doc.setFont("helvetica","bold"); doc.setFontSize(10.5); doc.text(q[1], x0, y);
+    doc.setFont("helvetica","normal"); doc.setFontSize(8.5); doc.setTextColor(90); doc.text("entoure 2 prénoms au plus (ou aucun)", x0+W, y, {align:"right"}); doc.setTextColor(0);
+    y+=5; doc.setFontSize(9.5);
+    autres.forEach(function(o,k){ doc.text(o.n, x0+2+(k%4)*(W/4), y+Math.floor(k/4)*lh); });
+    y+=rows*lh+4; });
+  doc.setFontSize(6); doc.setTextColor(160); doc.text(e ? "Plan de classe · "+e.id : "Plan de classe", x0+W, 204, {align:"right"}); doc.setTextColor(0);
+}
+function pdfFiches(vierge){
+  toast("Préparation du PDF…");
+  chargerJsPDF().then(function(JsPDF){
+    var doc=new JsPDF({orientation:"landscape", unit:"mm", format:"a4"});
+    var list = vierge ? [null,null] : EL.list.slice();
+    for(var i=0;i<list.length;i+=2){
+      if(i) doc.addPage();
+      ficheDessin(doc, 0, list[i]);
+      if(i+1<list.length) ficheDessin(doc, 148.5, list[i+1]);
+      doc.setLineDashPattern([2,2],0); doc.setDrawColor(170); doc.line(148.5, 5, 148.5, 205); doc.setLineDashPattern([],0);
+    }
+    telecharger(vierge?"fiche-ma-place-vierge.pdf":"fiches-ma-place-en-classe.pdf", doc.output("blob"));
+  }).catch(function(){ toast("PDF impossible : vérifie la connexion internet, puis réessaie."); });
+}
+
+/* ---------- démarrage ---------- */
+function demarrer(){
+  metaLire();
+  D = chargerLocal();
+  if(!D){ D = migrer(defaut()); }   /* v1.4 : plan de départ complété (bav, gauche, fiches…) : sinon « 🎲 » plantait sur un appareil neuf */
+  elevesLocal();
+  UI.vue = (location.hash||"").slice(1) || "plan"; if(!VUES[UI.vue]) UI.vue="plan";
+  try{ history.replaceState({v:UI.vue},"","#"+UI.vue); }catch(e){}
+  rendre();
+  if(SY.localBad) toast("Copie de cet appareil illisible : elle est gardée en secours, la base fait foi.");
+  var slowT = setTimeout(function(){ if(!SY.gotDb){ SY.slow=true; majSync(); } }, 8000);
+  if(!window.claude || !window.claude.use){ SY.dbNull=true; majSync(); return; }
+  window.claude.use("db").then(function(db){
+    if(!db){ SY.dbNull=true; majSync(); return; }
+    SY.db=db; SY.ref=db.doc("lecture/plan");
+    chargerEleves();
+    SY.ref.onSnapshot(function(s){ clearTimeout(slowT); recevoirBase(s); }, function(){ SY.dbNull=true; SY.db=null; majSync(); });
+    majSync();
+  }).catch(function(){ SY.dbNull=true; majSync(); });
+}
+document.addEventListener("visibilitychange", function(){ if(document.visibilityState==="visible") chargerEleves(); });
+demarrer();
+</script>
+<script>if(!MODE_APP)document.write('<script src="side-nav.js" defer><\/script>');</script>
+</body></html>

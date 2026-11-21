@@ -14,16 +14,20 @@ Licence : CC BY-NC-SA 4.0.
 
 | Outil | Adresse | Version |
 |---|---|---|
-| Portail « Outils de classe partagés » | https://xaviergougaud1-netizen.github.io/outils-classe/ | 1.0.0 |
+| Portail « Outils de classe partagés » | https://xaviergougaud1-netizen.github.io/outils-classe/ | 1.1.0 |
 | Ma classe (liste d'élèves commune) | https://xaviergougaud1-netizen.github.io/outils-classe/ma-classe/ | 1.0.0 |
 | Correcteur de calcul posé (ceintures Charivari) | https://xaviergougaud1-netizen.github.io/outils-classe/correcteur/ | 2.6.0 |
 | Ateliers de problèmes (corrigés Accès Maths CM1 et CM2) | https://xaviergougaud1-netizen.github.io/outils-classe/problemes/ | 2.1.0 |
+| Groupes (groupes de travail, rôles, minuteur) | https://xaviergougaud1-netizen.github.io/outils-classe/groupes/ | 1.10.0 |
+| Plan de classe | https://xaviergougaud1-netizen.github.io/outils-classe/plan/ | 1.6 |
 | Orienter un élève (outil de Xavier, pas dans le portail) | https://xaviergougaud1-netizen.github.io/outils-classe/orienter/ | 1.1.0 |
 
 ## Organisation
 - `commun/charte.css` : charte Repères v1 commune (couleur de chaque outil : `--outil-calcul`, `--outil-problemes`).
 - `commun/eval.js` : évaluations A / AR / ECA / NA, Ctrl+Z, tableau PDF. Dans Classe : base `evals/<outil>`, élèves de `maths/core.students`. Dans le kit (`{local:true}`) : élèves de « Ma classe », évaluations dans localStorage `kit-evals-<outil>`, activées outil par outil (`kit-evals-on-<outil>`).
 - `commun/ma-classe.js` : la liste d'élèves du kit (localStorage `kit-classe`), réglage « Évaluer mes élèves » de chaque outil. **Toutes les clés du kit commencent par `kit-`** (même adresse github.io que Thêta).
+- `commun/kit-db.js` : dans le kit seulement, imite la base de Classe (`window.claude.use('db')` et `use('downloads')`) avec le stockage de l'appareil (`kit-db:<chemin>`) ; `lecture/main` (élèves) est fabriqué à partir de « Ma classe ». C'est ce qui permet à Groupes et Plan de classe de tourner sans modification dans les deux endroits. Exception au préfixe `kit-` : leurs copies locales gardent leurs noms d'origine (`classe-groupes-v1`, `classe-plan-v1`).
+- `groupes/`, `plan/` : mêmes fichiers que `groupes.html` et `plan.html` de Classe (barre de navigation et mentions de la fluence adaptées dans le kit).
 - `ma-classe/` : saisie un par un, coller une liste, export ONDE (on ne garde que prénom et niveau), export / import JSON.
 - `index.html`, `sw.js`, `manifest.webmanifest` à la racine : le portail (installable), qui met aussi « Ma classe » hors ligne.
 - `commun/fiches-calcul.js`, `commun/corriges-problemes.js` : les données (fiches et corrigés).
@@ -33,10 +37,11 @@ Licence : CC BY-NC-SA 4.0.
 ## Mettre à jour un outil
 1. Modifier ici (c'est l'exemplaire de référence).
 2. Changer `VERSION` dans `index.html` **et** `CACHE` dans `sw.js` (sinon les téléphones gardent l'ancienne version).
-3. Republier aussi dans Classe : `correcteur/index.html` → `correcteur.html`, `problemes/index.html` → `problemes.html`, `commun/*` → `outils/*`.
+3. Republier aussi dans Classe : `correcteur/index.html` → `correcteur.html`, `problemes/index.html` → `problemes.html`, `groupes/index.html` → `groupes.html`, `plan/index.html` → `plan.html`, `commun/*` → `outils/*` (sauf `ma-classe.js` et `kit-db.js`, inutiles dans Classe).
 4. Ajouter une ligne dans « Nouveautés ».
 
 ## Nouveautés
+- 2026-11-21 · Kit 1.1.0 : Groupes 1.10.0 et Plan de classe 1.6 dans le kit (élèves de Ma classe, données sur l'appareil via commun/kit-db.js), même fichier que dans Classe.
 - 2026-11-21 · Kit 1.0.0 « Outils de classe partagés » : portail, Ma classe 1.0.0, Correcteur 2.6.0 et Ateliers 2.1.0 (plus de lien vers Classe sur github.io, évaluations au choix avec les élèves de Ma classe, sur l'appareil ; PDF en téléchargement classique ; mention Accès Maths).
 - 2026-11-18 · Orienter un élève 1.1.0 : fiches à imprimer (familles, enseignants) en PDF et Word dans `orienter/fiches/`, en tête du Répertoire.
 - 2026-11-18 · Orienter un élève 1.0.0 : répertoire de 27 professionnels, structures et dispositifs (ordonnance et prise en charge visibles), questions guidées, courrier de l'école pour le médecin (brouillon sur l'appareil, effacé après 30 jours), Se former, fiches pour les familles. Contenu modifiable dans `orienter/donnees.js`. Aucun prénom d'élève n'est enregistré dans le dépôt.

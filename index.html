@@ -13,6 +13,7 @@ Choix techniques : GitHub Pages ; un seul moteur par outil (le même fichier ser
   (même adresse github.io que Thêta sur l'appareil de Xavier).
 Licence : CC BY-NC-SA 4.0.
 Historique :
+- 1.1.0 (2026-11-21) Groupes et Plan de classe dans le kit (même fichier que dans Classe, commun/kit-db.js).
 - 1.0.0 (2026-11-21) portail, Ma classe, Correcteurs avec évaluations au choix sur l'appareil.
 -->
 <html lang="fr">
@@ -71,6 +72,7 @@ footer a{color:var(--encre-douce)}
   <details class="encart carte" id="nouveautes">
     <summary>✨ Nouveautés</summary>
     <ul>
+      <li><b>21/11/2026 · version 1.1</b> : <b>Groupes</b> et <b>Plan de classe</b> arrivent. Ils utilisent les élèves de « Ma classe » ; les profils (copains, élèves à séparer, filles et garçons…) se règlent dans Groupes › Élèves et servent aussi au plan.</li>
       <li><b>21/11/2026 · version 1.0</b> : premier partage. « Ma classe » (liste d’élèves une seule fois, coller une liste, export ONDE), Correcteur de calcul posé et Ateliers de problèmes, avec évaluations A / AR / ECA / NA au choix.</li>
     </ul>
   </details>
@@ -89,7 +91,7 @@ footer a{color:var(--encre-douce)}
 <div id="toast" class="toast" role="status"></div>
 <script src="commun/ma-classe.js"></script>
 <script>
-const VERSION = "1.0.0";
+const VERSION = "1.1.0";
 const MAIL = "xavier.gougaud@ac-nantes.fr";
 const $ = id => document.getElementById(id);
 const esc = t => String(t).replace(/[&<>"']/g, c => "&#" + c.charCodeAt(0) + ";");
@@ -97,9 +99,11 @@ const esc = t => String(t).replace(/[&<>"']/g, c => "&#" + c.charCodeAt(0) + ";"
 const OUTILS = [
   {id: "ma-classe", url: "ma-classe/", ico: "👥", c: "var(--outil-maclasse)", titre: "Ma classe", texte: "Ta liste d’élèves, saisie une seule fois : tous les outils la retrouvent."},
   {id: "calcul", url: "correcteur/", ico: "➗", c: "var(--outil-calcul)", titre: "Correcteur de calcul posé", texte: "Tape le premier calcul d’une fiche de ceinture (Charivari) : le corrigé s’affiche, avec les étapes. Sert aussi de calculatrice."},
-  {id: "problemes", url: "problemes/", ico: "🧩", c: "var(--outil-problemes)", titre: "Ateliers de problèmes", texte: "Corrigés des ateliers Accès Maths CM1 et CM2, problème par problème, avec les calculs."}
+  {id: "problemes", url: "problemes/", ico: "🧩", c: "var(--outil-problemes)", titre: "Ateliers de problèmes", texte: "Corrigés des ateliers Accès Maths CM1 et CM2, problème par problème, avec les calculs."},
+  {id: "groupes", url: "groupes/", ico: "🔀", c: "var(--outil-groupes)", titre: "Groupes", texte: "Des groupes de travail équilibrés selon tes critères (niveaux, copains, élèves à séparer, rôles), à projeter avec un minuteur."},
+  {id: "plan", url: "plan/", ico: "🪑", c: "var(--outil-plan)", titre: "Plan de classe", texte: "Dessine ta salle, puis place les élèves selon tes règles (séparer, tutorat, mixité, places imposées). Projection et impression."}
 ];
-const BIENTOT = [["🪑", "Plan de classe"], ["🔀", "Groupes"], ["✍️", "Dictées"], ["📝", "Mes problèmes (édition libre)"], ["⚡", "Flash maths"], ["📄", "Fiches Claires"]];
+const BIENTOT = [["✍️", "Dictées"], ["📝", "Mes problèmes (édition libre)"], ["⚡", "Flash maths"], ["📄", "Fiches Claires"]];
 function rendre() {
   const n = MaClasse.charger().eleves.length;
   $("depart").innerHTML = n

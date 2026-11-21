@@ -8,6 +8,8 @@ Fiche d'identité
 - Écran n° 1 : la prochaine dictée de l'année (d'après les cycles de Classe), telle que l'élève la verra.
 - Ce qu'il ne fait pas : les dates des cycles (journal de Classe, vue Dictées), les dictées originales (page « Dictées et dictées adaptées »).
 Version : voir VERSION
+- 2.6.0 (21/11/2026) : kit, « 📄 Importer un PDF » dans Mes dictées : texte lu par pdf.js (OCR Tesseract si scanné), découpage selon les titres « Dictée n », par page ou en un seul bloc,
+  lignes « Mots : » et « Règle : » reconnues, aperçu modifiable (cocher, titre, règle, texte, mots) avant l'ajout ; dates proposées à la suite.
 - 2.5.0 (21/11/2026) : un seul fichier pour Classe (dictees-adaptees.html) et le kit « Outils de classe partagés » (dépôt outils-classe, dictees/index.html).
   Dans le kit (MODE_APP) : onglet « Mes dictées » (texte, mots, règle, mots à trous, date : tout facultatif sauf le texte ; S.data.textes),
   cycle réglable (S.data.cycle : étapes, semaine, jour, devoirs avec {n} {mots} {regle} {titre}), « Aujourd’hui » (copier, projeter, étiquettes à imprimer),
@@ -232,7 +234,7 @@ span.gap{display:inline-block;line-height:40px}
 <div id="printzone" aria-hidden="true"></div>
 <div id="msg" role="status"></div>
 <script>
-var VERSION="2.5.0", KEY="classe-dictees-adaptees", DBPATH="dictees/reglages";
+var VERSION="2.6.0", KEY="classe-dictees-adaptees", DBPATH="dictees/reglages";
 /* Programme de l'année (livret « Leçons d'orthographe », règles H1 à H17) : dictées Retz faites, dans l'ordre */
 var PROGRAMME=[1,2,3,4,7,8,10,11,12,13,14,18,19,20,23,24,26];
 /* Notions proposées en choix : t = dictée Retz où la leçon est vue (auto) ; def = réglage par défaut */
@@ -631,7 +633,7 @@ function vueTextes(){
   h+='</div><div class="card"><h2 style="margin-top:0">📚 Mes dictées <span class="muted small">· '+T.length+'</span></h2>';
   h+=T.map(function(x,i){return '<div class="drow"><span class="h">'+(i+1)+'</span><span class="t">'+esc(x.t||"Sans titre")+'<small>'+(x.notion?esc(x.notion)+' · ':'')+(x.mots&&x.mots.length?x.mots.length+' mots · ':'')+(x.date?'bilan '+esc(fcourt(x.date)):'sans date')+'</small></span>'
     +'<span class="row" style="gap:4px;flex-wrap:nowrap"><button class="btn sq sm" data-ka="haut" data-ki="'+i+'" aria-label="Monter" '+(i?'':'disabled')+'>↑</button><button class="btn sm" data-ka="edit" data-ki="'+i+'">✎ Modifier</button><button class="btn sm" data-ka="voir" data-ki="'+i+'">▶</button></span></div>'}).join("");
-  h+='<div class="row" style="margin-top:10px"><button class="btn p" data-ka="ajout">＋ Ajouter une dictée</button></div>';
+  h+='<div class="row" style="margin-top:10px"><button class="btn p" data-ka="ajout">＋ Ajouter une dictée</button><label class="btn">📄 Importer un PDF<input type="file" id="kpdf" accept="application/pdf,.pdf" hidden></label></div>';
   h+='<details style="margin-top:12px"><summary class="small" style="cursor:pointer;font-weight:700">📤 Partager avec des collègues</summary><p class="small muted">Crée un fichier avec tes textes, mots et règles (sans élèves ni réglages), qu’un collègue importe ici. Ne partage que des textes que tu as le droit de diffuser.</p>'
     +'<div class="row"><button class="btn" data-ka="partager">📤 Créer le fichier</button><label class="btn">📥 Importer des dictées<input type="file" id="kimp" accept=".json,application/json" hidden></label></div></details></div>';
   var cycO=S.ui.cycOuvert===undefined?!T.length:S.ui.cycOuvert;
@@ -667,6 +669,100 @@ function editer(i){
     if(nouveau)S.ui.cur=n-1; fermer(); modifier(); rendre(); toast(nouveau?"Dictée ajoutée":"Dictée enregistrée");
   };
   setTimeout(function(){var f=$("#kT");if(f)f.focus()},50);
+}
+/* ---------- Kit : importer un PDF qui contient plusieurs dictées (2.6.0) ----------
+   pdf.js lit le texte de chaque page ; si le PDF est scanné (presque pas de texte), Tesseract le lit (OCR, en ligne la première fois).
+   Découpage au choix : selon les titres (« Dictée 1 », « Dictée n° 2 », « Texte 3 »…), une dictée par page, ou tout en une.
+   Dans chaque morceau : une ligne « Mots… : » donne les mots à apprendre, une ligne « Règle : » ou « Notion : » la règle ; le reste est le texte.
+   Aperçu modifiable avant l'ajout : rien n'est ajouté sans « Ajouter ». */
+var PDFJS_KIT="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/";
+function chargerScript(src){return new Promise(function(ok,ko){var s=document.createElement("script");s.src=src;s.onload=ok;s.onerror=ko;document.head.append(s)})}
+async function lirePdf(fichier,progres){
+  if(!window.pdfjsLib)await chargerScript(PDFJS_KIT+"pdf.min.js");
+  pdfjsLib.GlobalWorkerOptions.workerSrc=PDFJS_KIT+"pdf.worker.min.js";
+  var pdf=await pdfjsLib.getDocument({data:await fichier.arrayBuffer()}).promise, pages=[];
+  for(var i=1;i<=pdf.numPages;i++){
+    progres("Lecture de la page "+i+" sur "+pdf.numPages+"…");
+    var p=await pdf.getPage(i), tc=await p.getTextContent(), lignes=[], cur=null;
+    tc.items.forEach(function(it){ if(!it.str)return; var y=Math.round(it.transform[5]);
+      if(!cur||Math.abs(cur.y-y)>3){cur={y:y,t:"",h:it.height||0};lignes.push(cur)} cur.t+=(cur.t&&!/\s$/.test(cur.t)&&!/^\s/.test(it.str)?" ":"")+it.str; if(it.hasEOL)cur=null; });
+    lignes.sort(function(a,b){return b.y-a.y});
+    var txt="",prev=null; lignes.forEach(function(l){ var t=l.t.replace(/\s+/g," ").trim(); if(!t)return; if(prev&&prev.y-l.y>(l.h||12)*1.9)txt+="\n"; txt+=t+"\n"; prev=l; });
+    pages.push({txt:txt.trim(),page:p});
+  }
+  return pages;
+}
+async function ocrPages(pages,progres){
+  if(!window.Tesseract)await chargerScript("https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js");
+  for(var i=0;i<pages.length;i++){
+    progres("Lecture du scan, page "+(i+1)+" sur "+pages.length+"… (peut prendre une minute)");
+    var p=pages[i].page, v1=p.getViewport({scale:1}), v=p.getViewport({scale:Math.min(3,2000/v1.width)}), c=document.createElement("canvas"); c.width=v.width;c.height=v.height;
+    await p.render({canvasContext:c.getContext("2d"),viewport:v}).promise;
+    var r=await Tesseract.recognize(c,"fra"); pages[i].txt=(r&&r.data&&r.data.text||"").replace(/[ \t]+/g," ").trim();
+  }
+  return pages;
+}
+var TITRE_RE=/^\s*(?:dict[ée]e|texte)\s*(?:bilan\s*)?(?:n\s*[°ºo]\.?\s*|num[ée]ro\s*)?(\d+)\b[\s:.\-–—]*(.*)$/i;
+function analyser(bloc,k){
+  var lignes=bloc.split("\n").map(function(l){return l.trim()}), titre="", notion="", mots=[], corps=[];
+  lignes.forEach(function(l){
+    if(!l){corps.push("");return} if(/^\d{1,3}$/.test(l)||/^page\s*\d+/i.test(l))return; /* ligne vide = nouveau paragraphe ; numéros de page ignorés */
+    var m=l.match(TITRE_RE); if(m&&!titre){titre=m[2]?m[2].replace(/^[:.\-–—\s]+/,""):"";return}
+    var mm=l.match(/^mots?(?:\s+[àa]\s+(?:apprendre|retenir|savoir))?\s*:\s*(.*)$/i); if(mm){mots=mots.concat(listeMots(mm[1]));return}
+    var rg=l.match(/^(?:r[èe]gle|notion|le[çc]on)\s*:\s*(.*)$/i); if(rg){notion=rg[1];return}
+    corps.push(l);
+  });
+  var txt=corps.join("\n").replace(/-\n(?=\p{Ll})/gu,"").split(/\n\s*\n/).map(function(p){return p.replace(/\s*\n\s*/g," ").trim()}).filter(Boolean).join("\n\n");
+  return {on:txt.length>15,t:titre||("Dictée "+k),notion:notion,src:txt,mots:mots};
+}
+function decouper(pages,mode){
+  var tout=pages.map(function(p){return p.txt}).join("\n\n");
+  if(mode==="page")return pages.map(function(p,i){return analyser(p.txt,i+1)}).filter(function(d){return d.src});
+  if(mode==="un")return [analyser(tout,1)];
+  var blocs=[],cur=null; tout.split("\n").forEach(function(l){ if(TITRE_RE.test(l.trim())){cur=[l];blocs.push(cur)} else if(cur)cur.push(l); else {cur=[l];blocs.push(cur)} });
+  if(blocs.length<2)return null; /* aucun titre trouvé */
+  return blocs.map(function(b,i){return analyser(b.join("\n"),i+1)}).filter(function(d){return d.src||d.mots.length});
+}
+var IMP=null; /* {pages, mode, lot} */
+function apercuImport(){
+  var L=IMP.lot||[], n=L.filter(function(d){return d.on}).length;
+  ouvrir('<h2 style="margin-top:0">📄 Dictées trouvées dans le PDF</h2>'
+   +'<div class="chips" role="group" aria-label="Découpage">'+[["titres","Selon les titres"],["page","Une par page"],["un","Tout en une"]].map(function(o){return '<button class="chip sm" data-kim="'+o[0]+'" aria-pressed="'+(IMP.mode===o[0])+'">'+o[1]+'</button>'}).join("")+'</div>'
+   +(IMP.mode==="titres"&&!IMP.titres?'<p class="small muted">Aucun titre « Dictée 1, Dictée 2… » trouvé : découpage page par page.</p>':'')
+   +'<p class="small muted">Vérifie chaque dictée (touche son titre pour voir le texte). Décoche celles à ne pas ajouter. Tu pourras tout modifier ensuite.</p>'
+   +'<div style="max-height:52vh;overflow:auto">'+L.map(function(d,i){return '<details style="border-top:1px solid var(--line);padding:6px 0"><summary class="row" style="cursor:pointer;flex-wrap:nowrap"><input type="checkbox" data-kion="'+i+'" '+(d.on?"checked":"")+' aria-label="Ajouter"><b style="flex:1">'+esc(d.t)+'</b><small class="muted">'+(d.mots.length?d.mots.length+" mots · ":"")+d.src.split(/\s+/).filter(Boolean).length+' mots de texte</small></summary>'
+     +'<label class="small">Titre<input type="text" data-kif="t" data-ki2="'+i+'" value="'+esc(d.t)+'" style="width:100%"></label>'
+     +'<label class="small">Règle<input type="text" data-kif="notion" data-ki2="'+i+'" value="'+esc(d.notion)+'" style="width:100%"></label>'
+     +'<label class="small">Texte<textarea data-kif="src" data-ki2="'+i+'" rows="5" style="width:100%;font:inherit;border:2px solid var(--line);border-radius:12px;padding:8px">'+esc(d.src)+'</textarea></label>'
+     +'<label class="small">Mots à apprendre (séparés par des virgules)<input type="text" data-kif="mots" data-ki2="'+i+'" value="'+esc(d.mots.join(", "))+'" style="width:100%"></label></details>'}).join("")+'</div>'
+   +'<div class="row end" style="margin-top:10px"><button class="btn" id="kiA">Annuler</button><button class="btn p" id="kiO" '+(n?'':'disabled')+'>Ajouter '+(n>1?'les '+n+' dictées':n?'la dictée':'')+'</button></div>');
+  var dlg=$("#dlg");
+  dlg.onclick=function(e){var b=e.target.closest("[data-kim]"); if(b){IMP.mode=b.dataset.kim; refaireLot(); apercuImport();}};
+  dlg.onchange=function(e){var t=e.target, i=+(t.dataset.kion!==undefined?t.dataset.kion:t.dataset.ki2), d=IMP.lot[i]; if(!d)return;
+    if(t.dataset.kion!==undefined){d.on=t.checked; var c=IMP.lot.filter(function(x){return x.on}).length, ok=$("#kiO"); ok.disabled=!c; ok.textContent="Ajouter "+(c>1?"les "+c+" dictées":c?"la dictée":""); return;}
+    var f=t.dataset.kif; d[f]=f==="mots"?listeMots(t.value):t.value;};
+  $("#kiA").onclick=function(){IMP=null;fermer()};
+  $("#kiO").onclick=function(){
+    var choix=IMP.lot.filter(function(d){return d.on&&nettoyer(d.src).trim()}); if(!choix.length){toast("Aucune dictée cochée avec un texte");return}
+    choix.forEach(function(d){ var src=nettoyer(d.src).split(/\n\s*\n/).map(function(p){return p.replace(/\s*\n\s*/g," ").trim()}).filter(Boolean).join(" ¶ ");
+      S.data.textes.push({id:"d"+Date.now().toString(36)+Math.random().toString(36).slice(2,5),t:nettoyer(d.t).trim(),notion:nettoyer(d.notion).trim(),src:src,mots:d.mots.map(function(w){return nettoyer(w).trim()}).filter(Boolean),trous:[],date:prochaineDate()}); });
+    IMP=null; kitPrep(); fermer(); modifier(); rendre(); toast(choix.length+" dictée"+(choix.length>1?"s ajoutées":" ajoutée")+" · vérifie leurs dates dans la liste");
+  };
+}
+function refaireLot(){ var l=IMP.mode==="titres"?decouper(IMP.pages,"titres"):null; IMP.titres=!!l; IMP.lot=l||decouper(IMP.pages,IMP.mode==="titres"?"page":IMP.mode); }
+async function importerPdf(fichier){
+  var msg=function(t){toast(t)};
+  try{
+    var pages=await lirePdf(fichier,msg);
+    var lettres=pages.reduce(function(n,p){return n+p.txt.replace(/\s/g,"").length},0);
+    if(lettres<40*pages.length){
+      var ok=await new Promise(function(res){confirmer("Ce PDF semble scanné (presque pas de texte lisible). Le lire avec la reconnaissance de texte ? Compte environ 20 secondes par page ; il faudra relire le résultat.","Lire le scan",function(){res(true)}); var a=$("#cA"); if(a)a.addEventListener("click",function(){res(false)});});
+      if(!ok)return; pages=await ocrPages(pages,msg);
+    }
+    IMP={pages:pages,mode:"titres"}; refaireLot();
+    if(!IMP.lot.length){toast("Aucun texte trouvé dans ce PDF");IMP=null;return}
+    apercuImport();
+  }catch(e){ toast("PDF illisible, ou pas de connexion (la lecture des PDF demande Internet la première fois). Réessaie."); }
 }
 function devoirsTexte(){var j=aujourdhui();return etapesDu(j).filter(function(x){return x.devoir}).map(function(x){return x.devoir}).join("\n")}
 function projeter(){var t=devoirsTexte(); var el=document.createElement("div"); el.id="kproj";
@@ -706,6 +802,7 @@ document.addEventListener("click",function(e){
 document.addEventListener("toggle",function(e){if(MODE_APP&&e.target.id==="kcyc"){S.ui.cycOuvert=e.target.open;sauverLocal()}},true);
 document.addEventListener("change",function(e){
   if(!MODE_APP)return; var s=e.target;
+  if(s.id==="kpdf"&&s.files[0]){var fp=s.files[0];s.value="";importerPdf(fp);return}
   if(s.id==="kimp"&&s.files[0]){s.files[0].text().then(function(t){var p=JSON.parse(t),L3=(p&&Array.isArray(p.dictees))?p.dictees:[]; if(!L3.length){toast("Ce fichier ne contient pas de dictées");return}
       L3.forEach(function(x){S.data.textes.push({id:"d"+Date.now().toString(36)+Math.random().toString(36).slice(2,5),t:nettoyer(x.t),notion:nettoyer(x.notion),src:nettoyer(String(x.src||"").split(" ¶ ").join("\n\n")).split(/\n\s*\n/).join(" ¶ "),mots:(x.mots||[]).map(String),trous:(x.trous||[]).map(String),date:""}); kitPrep(); var n=S.data.textes.length; appliquerTrous(n,(x.trous||[]).map(String),[]);});
       modifier();rendre();toast(L3.length+" dictée"+(L3.length>1?"s importées":" importée")+" · ajoute leurs dates");}).catch(function(){toast("Fichier illisible")});s.value="";return}

@@ -22,7 +22,7 @@ Licence : CC BY-NC-SA 4.0.
 | Flash maths (exercices en photo du collègue) | https://xaviergougaud1-netizen.github.io/outils-classe/flash/ | 4.8 |
 | Fiches Claires | https://xaviergougaud1-netizen.github.io/outils-classe/fiches-claires/ | 1.11 |
 | Groupes (groupes de travail, rôles, minuteur) | https://xaviergougaud1-netizen.github.io/outils-classe/groupes/ | 1.10.0 |
-| Dictées adaptées (édition libre, cycle, devoirs) | https://xaviergougaud1-netizen.github.io/outils-classe/dictees/ | 2.5.0 |
+| Dictées adaptées (édition libre, cycle, devoirs, import PDF) | https://xaviergougaud1-netizen.github.io/outils-classe/dictees/ | 2.6.0 |
 | Plan de classe | https://xaviergougaud1-netizen.github.io/outils-classe/plan/ | 1.6 |
 | Orienter un élève (outil de Xavier, pas dans le portail) | https://xaviergougaud1-netizen.github.io/outils-classe/orienter/ | 1.1.0 |
 
@@ -51,6 +51,7 @@ Licence : CC BY-NC-SA 4.0.
 4. Ajouter une ligne dans « Nouveautés ».
 
 ## Nouveautés
+- 2026-11-21 · Dictées adaptées 2.6.0 : « Importer un PDF » qui contient plusieurs dictées (découpage selon les titres, par page ou en un bloc ; mots et règle reconnus ; OCR si scanné ; aperçu modifiable).
 - 2026-11-21 · Kit 1.4.0 : Fiches Claires 1.11 dans le kit (bibliothèque Ta Mallette sortie dans tm-lib.js, Classe seulement).
 - 2026-11-21 · Kit 1.3.0 : Mes problèmes (Ateliers 2.2.0, édition libre), Flash maths 4.8 dans le kit, images sur l'appareil (kit-images.js) et dans la sauvegarde complète.
 - 2026-11-21 · Kit 1.2.0 : Dictées adaptées 2.5.0 dans le kit (édition libre, cycle réglable, devoirs) ; Ma classe 1.1.0 : « Tout exporter » (sauvegarde complète) et rappel mensuel.

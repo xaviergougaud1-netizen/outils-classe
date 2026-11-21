@@ -2930,6 +2930,21 @@ function openSaveDialog(preVers) {
     } finally { go.disabled = false; }
   };
 }
+/* Lot de fiches (récupération de l'ancien artéfact Fiches Claires, 21/11/2026) : on ajoute, et pour une fiche déjà là on garde la plus récente. */
+function importLot(lot) {
+  let n = 0, garde = 0;
+  for (const fi of lot) {
+    if (!fi || !fi.id || !fi.versions || !fi.versions.lisible || !fi.versions.dys) continue;
+    fi.source = fi.source || { text: '', pages: [] }; fi.images = fi.images || {};
+    for (const vk of ['lisible', 'dys']) fi.versions[vk].style = Object.assign(clone(STYLE[vk]), fi.versions[vk].style || {});
+    ensureRep(fi);
+    const ex = S.fiches[fi.id];
+    if (ex && (ex.updated || 0) >= (fi.updated || 0)) { garde++; continue; }
+    S.fiches[fi.id] = fi; n++;
+  }
+  const ok = store.set('fc.fiches', S.fiches); syncSoon(); renderAll();
+  toast(n + ' fiche' + (n > 1 ? 's' : '') + ' ajoutée' + (n > 1 ? 's' : '') + (garde ? ' · ' + garde + ' déjà là (version plus récente gardée)' : '') + (ok ? '.' : ' · mémoire de l’appareil pleine : elles sont envoyées dans la base, garde le fichier.'), 7000);
+}
 function applySaved(j) {
   if (!j || !j.fiche || !j.fiche.versions) throw 0;
   const fi = j.fiche; fi.source = fi.source || { text: '', pages: [] }; fi.images = fi.images || {};
@@ -2950,6 +2965,7 @@ $('#open-input').addEventListener('change', async ev => {
       applySaved(el ? JSON.parse(el.textContent) : null); toast('Fiche ouverte telle qu’enregistrée.'); return;
     }
     const j = JSON.parse(txt);
+    if (j && j.app === 'fiches-claires' && Array.isArray(j.lot)) { importLot(j.lot); return; }
     if (j && j.app === 'fiches-claires') { applySaved(j); toast('Fiche ouverte.'); return; }
     if (!j || !j.versions || !j.versions.lisible || !j.versions.dys) throw 0;
     j.id = uid(); j.source = j.source || { text: '', pages: [] }; j.images = j.images || {};

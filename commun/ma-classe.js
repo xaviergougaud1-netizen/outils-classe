@@ -80,7 +80,7 @@ function encartEvals(el, outil){
 }
 /* Sauvegarde complète du kit : tout ce que les outils gardent sur l'appareil (élèves, groupes, plans, évaluations, dictées). */
 var JOUR = 864e5;
-function cleSauvee(k){ return /^(kit-|classe-groupes-v1|classe-plan-v1|flashmath-)/.test(k) && !/^kit-ui-|-secours$|^kit-export-|^kit-avant-import/.test(k); }
+function cleSauvee(k){ return /^(kit-|classe-groupes-v1|classe-plan-v1|flashmath-|fc\.)/.test(k) && !/^kit-ui-|-secours$|^kit-export-|^kit-avant-import/.test(k); }
 function sauvegarde(){
   var cles = {};
   try{ for(var i = 0; i < localStorage.length; i++){ var k = localStorage.key(i); if(cleSauvee(k)) cles[k] = localStorage.getItem(k); } }catch(e){}

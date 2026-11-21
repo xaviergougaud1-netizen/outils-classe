@@ -7,7 +7,9 @@ const CATEGORIES = [
   { id: "ecole", nom: "À l'école", couleur: "#2453C7", picto: "ecole" },
   { id: "sante", nom: "Santé", couleur: "#0F8F6C", picto: "sante" },
   { id: "structure", nom: "Structures", couleur: "#7C3AED", picto: "structure" },
-  { id: "dispositif", nom: "Dispositifs", couleur: "#D97706", picto: "fichier" }
+  { id: "dispositif", nom: "Dispositifs", couleur: "#D97706", picto: "fichier" },
+  { id: "parents", nom: "Soutien aux parents (avec leur accord)", couleur: "#0E7490", picto: "coeur" },
+  { id: "justice", nom: "Mesures du juge des enfants", couleur: "#B42318", picto: "alerte" }
 ];
 
 // Niveaux de coût : texte court affiché en pastille
@@ -15,7 +17,8 @@ const COUTS = {
   gratuit: { txt: "Gratuit", cls: "ok" },
   rembourse: { txt: "Remboursé", cls: "info" },
   partiel: { txt: "Remboursé en partie", cls: "warn" },
-  payant: { txt: "Non remboursé hors dispositif", cls: "bad" }
+  payant: { txt: "Non remboursé hors dispositif", cls: "bad" },
+  revenus: { txt: "Participation selon les revenus", cls: "warn" }
 };
 
 // Répertoire : professionnels, structures, dispositifs
@@ -212,7 +215,53 @@ const PROS = [
     quand: ["Difficultés qui durent", "Avant une demande MDPH (GEVA-Sco)", "Besoin de coordonner école, famille et soins"],
     acces: ["Le directeur invite par écrit", "Un compte rendu est rédigé"],
     ordo: "Via la direction", cout: "gratuit", coutTxt: "Gratuit.", delai: "Quelques semaines",
-    famille: "", parler: "" }
+    famille: "", parler: "" },
+
+  // ---------- Soutien aux parents : aides administratives, toujours avec l'accord des parents ----------
+  { id: "laep", cat: "parents", nom: "Lieu d'accueil enfants-parents (LAEP)", court: "Jouer et échanger, enfants de 0 à 6 ans",
+    sert: "Lieu de jeu et de parole où le parent vient avec son enfant de moins de 6 ans. Des accueillants formés sont présents. Les parents y rencontrent d'autres parents, posent leurs questions et soufflent un peu. Ce n'est ni un soin ni un contrôle.",
+    quand: ["Parents qui se sentent seuls ou démunis avec un jeune enfant", "Enfant de maternelle qui a du mal avec les règles, la séparation, les autres", "Famille qui ne demande rien de plus formel"],
+    acces: ["La famille y va quand elle veut, aux heures d'ouverture", "Sans inscription, sans rendez-vous, sans dossier"],
+    ordo: "Accès direct", cout: "gratuit", coutTxt: "Gratuit et anonyme (parfois une petite participation symbolique).", delai: "Aucun",
+    famille: "Un lieu d'accueil enfants-parents vous accueille avec votre enfant pour jouer et parler avec d'autres parents et des professionnels. C'est gratuit, sans inscription.",
+    parler: "Le présenter comme un lieu pour souffler et échanger entre parents, pas comme une aide pour « mauvais parents »." },
+  { id: "eds", cat: "parents", nom: "Espace départemental des solidarités (travailleur social)", court: "La porte d'entrée des aides aux familles",
+    sert: "Service du Département près de chez la famille. Un ou une assistant(e) social(e) écoute les parents, les conseille et les oriente : difficultés éducatives, fatigue, séparation, logement, argent. C'est lui ou elle qui peut proposer une TISF ou une aide éducative à domicile.",
+    quand: ["Parents en difficulté dans l'éducation de leur enfant, qui se sentent démunis", "Famille épuisée ou isolée", "Difficultés matérielles qui pèsent sur l'enfant"],
+    acces: ["La famille appelle elle-même pour un rendez-vous", "Elle peut dire que l'école lui a conseillé cette démarche"],
+    ordo: "Accès direct", cout: "gratuit", coutTxt: "Gratuit.", delai: "Quelques jours à quelques semaines",
+    famille: "Une assistante sociale du Département peut vous écouter et vous conseiller, par exemple quand l'éducation de votre enfant devient difficile ou fatigante. C'est gratuit. Vous prenez rendez-vous vous-même.",
+    parler: "Insister : c'est un service pour toutes les familles, et c'est la famille qui décide de ce qu'elle accepte." },
+  { id: "tisf", cat: "parents", nom: "TISF (technicien de l'intervention sociale et familiale)", court: "Un professionnel qui vient à la maison",
+    sert: "Vient au domicile quelques heures par semaine pour aider les parents dans le quotidien et l'éducation : rythmes, repas, coucher, devoirs, sorties. Il ou elle fait avec les parents, pas à leur place.",
+    quand: ["Quotidien très difficile à tenir (fatigue, naissance, maladie, séparation)", "Besoin de repères sur les rythmes de l'enfant (sommeil, écrans, repas)"],
+    acces: ["Demande auprès de la CAF ou d'une association d'aide à domicile, pour certains événements (naissance, maladie, séparation…)", "Ou proposée par le travailleur social de l'espace départemental des solidarités", "Toujours avec l'accord des parents"],
+    ordo: "Accord des parents", cout: "revenus", coutTxt: "Participation de la famille selon ses revenus (CAF) ; gratuit quand c'est le Département qui le propose.", delai: "Quelques semaines",
+    famille: "Un ou une professionnel(le) peut venir chez vous quelques heures par semaine pour vous aider dans le quotidien avec vos enfants.",
+    parler: "" },
+  { id: "aed", cat: "parents", nom: "AED (aide éducative à domicile)", court: "Mesure administrative, avec l'accord écrit des parents",
+    sert: "Un éducateur ou une éducatrice de l'aide sociale à l'enfance accompagne les parents et l'enfant, à la maison et à l'extérieur, quand l'éducation devient difficile. Les parents gardent l'autorité parentale. Les objectifs sont fixés avec eux, pour une durée limitée (souvent 6 mois à 1 an, renouvelable).",
+    quand: ["Parents démunis face au comportement de l'enfant, qui veulent de l'aide", "Difficultés éducatives qui durent, sans danger grave pour l'enfant"],
+    acces: ["La famille en fait la demande à l'espace départemental des solidarités, ou le travailleur social la lui propose", "Le Département évalue la situation", "Les parents signent leur accord : ils peuvent refuser ou arrêter"],
+    ordo: "Accord écrit des parents", cout: "gratuit", coutTxt: "Gratuit.", delai: "Quelques semaines à quelques mois",
+    famille: "Un éducateur peut vous accompagner pendant quelques mois pour vous aider dans l'éducation de votre enfant. C'est vous qui le demandez et qui donnez votre accord. C'est gratuit.",
+    parler: "Ne pas la confondre avec l'AEMO : l'AED est une aide demandée et acceptée par les parents, sans juge." },
+
+  // ---------- Mesures du juge des enfants : judiciaires, sans l'accord des parents ----------
+  { id: "aemo", cat: "justice", nom: "AEMO (assistance éducative en milieu ouvert)", court: "Décidée par le juge des enfants",
+    sert: "Le juge des enfants confie à un service éducatif le suivi de l'enfant, qui reste chez lui. Un éducateur rencontre régulièrement l'enfant et sa famille et rend compte au juge. Les parents gardent l'autorité parentale, mais la mesure s'impose à eux.",
+    quand: ["L'enfant est en danger ou risque de l'être", "Les aides avec l'accord des parents (AED) ont échoué ou sont refusées"],
+    acces: ["Ce n'est pas l'école qui oriente : elle transmet une information préoccupante (CRIP) ou un signalement", "Le juge des enfants entend la famille puis décide"],
+    ordo: "Décision du juge des enfants", cout: "gratuit", coutTxt: "Gratuit pour la famille.", delai: "Selon la décision du juge",
+    famille: "",
+    parler: "L'école ne propose pas une AEMO à une famille. Si un enfant est peut-être en danger, voir « Si l'enfant est peut-être en danger » dans Se former." },
+  { id: "mjie", cat: "justice", nom: "MJIE (mesure judiciaire d'investigation éducative)", court: "Évaluation demandée par le juge",
+    sert: "Le juge des enfants demande à une équipe (éducateur, psychologue, assistant social) d'évaluer la situation de l'enfant et de sa famille pendant quelques mois, avant de décider s'il faut une mesure.",
+    quand: ["Après une information préoccupante ou un signalement, quand le juge a besoin d'en savoir plus"],
+    acces: ["Décidée par le juge des enfants", "L'équipe peut contacter l'école pour avoir son avis"],
+    ordo: "Décision du juge des enfants", cout: "gratuit", coutTxt: "Gratuit pour la famille.", delai: "Selon la décision du juge",
+    famille: "",
+    parler: "Si l'équipe de la MJIE contacte l'école : répondre avec des faits observés en classe, datés." }
 ];
 
 // Domaines et constats. q : question posée dans « Questions » ; c : phrase du courrier ;
@@ -286,6 +335,7 @@ const DOMAINES = [
     { id: "soc-sens", q: "Réagit-il très fortement aux bruits, aux textures ou au toucher ?", c: "Réagit très fortement aux bruits, aux textures ou au toucher.", sp: ["medecin", "psychomot", "ergo", "pco"] }
   ]},
   { id: "sante", nom: "Santé et vie quotidienne", picto: "lune", couleur: "#64748B", items: [
+    { id: "sante-fam", q: "La famille dit-elle se sentir démunie ou épuisée face à son comportement à la maison ?", c: null, sp: ["eds", "laep", "pmi"] },
     { id: "sante-som", q: "Semble-t-il manquer de sommeil ?", c: "Semble souvent fatigué, comme s'il manquait de sommeil.", sp: ["medecin"] },
     { id: "sante-prop", q: "A-t-il encore des accidents de propreté pour son âge ?", c: "A encore des accidents de propreté pour son âge.", sp: ["medecin"] },
     { id: "sante-mal", q: "Se plaint-il souvent d'avoir mal (tête, ventre) ?", c: "Se plaint souvent d'avoir mal à la tête ou au ventre.", sp: ["medecin"] },
@@ -313,6 +363,7 @@ const AIDES = [
 // Coordonnées locales par défaut (modifiables dans Réglages)
 const CONTACTS_DEFAUT = [
   { pro: "cmp", nom: "CMPEA Blain (EPSYLAN)", adresse: "15, rue Pierre Morin, 44130 Blain", tel: "02 40 79 86 80", mail: "" },
+  { pro: "laep", nom: "LAEP Les P'tites Graines", adresse: "6, rue du Moulin, 44130 Blain", tel: "", mail: "laep.lesptitesgraines@gmail.com" },
   { pro: "pco", nom: "PCO TND 44 Ouest (APAJH 44)", adresse: "51, rue François-René de Chateaubriand, 44600 Saint-Nazaire", tel: "02 40 70 98 08", mail: "pcotndouest@apajh44.org" },
   { pro: "camsp", nom: "CAMSP Kerbrun (APAJH 44)", adresse: "51, rue François-René de Chateaubriand, 44600 Saint-Nazaire", tel: "", mail: "contact-kerbrun@apajh44.org" },
   { pro: "cmpp", nom: "CMPP Kerbrun (APAJH 44)", adresse: "51, rue François-René de Chateaubriand, 44600 Saint-Nazaire", tel: "", mail: "contact-kerbrun@apajh44.org" }
@@ -380,7 +431,7 @@ const FORMATION = [
       <li>Anxiété, repli ou colères qui augmentent.</li></ul>` },
   { id: "cout", titre: "Qui paie quoi ?", couleur: "#23914A", html: `
     <table class="tab"><thead><tr><th>Pour la famille</th><th>Exemples</th></tr></thead><tbody>
-      <tr><td><span class="badge ok">Gratuit</span></td><td>Aides de l'école (RASED, psychologue scolaire, médecin scolaire), PMI, CMP, CMPP, CAMSP, PCO, MDPH.</td></tr>
+      <tr><td><span class="badge ok">Gratuit</span></td><td>Aides de l'école (RASED, psychologue scolaire, médecin scolaire), PMI, CMP, CMPP, CAMSP, PCO, MDPH. Soutien aux parents : LAEP, espace départemental des solidarités, AED.</td></tr>
       <tr><td><span class="badge info">Remboursé</span></td><td>Médecin, ophtalmologiste, ORL, pédopsychiatre. Orthophoniste et orthoptiste avec ordonnance (60 % + mutuelle). Psychologue avec Mon soutien psy (12 séances par an).</td></tr>
       <tr><td><span class="badge bad">Non remboursé hors dispositif</span></td><td>Psychomotricien, ergothérapeute, neuropsychologue en cabinet. Pris en charge via la PCO, le CMP, le CAMSP ou le CMPP, parfois par la mutuelle ou l'AEEH (MDPH).</td></tr>
     </tbody></table>
@@ -392,6 +443,23 @@ const FORMATION = [
       <li>Orthophonie : liste commune Allo-Ortho, et rappeler les cabinets chaque mois.</li>
       <li>Pendant l'attente, l'école continue d'adapter : les aides en classe n'attendent pas le bilan.</li>
     </ul>` },
+  { id: "aides-educ", titre: "Aider les parents : avec leur accord ou par le juge", couleur: "#0E7490", html: `
+    <p>Quand des parents se sentent démunis face au comportement de leur enfant, il existe des aides. Elles sont de deux sortes, à ne pas confondre.</p>
+    <div class="deuxcol">
+      <div><h4>Aides administratives : les parents décident</h4><ul>
+        <li><b>Lieu d'accueil enfants-parents (LAEP)</b> : accès libre, gratuit, enfants de 0 à 6 ans.</li>
+        <li><b>PMI</b> : médecin et puéricultrice conseillent sur le quotidien (sommeil, colères, limites), enfants de 0 à 6 ans.</li>
+        <li><b>Espace départemental des solidarités</b> : un travailleur social écoute et oriente. C'est la porte d'entrée.</li>
+        <li><b>TISF</b> : un professionnel vient à la maison aider dans le quotidien.</li>
+        <li><b>AED (aide éducative à domicile)</b> : un éducateur de l'aide sociale à l'enfance, avec l'<b>accord écrit</b> des parents. Ils peuvent refuser ou arrêter.</li>
+      </ul><p>L'école peut <b>les conseiller</b> à la famille, à l'oral ou dans un compte rendu (« s'ils le souhaitent »).</p></div>
+      <div><h4>Mesures judiciaires : le juge décide</h4><ul>
+        <li><b>MJIE</b> : le juge fait évaluer la situation de l'enfant et de sa famille.</li>
+        <li><b>AEMO (assistance éducative en milieu ouvert)</b> : l'enfant reste chez lui, un éducateur suit la famille et rend compte au juge. La mesure s'impose aux parents.</li>
+        <li>Elles concernent un enfant <b>en danger ou en risque de l'être</b>, quand l'aide acceptée ne suffit pas ou est refusée.</li>
+      </ul><p>L'école ne les <b>propose jamais</b> à une famille : elle transmet une information préoccupante (voir la section suivante).</p></div>
+    </div>
+    <p>Une famille fatiguée ou démunie n'est pas une famille en danger. Commencer par les aides administratives, en les présentant comme des services pour toutes les familles.</p>` },
   { id: "danger", titre: "Si l'enfant est peut-être en danger", couleur: "#B42318", html: `
     <ul>
       <li>Ce n'est plus une question d'orientation vers un soin : en parler <b>tout de suite</b> au directeur.</li>

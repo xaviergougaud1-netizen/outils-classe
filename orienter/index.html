@@ -8,6 +8,7 @@ Fiche d'identité
   Ce qu'il ne fait pas : pas de dossier d'élève partagé, pas de diagnostic, pas de compte rendu d'équipe éducative (skill compte-rendu-equipe-educative).
 Version : voir VERSION (une seule constante)
 Historique :
+  - 1.2.0 (2026-11-21) Répertoire : catégories « Soutien aux parents » (LAEP, espace départemental des solidarités, TISF, AED, avec l'accord des parents) et « Mesures du juge des enfants » (AEMO, MJIE). Question « famille démunie ». Se former : section aides administratives / judiciaires. Contact LAEP de Blain ajouté aux réglages existants.
   - 1.1.0 (2026-11-18) Fiches à imprimer (familles, enseignants) en PDF et Word, dossier fiches/, en tête du Répertoire (section repliable).
   - 1.0.0 (2026-11-18) Répertoire, Questions, Courrier, Se former, Réglages. et CACHE dans sw.js, à changer ensemble.
 Publié dans le dépôt outils-classe, dossier orienter/ (appli installable, hors ligne).
@@ -217,7 +218,7 @@ dl.gloss{display:grid;grid-template-columns:max-content 1fr;gap:6px 14px;margin:
 <script src="donnees.js"></script>
 <script>
 "use strict";
-const VERSION = "1.1.0";
+const VERSION = "1.2.0";
 const CLE_R = "orienter-reglages", CLE_B = "orienter-brouillon", CLE_SEC = "orienter-sections";
 
 /* ---------- Pictogrammes (style Lucide) ---------- */
@@ -259,9 +260,9 @@ function ic(n){return '<svg class="i" viewBox="0 0 24 24" aria-hidden="true">'+(
 function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
 
 /* ---------- Données de l'appareil ---------- */
-function defautR(){return{v:1,theme:"auto",expire:30,ecole:{nom:"École primaire Andrée Chedid",ville:"Blain",circo:"Circonscription de Blain-Nozay",adresse:"",tel:"",mail:"",directeur:"Xavier Gougaud"},contacts:JSON.parse(JSON.stringify(CONTACTS_DEFAUT))}}
+function defautR(){return{v:2,theme:"auto",expire:30,ecole:{nom:"École primaire Andrée Chedid",ville:"Blain",circo:"Circonscription de Blain-Nozay",adresse:"",tel:"",mail:"",directeur:"Xavier Gougaud"},contacts:JSON.parse(JSON.stringify(CONTACTS_DEFAUT))}}
 function defautB(){return{v:1,savedAt:0,eleve:{prenom:"",nom:"",naissance:"",classe:"",enseignant:""},rencontre:"",niveau:"",domaines:[],rep:{},aides:{},autresAides:"",obs:"",persiste:true}}
-function migrerR(d){var r=defautR();if(!d||typeof d!=="object")return r;r.theme=d.theme||r.theme;if(typeof d.expire==="number")r.expire=d.expire;r.ecole=Object.assign(r.ecole,d.ecole||{});if(Array.isArray(d.contacts))r.contacts=d.contacts;return r}
+function migrerR(d){var r=defautR();if(!d||typeof d!=="object")return r;r.theme=d.theme||r.theme;if(typeof d.expire==="number")r.expire=d.expire;r.ecole=Object.assign(r.ecole,d.ecole||{});if(Array.isArray(d.contacts)){r.contacts=d.contacts;if(!(d.v>=2))CONTACTS_DEFAUT.forEach(function(c){if(c.pro==="laep"&&!r.contacts.some(function(x){return x.pro===c.pro}))r.contacts.push(JSON.parse(JSON.stringify(c)))})}return r}
 function migrerB(d){var b=defautB();if(!d||typeof d!=="object")return b;Object.keys(b).forEach(function(k){if(d[k]!==undefined)b[k]=d[k]});b.eleve=Object.assign(defautB().eleve,d.eleve||{});return b}
 function lire(cle,migrer){try{var t=localStorage.getItem(cle);return migrer(t?JSON.parse(t):null)}catch(e){try{localStorage.setItem(cle+"-secours",localStorage.getItem(cle))}catch(x){}return migrer(null)}}
 function ecrire(cle,val){try{localStorage.setItem(cle,JSON.stringify(val))}catch(e){toast("Enregistrement impossible sur cet appareil")}}
@@ -471,7 +472,7 @@ function vueReglages(){
   var E=R.ecole;
   var h='<div class="outils-sec"><button class="btn petit" data-act="tout" data-v="1">Tout déplier</button><button class="btn petit" data-act="tout" data-v="0">Tout replier</button></div>';
   h+=sec("r-ecole","École (en-tête du courrier)","#2453C7","ecole",'<div class="grille2">'+[["nom","Nom de l'école"],["circo","Circonscription"],["ville","Ville"],["directeur","Directeur ou directrice"],["adresse","Adresse"],["tel","Téléphone"],["mail","Courriel"]].map(function(x){return '<div class="champ"><label>'+x[1]+'</label><input data-ecole="'+x[0]+'" value="'+esc(E[x[0]])+'"></div>'}).join("")+'</div>',"");
-  var opts=PROS.filter(function(p){return p.cat!=="dispositif"}).map(function(p){return[p.id,p.nom]});
+  var opts=PROS.filter(function(p){return p.cat!=="dispositif"&&p.cat!=="justice"}).map(function(p){return[p.id,p.nom]});
   h+=sec("r-contacts","Coordonnées près de chez nous","#7C3AED","tel",'<p class="muted">Elles s\'affichent dans les fiches du répertoire et sur les fiches pour les familles.</p>'+R.contacts.map(function(c,i){return '<div class="ligne-contact"><div class="grille2"><div class="champ"><label>Pour</label><select data-contact="'+i+'" data-k="pro">'+opts.map(function(o){return '<option value="'+o[0]+'" '+(o[0]===c.pro?"selected":"")+'>'+esc(o[1])+'</option>'}).join("")+'</select></div>'+["nom","adresse","tel","mail"].map(function(k){return '<div class="champ"><label>'+{nom:"Nom",adresse:"Adresse",tel:"Téléphone",mail:"Courriel"}[k]+'</label><input data-contact="'+i+'" data-k="'+k+'" value="'+esc(c[k])+'"></div>'}).join("")+'</div><button class="btn petit danger" data-act="suppr-contact" data-i="'+i+'">'+ic("poubelle")+'Supprimer</button></div>'}).join("")+'<button class="btn doux" data-act="ajout-contact">'+ic("plus")+'Ajouter des coordonnées</button>',"");
   h+=sec("r-brouillon","Brouillon du courrier","#B03A48","fichier",'<div class="champ"><label for="expire">Effacer automatiquement le brouillon après</label><select id="expire">'+[[7,"7 jours"],[30,"30 jours"],[90,"90 jours"],[0,"Jamais"]].map(function(o){return '<option value="'+o[0]+'" '+(R.expire===o[0]?"selected":"")+'>'+o[1]+'</option>'}).join("")+'</select></div><p class="muted">Le brouillon contient des informations sur un élève : le garder le moins longtemps possible.</p><button class="btn danger" data-act="effacer-b">'+ic("poubelle")+'Effacer le brouillon maintenant</button>',"");
   h+=sec("r-app","Apparence","#64748B","reglages",'<div class="champ"><label for="th">Thème</label><select id="th"><option value="auto">Automatique</option><option value="light">Clair</option><option value="dark">Sombre</option></select></div>',"");

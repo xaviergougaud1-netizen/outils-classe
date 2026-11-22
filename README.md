@@ -24,7 +24,7 @@ Licence : CC BY-NC-SA 4.0.
 | Groupes (groupes de travail, rôles, minuteur) | https://xaviergougaud1-netizen.github.io/outils-classe/groupes/ | 1.10.0 |
 | Dictées adaptées (édition libre, cycle, devoirs, import PDF) | https://xaviergougaud1-netizen.github.io/outils-classe/dictees/ | 2.6.1 |
 | Plan de classe | https://xaviergougaud1-netizen.github.io/outils-classe/plan/ | 1.6 |
-| Boussole élève, ex-« Orienter un élève » (outil de Xavier, pas dans le portail) | https://xaviergougaud1-netizen.github.io/outils-classe/orienter/ | 1.3.0 |
+| Boussole élève, ex-« Orienter un élève » (outil de Xavier, pas dans le portail) | https://xaviergougaud1-netizen.github.io/outils-classe/orienter/ | 1.3.1 |
 
 ## Organisation
 - `commun/charte.css` : charte Repères v1 commune (couleur de chaque outil : `--outil-calcul`, `--outil-problemes`).

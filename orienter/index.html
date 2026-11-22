@@ -9,6 +9,7 @@ Fiche d'identité
   Ce qu'il ne fait pas : pas de dossier d'élève, pas de diagnostic, ne transmet rien (l'IP se fait sur le formulaire en ligne du Département), pas de compte rendu d'équipe éducative (skill compte-rendu-equipe-educative).
 Version : voir VERSION (une seule constante)
 Historique :
+  - 1.3.1 (2026-11-22) Fiche « Équipe de suivi de la scolarisation (ESS) » à côté de l'équipe éducative (différence EE/ESS, GEVA-Sco première demande et réexamen) ; ESS dans la liste des aides déjà mises en place.
   - 1.3.0 (2026-11-21) Nouveau nom « Boussole élève ». Onglet Protéger : que faire (urgence, signalement, IP, rester attentif), comparer, recueillir la parole, rédiger une IP (en mémoire seulement, rien n'est enregistré), contacts (CRIP 44, parquet de Nantes, 119), textes de loi et sources. Date de vérification sur chaque fiche et chaque contact, rappel au-delà d'un an. Orthophonistes et neuropsychologues du secteur ajoutés (migration v3 : ajout aux appareils déjà installés, sans rien effacer). Fiche « Enfant en danger : que faire » à imprimer.
   - 1.2.0 (2026-11-21) Répertoire : catégories « Soutien aux parents » (LAEP, espace départemental des solidarités, TISF, AED, avec l'accord des parents) et « Mesures du juge des enfants » (AEMO, MJIE). Question « famille démunie ». Se former : section aides administratives / judiciaires. Coordonnées EDS Blain-Nozay et LAEP (Les P'tites Graines, Le Sablier) ajoutées aux réglages existants. Fiche familles : section « Pour vous, les parents » (3 pages).
   - 1.1.0 (2026-11-18) Fiches à imprimer (familles, enseignants) en PDF et Word, dossier fiches/, en tête du Répertoire (section repliable).
@@ -237,7 +238,7 @@ table.tab th[scope=row]{color:var(--encre-douce);white-space:nowrap}
 <script src="donnees.js"></script>
 <script>
 "use strict";
-const VERSION = "1.3.0";
+const VERSION = "1.3.1";
 const CLE_R = "orienter-reglages", CLE_B = "orienter-brouillon", CLE_SEC = "orienter-sections";
 
 /* ---------- Pictogrammes (style Lucide) ---------- */

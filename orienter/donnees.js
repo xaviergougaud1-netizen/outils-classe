@@ -213,9 +213,18 @@ const PROS = [
   { id: "ee", cat: "dispositif", nom: "Équipe éducative", court: "Réunion école, famille, professionnels",
     sert: "Réunion organisée par le directeur avec la famille, les enseignants, la psychologue scolaire, le médecin scolaire et les professionnels qui suivent l'enfant, pour faire le point et décider des suites.",
     quand: ["Difficultés qui durent", "Avant une demande MDPH (GEVA-Sco)", "Besoin de coordonner école, famille et soins"],
-    acces: ["Le directeur invite par écrit", "Un compte rendu est rédigé"],
+    acces: ["Le directeur invite par écrit", "Un compte rendu est rédigé", "Pour une première demande à la MDPH, elle remplit le GEVA-Sco « première demande », que la famille joint à son dossier"],
     ordo: "Via la direction", cout: "gratuit", coutTxt: "Gratuit.", delai: "Quelques semaines",
-    famille: "", parler: "" },
+    famille: "", parler: "",
+    verifie: "2026-11-22" },
+  { id: "ess", cat: "dispositif", nom: "Équipe de suivi de la scolarisation (ESS)", court: "Suivi du PPS, au moins une fois par an",
+    sert: "Réunion pour un élève qui a un PPS décidé par la MDPH. Elle facilite la mise en œuvre du PPS, en assure le suivi et l'évalue au moins une fois par an. Elle peut proposer des aménagements ou une révision du projet (art. D351-10 du code de l'éducation). L'enseignant référent y remplit le GEVA-Sco « réexamen » et l'envoie à la MDPH. Équipe éducative ou ESS ? Sans décision de la MDPH, c'est l'équipe éducative, réunie par le directeur ; avec un PPS, c'est l'ESS, réunie par l'enseignant référent.",
+    quand: ["Chaque année pour un élève qui a un PPS", "Quand le PPS ne répond plus aux besoins (AESH, matériel, aménagements, orientation)", "Avant la fin d'une notification de la MDPH, pour préparer son renouvellement"],
+    acces: ["L'enseignant référent de la circonscription la réunit et l'anime", "Participants : la famille (qui peut se faire accompagner par la personne de son choix), l'enseignant référent, les enseignants de l'élève, l'AESH, les professionnels de santé et des services sociaux qui le suivent, le directeur", "Elle se réunit aussi en cas de besoin : le directeur ou l'enseignant la demande à l'enseignant référent"],
+    ordo: "Via l'enseignant référent", cout: "gratuit", coutTxt: "Gratuit.", delai: "Au moins une fois par an",
+    famille: "", parler: "",
+    lien: { txt: "Onisep : l'équipe de suivi de la scolarisation", url: "https://www.onisep.fr/inclusion-et-handicap/qui-peut-vous-aider/l-equipe-de-suivi-de-la-scolarisation-des-eleves-en-situation-de-handicap" },
+    verifie: "2026-11-22" },
 
   // ---------- Soutien aux parents : aides administratives, toujours avec l'accord des parents ----------
   { id: "laep", cat: "parents", nom: "Lieu d'accueil enfants-parents (LAEP)", court: "Jouer et échanger, enfants de 0 à 6 ans",
@@ -356,6 +365,7 @@ const AIDES = [
   "Observation ou bilan par la psychologue de l'Éducation nationale",
   "Rencontre avec la famille",
   "Équipe éducative",
+  "Équipe de suivi de la scolarisation (ESS)",
   "PAP (plan d'accompagnement personnalisé)",
   "Bilan de santé de la PMI ou visite du médecin scolaire"
 ];

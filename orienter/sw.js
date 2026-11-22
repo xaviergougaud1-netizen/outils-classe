@@ -1,6 +1,6 @@
 // Fonctionnement hors ligne de l'appli installée.
 // Changer CACHE à chaque nouvelle version (en même temps que VERSION dans index.html).
-const CACHE = "orienter-1.3.0";
+const CACHE = "orienter-1.3.1";
 const FILES = ["./", "./index.html", "./donnees.js", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png"];
 
 self.addEventListener("install", event => {

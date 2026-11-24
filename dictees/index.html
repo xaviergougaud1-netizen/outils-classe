@@ -202,10 +202,10 @@ span.gap{display:inline-block;line-height:40px}
 .page .cons .d{display:inline-flex;flex-direction:column;gap:2px}.page .cons .d i{font-style:normal;border:1.5px solid #2E6DB4;background:#EAF3FD;border-radius:6px;padding:0 6px;font-size:12px;text-align:center}
 .page .cons .g{display:inline-block;width:60px;height:22px;background:#FFF6CC;border-bottom:2px solid #C9A400;border-radius:4px;vertical-align:middle}
 .page .pt{flex:1;overflow:hidden;font-size:var(--fs,21px)}
-.page .pt p{margin:0 0 .55em;line-height:2.15}
-.page .pg{display:inline-flex;flex-direction:column;gap:2px;vertical-align:middle;margin:1px 3px}
-.page .pg i{font-style:normal;border:1.5px solid #2E6DB4;background:#EAF3FD;border-radius:7px;padding:0 7px;font-size:.8em;line-height:1.3;text-align:center}
-.page .pz{display:inline-block;height:1.45em;vertical-align:-.4em;background:#FFF6CC;border-bottom:2.5px solid #C9A400;border-radius:4px;margin:0 3px}
+.page .pt p{margin:0 0 .9em;line-height:2.6}
+.page .pg{display:inline-flex;flex-direction:column;gap:4px;vertical-align:middle;margin:10px 5px}
+.page .pg i{font-style:normal;border:1.5px solid #2E6DB4;background:#EAF3FD;border-radius:7px;padding:2px 9px;font-size:.82em;line-height:1.3;text-align:center}
+.page .pz{display:inline-block;height:1.45em;vertical-align:-.4em;background:#FFF6CC;border-bottom:2.5px solid #C9A400;border-radius:4px;margin:8px 4px}
 .page .psc{display:flex;gap:10px;margin-top:10px}
 .page .psc div{flex:1;border:2px solid #2E6DB4;border-radius:12px;padding:8px 10px;font-size:16px;text-align:center}
 .page .psc b{font-size:22px}
@@ -235,7 +235,7 @@ span.gap{display:inline-block;line-height:40px}
 <div id="printzone" aria-hidden="true"></div>
 <div id="msg" role="status"></div>
 <script>
-var VERSION="2.6.1", KEY="classe-dictees-adaptees", DBPATH="dictees/reglages";
+var VERSION="2.6.2", KEY="classe-dictees-adaptees", DBPATH="dictees/reglages";
 /* Programme de l'année (livret « Leçons d'orthographe », règles H1 à H17) : dictées Retz faites, dans l'ordre */
 var PROGRAMME=[1,2,3,4,7,8,10,11,12,13,14,18,19,20,23,24,26];
 /* Notions proposées en choix : t = dictée Retz où la leçon est vue (auto) ; def = réglage par défaut */
@@ -1039,6 +1039,7 @@ async function versPdf(pages,filename){
   if(!window.html2canvas||!window.jspdf){toast("Les outils PDF ne se sont pas chargés. Vérifie la connexion puis réessaie.");return}
   ouvrir('<h2 style="margin-top:0">Préparation du PDF…</h2><p class="muted" id="pp">0 / '+pages.length+'</p>',true);
   try{ await document.fonts.ready; }catch(e){}
+  pages=pages.reduce(function(a,h){return a.concat(etalerFiche(h))},[]);
   var zone=$("#printzone"), jsPDF=window.jspdf.jsPDF, pdf=new jsPDF({unit:"mm",format:"a4"}), imgs=[];
   try{
     for(var i=0;i<pages.length;i++){
@@ -1054,6 +1055,21 @@ async function versPdf(pages,filename){
   $("#dlg").innerHTML='<div class="row" style="justify-content:space-between;margin:0 0 10px"><b>'+pages.length+' page'+(pages.length>1?"s":"")+'</b><span class="row" style="margin:0"><button class="btn" id="pF">Fermer</button><button class="btn p" id="pD">⬇ Télécharger le PDF</button></span></div><div id="prev"><div class="imgs">'+imgs.map(function(u,i){return '<img src="'+u+'" alt="Page '+(i+1)+'">'}).join("")+'</div></div>';
   $("#pF").onclick=fermer;
   $("#pD").onclick=async function(){if(await enregistrer(filename,blob))toast("PDF enregistré")};
+}
+/* 24/11/2026 : fiche élève aérée (lignes plus espacées, mots à choisir mieux séparés) ; si elle ne tient pas sur une page à 22 px, elle passe sur 2 pages (coupure entre deux paragraphes, prénom et barre de score sur la 2e) */
+function etalerFiche(html){
+  var zone=$("#printzone"); zone.innerHTML=html; var pg=zone.firstElementChild;
+  if(!pg||!pg.classList.contains("fiche"))return [html];
+  var pt=pg.querySelector(".pt"); if(!pt)return [html]; pt.style.setProperty("--fs","22px");
+  if(pt.scrollHeight<=pt.clientHeight+1)return [pg.outerHTML];
+  var ps=Array.prototype.slice.call(pt.children), psc=pg.querySelector(".psc"), foot=pg.querySelector(".foot"), who=pg.querySelector(".who"), ph=pg.querySelector(".ph");
+  var pscH=psc?psc.outerHTML:"", footH=foot?foot.outerHTML:"", whoH=who?who.outerHTML:"", ph2=ph.outerHTML.replace(/<\/span><\/div>$/," · suite</span></div>");
+  if(psc)psc.remove(); pt.innerHTML=""; var k=0;
+  for(var i=0;i<ps.length;i++){ pt.appendChild(ps[i]); if(i>0&&pt.scrollHeight>pt.clientHeight+1){ pt.removeChild(ps[i]); break; } k=i+1; }
+  if(k>=ps.length||k<1){ zone.innerHTML=html; return [html]; }
+  var p1=pg.outerHTML, rest=ps.slice(k).map(function(p){return p.outerHTML}).join("");
+  var p2='<div class="page fiche">'+ph2+whoH+'<div class="pt" style="--fs:22px">'+rest+'</div>'+pscH+footH+'</div>';
+  return [p1,p2];
 }
 function ajuster(pg){ var pt=pg.querySelector(".pt"); if(!pt)return; var fs=22; pt.style.setProperty("--fs",fs+"px");
   while(pt.scrollHeight>pt.clientHeight+1&&fs>13){fs-=.5;pt.style.setProperty("--fs",fs+"px")} }

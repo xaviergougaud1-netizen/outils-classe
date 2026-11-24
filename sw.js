@@ -1,7 +1,7 @@
 // Portail « Outils de classe partagés » et « Ma classe » : fonctionnement hors ligne.
 // Changer CACHE à chaque nouvelle version (en même temps que VERSION dans index.html).
 // Les outils qui ont leur propre sw.js (correcteur/, problemes/, orienter/) gardent le leur : il est prioritaire dans leur dossier.
-const CACHE = "portail-1.4.0";
+const CACHE = "portail-1.4.1";
 const FILES = ["./", "./index.html", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png",
   "./ma-classe/", "./ma-classe/index.html", "./commun/charte.css", "./commun/ma-classe.js", "./commun/kit-db.js",
   "./groupes/", "./groupes/index.html", "./plan/", "./plan/index.html", "./dictees/", "./dictees/index.html", "./flash/", "./flash/index.html", "./fiches-claires/", "./fiches-claires/index.html", "./commun/kit-images.js"];

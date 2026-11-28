@@ -7,7 +7,7 @@ if(MODE_APP)document.write('<link rel="manifest" href="../manifest.webmanifest">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Andika:wght@400;700&family=Atkinson+Hyperlegible:wght@400;700&family=Lexend:wght@400;600&family=Playwrite+FR+Moderne:wght@300;400&display=swap">
-<style>/* 28/11/2026 · v1.13 : mode simplifié par défaut (version dys cachée, 2 volets lisible + fiche réponses, menus « Fichier ▾ » et « ⋯ Plus » avec l'interrupteur « Mode avancé »). */
+<style>/* 28/11/2026 · v1.13 : page d'aide (aide.html, « ⋯ Plus › Aide ») ; mode simplifié par défaut (version dys cachée, 2 volets lisible + fiche réponses, menus « Fichier ▾ » et « ⋯ Plus » avec l'interrupteur « Mode avancé »). */
 /* 25/11/2026 · v1.12 : verbe sous le trait de réponse. */
 /* 21/11/2026 · v1.11 : même fichier dans Classe et dans le kit des collègues ; bibliothèque Ta Mallette sortie dans tm-lib.js (Classe seulement). */
 /* 15/11/2026 · colonne commune de Classe (../side-nav.js) sur ordinateur ≥ 1180 px, masquée en mode Projeter ; « ← Classe » masqué quand elle est là. Hors de fc-style : rien n'est recopié dans les fiches. */
@@ -514,13 +514,14 @@ textarea{width:100%; box-sizing:border-box; resize:vertical; line-height:1.45}
       <button class="btn" type="button" id="b-full">⛶ Plein écran</button>
       <button class="btn" type="button" id="b-plus" aria-haspopup="menu" aria-expanded="false" title="Coups de pouce, mode avancé">⋯ Plus</button>
       <div class="top-pop" id="plus-pop" role="menu" aria-label="Plus" hidden>
+        <a id="b-aide" role="menuitem" href="aide.html" title="Mode d'emploi de Fiches Claires">Aide</a>
         <a id="tm-cp" role="menuitem" href="coups-de-pouce.html" title="Cartes coups de pouce 1, 2, 3 de cette fiche (projection ou impression)">Coups de pouce</a>
         <button type="button" role="menuitemcheckbox" id="b-avance" aria-checked="false">Mode avancé</button>
         <div class="pop-note">Version dys, code couleur grammatical et leurs réglages. Réglage propre à cet appareil.</div>
       </div>
     </div>
     <script>if(MODE_APP){var tb=document.getElementById("tm-back");tb.href="../";tb.title="Revenir aux outils";tb.textContent="← Outils";document.getElementById("tm-cp").hidden=true;document.title="Fiches Claires";}</script>
-    <script>(function(){var a=document.getElementById("tm-cp");function u(){a.href="coups-de-pouce.html"+(location.hash||"");}u();window.addEventListener("hashchange",u);})();</script>
+    <script>(function(){var a=document.getElementById("tm-cp");document.getElementById("b-aide").href="aide.html"+location.search;function u(){a.href="coups-de-pouce.html"+(location.hash||"");}u();window.addEventListener("hashchange",u);})();</script>
   </header>
   <div class="marks" id="marks" hidden role="toolbar" aria-label="Marquage grammatical">
     <button class="mk" type="button" data-mark="b"><b>Gras</b></button>

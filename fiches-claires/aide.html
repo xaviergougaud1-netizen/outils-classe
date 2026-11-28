@@ -1,0 +1,142 @@
+<!doctype html>
+<!-- TECHNIQUE
+Fiches Claires : page d'aide (v1.13, 28/11/2026).
+Rôle : expliquer l'outil en une page, à jour du mode simplifié (lisible + fiche réponses, « Mode avancé » pour la dys).
+Où : ouverte depuis « ⋯ Plus › Aide » de fiches-claires/index.html, dans Classe comme dans le kit des collègues. Même fichier partout.
+Ce qu'elle ne fait pas : pas de données, pas de Claude. Les anciens Guide et Notice (octobre 2026) renvoient ici.
+Les blocs .classe-only sont masqués dans le kit (github.io ou ?mode=app).
+-->
+<html lang="fr"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Aide · Fiches Claires</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap">
+<style>
+:root{--bg:#EDF1F7;--panel:#fff;--fg:#111A2C;--muted:#475166;--line:#D3DAE5;--accent:#2453C7;--accent-soft:#E3EBFD;
+  --entete:#EDE7FB;--entete-ink:#2E1A5E;--entete-bd:#D6CBF5;--entete-on:#7C3AED;--note:#FFF5D6;--note-ink:#6B5310;
+  --ui:'Atkinson Hyperlegible','Segoe UI',Arial,sans-serif}
+@media (prefers-color-scheme:dark){:root{--bg:#0F1522;--panel:#172033;--fg:#E9EEF7;--muted:#A3AEC2;--line:#2C3852;--accent:#7EA2FF;--accent-soft:#223056;
+  --entete:#241B3D;--entete-ink:#EFEAFB;--entete-bd:#46387A;--entete-on:#A78BFA;--note:#3A3220;--note-ink:#F1DD9F}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:17px/1.55 var(--ui)}
+header{background:var(--entete);color:var(--entete-ink);border-bottom:1px solid var(--entete-bd);padding:14px 16px}
+header .in{max-width:900px;margin:0 auto;display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between}
+header h1{margin:0;font-size:1.35rem}
+.back{display:inline-flex;align-items:center;min-height:44px;padding:0 16px;border-radius:12px;background:var(--panel);color:var(--entete-ink);border:1px solid var(--entete-bd);font-weight:700;text-decoration:none}
+main{max-width:900px;margin:0 auto;padding:20px 16px 60px;display:grid;gap:18px}
+.lead{font-size:1.1rem;margin:0}
+.trois{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px 18px}
+.card h2,.card h3{margin:0 0 6px;font-size:1.1rem}
+.card p{margin:6px 0}
+.n{display:inline-grid;place-items:center;width:32px;height:32px;border-radius:50%;background:var(--entete-on);color:#fff;font-weight:700;margin-right:8px}
+details.card>summary{cursor:pointer;font-weight:700;font-size:1.1rem;list-style:none;display:flex;gap:10px;align-items:center;min-height:44px}
+details.card>summary::before{content:"▸";color:var(--entete-on)}
+details.card[open]>summary::before{content:"▾"}
+details.card>summary::-webkit-details-marker{display:none}
+details.card[open]>summary{margin-bottom:8px}
+ul{margin:6px 0;padding-left:1.2em}li{margin:4px 0}
+kbd{font:inherit;font-size:.9em;font-weight:700;border:1px solid var(--line);border-bottom-width:3px;border-radius:6px;padding:0 6px;background:var(--bg);white-space:nowrap}
+.note{background:var(--note);color:var(--note-ink);border-radius:12px;padding:12px 16px}
+.tools{display:flex;flex-wrap:wrap;gap:8px}.tools span{border:1px solid var(--line);border-radius:999px;padding:2px 12px;background:var(--bg);font-size:.95rem}
+.ctl{display:flex;gap:8px;flex-wrap:wrap}
+.ctl button{min-height:44px;padding:0 14px;border-radius:10px;border:1px solid var(--line);background:var(--panel);color:var(--fg);font:inherit;font-weight:700;cursor:pointer}
+a{color:var(--accent)}
+[hidden]{display:none!important}
+@media (max-width:700px){.trois{grid-template-columns:minmax(0,1fr)}}
+</style></head><body>
+<header><div class="in"><h1>Fiches Claires · Aide</h1><a class="back" href="index.html" id="retour">← Retour aux fiches</a></div></header>
+<main>
+  <p class="lead">Fiches Claires transforme une fiche d’exercices (PDF, capture ou texte) en <b>version lisible</b> et en <b>fiche réponses</b>, à projeter en classe ou à imprimer pour le cahier.</p>
+
+  <section class="trois" aria-label="L’essentiel en trois gestes">
+    <div class="card"><h2><span class="n">1</span>Déposer</h2><p>Glisse ou colle (<kbd>Ctrl</kbd> + <kbd>V</kbd>) ta fiche dans un volet.</p></div>
+    <div class="card"><h2><span class="n">2</span>Choisir</h2><p>Coche « Version lisible » et « Fiche réponses », puis « Créer les versions cochées ». Ou « Lecture seule » pour projeter tel quel.</p></div>
+    <div class="card"><h2><span class="n">3</span>Utiliser</h2><p>Projette en classe, ou télécharge le PDF dans « Fichier ▾ ».</p></div>
+  </section>
+
+  <details class="card" open>
+    <summary>Créer une fiche</summary>
+    <ul>
+      <li><b>Fichier ▾ › Nouvelle fiche</b>, puis dépose le document sur un volet (glisser, coller une capture, ou « Choisir des fichiers… »).</li>
+      <li><b>Ajouter</b> : exemples, rappel de la règle, Défi ★★★, corrigé. Rien n’est coché au départ : coche seulement ce qui te sert.</li>
+      <li><b>Avancé</b> (section repliée) : niveau et précisions pour Claude, par exemple « l’exercice 3 évalue l’orthographe ».</li>
+      <li><b>Lecture seule</b> projette le document tel quel, sans adaptation. <b>Mise en forme simple (sans IA)</b> reprend le texte sans appeler Claude.</li>
+      <li>Relis chaque version avant de la distribuer : un bandeau « Vigilance » signale les passages à vérifier (texte lu sur une capture, schéma redessiné).</li>
+    </ul>
+    <p class="note">Créer les versions utilise ton compte Claude (une à deux minutes). Tout le reste est gratuit. La première fois, une fenêtre demande l’autorisation : accepte-la.</p>
+  </details>
+
+  <details class="card">
+    <summary>Les deux versions</summary>
+    <ul>
+      <li><b>● Version lisible</b> : tous les items, consignes claires avec un verbe en gras et son pictogramme, mise en page aérée, pour toute la classe.</li>
+      <li><b>■ Fiche réponses</b> : tous les items de la version lisible, avec des réponses à trou, pour les élèves qui écrivent peu. La réponse commence à la ligne, juste après la flèche, et le verbe entre parenthèses se place sous la barre de réponse. Un bouton affiche ou masque les consignes.</li>
+      <li>Les numéros d’exercices restent ceux du document d’origine. Chaque volet garde ses propres lettres ou numéros d’items.</li>
+    </ul>
+  </details>
+
+  <details class="card">
+    <summary>Préparer une fiche</summary>
+    <p>En mode <b>Préparer</b>, clique sur un texte pour le modifier. Sélectionne des mots : une petite barre propose le gras, le trou ___ et la fraction (sélectionne « 5/10 », puis « Fraction »).</p>
+    <p>Le bouton <b>⋯</b> de chaque exercice regroupe ses actions :</p>
+    <div class="tools"><span>Exemple, rappel, Défi</span><span>Ajouter un item</span><span>Lignes d’écriture</span><span>Masquer le tableau</span><span>Image : rendre plus nette, redessiner, remplacer</span><span>Monter, descendre, colonnes, repères des items</span><span>Dupliquer</span><span>Supprimer (annulable 7 secondes)</span></div>
+    <ul>
+      <li><b>⚙ Réglages</b> d’un volet : police, taille, interligne, <b>espace de réponse</b> (de Normal à Maximum), exemples, rappels, lignes, tableaux, corrigé.</li>
+      <li><b>Enlever les lignes</b> et <b>Enlever les tableaux</b> agissent sur tous les exercices d’une version à la fois.</li>
+      <li><b>A− / A+</b> n’agrandit que l’affichage à l’écran, pas l’impression.</li>
+    </ul>
+  </details>
+
+  <details class="card">
+    <summary>Projeter en classe</summary>
+    <ul>
+      <li><b>Projeter</b>, puis <b>⛶ Plein écran</b>. Choisis 1, 2 ou 3 volets : par exemple la fiche à gauche et une <b>zone libre</b> blanche à droite pour un autre groupe.</li>
+      <li><b>Affichage ajusté à l’écran</b> : ◀ ▶ ou les flèches du clavier changent d’écran. Autres modes : un exercice à la fois, défilement.</li>
+      <li><b>Pas à pas</b> : la consigne puis chaque item apparaissent au clic, ou avec <kbd>Espace</kbd>, <kbd>Entrée</kbd>, <kbd>↓</kbd> (<kbd>↑</kbd> pour revenir).</li>
+      <li><b>Correction</b> : aucune, au clic, ou complète.</li>
+      <li><b>⏱ Minuteur</b> dans la barre du volet ; la poignée ⠿ le déplace.</li>
+      <li><b>Zone libre</b> : stylo, surligneur, règle, flèche, cadre, gomme, 5 couleurs, annuler avec <kbd>Ctrl</kbd> + <kbd>Z</kbd>. Tu peux y ajouter du texte, une image ou un PDF.</li>
+    </ul>
+  </details>
+
+  <details class="card">
+    <summary>Fichier : télécharger, enregistrer, ouvrir</summary>
+    <ul>
+      <li><b>Télécharger en PDF</b> : A5 pour le cahier (2 par feuille A4 possible) ou A4, portrait ou paysage, marge de découpe, titre, prénom et date. Pour chaque version : police, interligne, espace de réponse, lignes et tableaux visibles ou non. Ces réglages ne valent que pour ce PDF.</li>
+      <li><b>Enregistrer</b> : une page web (.html) qui se rouvre telle quelle. Enregistre de nouveau après une modification : le fichier ne se met pas à jour tout seul.</li>
+      <li><b>Ouvrir…</b> rouvre une fiche enregistrée.</li>
+      <li>Un exercice trop long continue sur la page suivante au lieu de réduire la police.</li>
+    </ul>
+    <p class="classe-only">Dans Classe, tes fiches sont rangées dans la base de l’outil et suivent ton compte d’un appareil à l’autre. Ailleurs, elles restent sur cet appareil : pense à <b>Enregistrer</b>.</p>
+  </details>
+
+  <details class="card">
+    <summary>⋯ Plus : Mode avancé</summary>
+    <p>Par défaut, l’outil est simplifié : pas de version dys, pas de code couleur de grammaire. Pour les retrouver, ouvre <b>⋯ Plus › Mode avancé</b>. Ce réglage est propre à chaque appareil, et tes fiches ne sont jamais modifiées par lui.</p>
+    <ul>
+      <li><b>Version dys</b> : moins d’items, une tâche par exercice, police et interlignes agrandis, réponses à trou ou autre façon de répondre (entourer, relier, banque de mots, vrai / faux, écriture libre).</li>
+      <li><b>Code couleur de grammaire</b> : verbe souligné en rouge, sujet encadré en bleu, groupe verbal encadré en rouge, complément circonstanciel en vert, COD / COI souligné en noir.</li>
+    </ul>
+    <p class="classe-only"><b>Coups de pouce</b> (aussi dans ⋯ Plus) ouvre les cartes d’aide 1, 2, 3 de la fiche, à projeter ou à imprimer.</p>
+  </details>
+
+  <details class="card">
+    <summary>Bon à savoir</summary>
+    <ul>
+      <li>Utilise un ordinateur avec Chrome ou Edge. Une connexion est nécessaire pour les polices et le PDF.</li>
+      <li>Si un souci apparaît, recharge la page (<kbd>Ctrl</kbd> + <kbd>Maj</kbd> + <kbd>R</kbd>) : tes fiches sont conservées.</li>
+      <li>Une erreur, une idée ? Écris à <b>xavier.gougaud@ac-nantes.fr</b>.</li>
+    </ul>
+  </details>
+</main>
+<script>
+/* Kit des collègues (github.io ou ?mode=app) : pas de Classe ni de Coups de pouce */
+(function(){
+  var kit=/github\.io$/.test(location.hostname)||/[?&]mode=app/.test(location.search);
+  if(kit)[].forEach.call(document.querySelectorAll('.classe-only'),function(e){e.hidden=true;});
+  if(location.search)document.getElementById('retour').href='index.html'+location.search;
+})();
+</script>
+</body></html>

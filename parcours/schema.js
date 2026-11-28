@@ -87,7 +87,8 @@ const SCHEMA = [
     { id: "Type", type: "Choice", label: "Type", choices: "type_rencontre" },
     { id: "Presents", type: "Text", label: "Présents" },
     { id: "Dit", type: "Text", label: "Ce qui a été dit" },
-    { id: "Decisions", type: "Text", label: "Décisions" },
+    { id: "Important", type: "Text", label: "À retenir (information importante)" },
+    { id: "Decisions", type: "Text", label: "Décisions et préconisations" },
     { id: "Resume", type: "Text", label: "Résumé du bilan" },
     { id: "CR", type: "Attachments", label: "Compte rendu joint" },
     { id: "Auteur", type: "Text", label: "Auteur" }

@@ -25,7 +25,7 @@ Licence : CC BY-NC-SA 4.0.
 | Dictées adaptées (édition libre, cycle, devoirs, import PDF) | https://xaviergougaud1-netizen.github.io/outils-classe/dictees/ | 2.6.1 |
 | Plan de classe | https://xaviergougaud1-netizen.github.io/outils-classe/plan/ | 1.6 |
 | Boussole élève, ex-« Orienter un élève » (outil de Xavier, pas dans le portail) | https://xaviergougaud1-netizen.github.io/outils-classe/orienter/ | 1.3.1 |
-| Parcours élève (widget Grist, suivi des élèves de l'école ; **aucune donnée ici**, elles sont dans Grist) | https://xaviergougaud1-netizen.github.io/outils-classe/parcours/ | 0.3.0 |
+| Parcours élève (widget Grist, suivi des élèves de l'école ; **aucune donnée ici**, elles sont dans Grist) | https://xaviergougaud1-netizen.github.io/outils-classe/parcours/ | 0.4.0 |
 
 ## Organisation
 - `commun/charte.css` : charte Repères v1 commune (couleur de chaque outil : `--outil-calcul`, `--outil-problemes`).
@@ -52,6 +52,7 @@ Licence : CC BY-NC-SA 4.0.
 4. Ajouter une ligne dans « Nouveautés ».
 
 ## Nouveautés
+- 2026-11-28 · Parcours élève 0.4.0 : Résumé = fiche de synthèse (dernière réunion avec « À retenir », préconisations en cours, suivis avec contacts, MDPH et PAI).
 - 2026-11-28 · Parcours élève 0.3.0 : suivis (type puis nom filtré, dates selon l'état, fréquence en liste), rencontres réduites avec les cases du parcours, listes PAI / MDPH / PPS / PAP / PPRE à l'accueil, mise à jour automatique des colonnes.
 - 2026-11-28 · Parcours élève 0.2.1 : pièces jointes (l'envoi depuis le widget est bloqué par le navigateur) : guide pour joindre le fichier dans Grist, lecture conservée.
 - 2026-11-28 · Parcours élève 0.2.0 : accueil (recherche, alertes, classes, archivés), fiche élève (résumé, parcours, suivis avec contacts, rencontres avec pièces jointes, MDPH et PAI), réglages repliables, Ctrl+Z.

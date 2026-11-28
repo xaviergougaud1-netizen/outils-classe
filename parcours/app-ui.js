@@ -51,7 +51,7 @@ const GROUPES=[
  {t:"Points d'appui et commentaires",f:[{c:"Points_appui",kind:"area",label:"Points d'appui, réussites"},{c:"Commentaire",kind:"area",label:"Commentaire"},{c:"Classe",kind:"text",label:"Classe cette année-là"},{c:"Enseignant",kind:"text",label:"Enseignant"}]}
 ];
 const F_ELEVE=[{c:"Prenom",kind:"text",label:"Prénom"},{c:"Nom",kind:"text",label:"Nom"},{c:"Naissance",kind:"date",label:"Date de naissance"},{c:"Classe",kind:"text",label:"Classe",liste:"classes"}];
-const F_RENC=[{c:"Date",kind:"date",label:"Date"},{c:"Type",kind:"choice",label:"Type",choices:LISTES.type_rencontre},{c:"Auteur",kind:"text",label:"Auteur"},{c:"Presents",kind:"text",label:"Présents"},{c:"Dit",kind:"area",label:"Ce qui a été dit",rows:5},{c:"Decisions",kind:"area",label:"Décisions",rows:3},{c:"Resume",kind:"area",label:"Résumé du bilan (quelques lignes)",rows:4}];
+const F_RENC=[{c:"Date",kind:"date",label:"Date"},{c:"Type",kind:"choice",label:"Type",choices:LISTES.type_rencontre},{c:"Auteur",kind:"text",label:"Auteur"},{c:"Presents",kind:"text",label:"Présents"},{c:"Important",kind:"area",label:"À retenir : information importante",rows:3},{c:"Dit",kind:"area",label:"Ce qui a été dit",rows:5},{c:"Decisions",kind:"area",label:"Décisions et préconisations",rows:3},{c:"Resume",kind:"area",label:"Résumé du bilan (quelques lignes)",rows:4}];
 const F_MDPH=[{c:"Nature",kind:"chips",label:"Nature de la notification",choices:LISTES.nature_mdph},{c:"Date_notification",kind:"date",label:"Notifiée le"},{c:"Debut",kind:"date",label:"Début"},{c:"Fin",kind:"date",label:"Jusqu'au"},{c:"Quotite_AESH",kind:"num",label:"Quotité AESH (h/semaine)"},{c:"Nom_AESH",kind:"text",label:"Nom de l'AESH"},{c:"Enseignant_referent",kind:"ref",refTable:"Professionnels",label:"Enseignant référent"},{c:"Note",kind:"area",label:"Note",rows:2}];
 const F_PAI=[{c:"Date",kind:"date",label:"Date du PAI"},{c:"Renouvellement",kind:"date",label:"À renouveler le"},{c:"Note",kind:"area",label:"Note",rows:2}];
 
@@ -148,22 +148,50 @@ function vueEleve(){
    <div class="onglets noprint" role="tablist">${ONGLETS.map(([k,l])=>`<button role="tab" data-onglet="${k}" aria-selected="${S.onglet===k}">${l}</button>`).join("")}</div>`;
   return h+({resume:ongletResume,parcours:ongletParcours,suivis:ongletSuivis,rencontres:ongletRencontres,mdph:ongletMdph})[S.onglet](e)+`<datalist id="classes">${[...new Set(T.Eleves.map(x=>x.Classe).filter(Boolean))].map(c=>`<option value="${esc(c)}">`).join("")}</datalist>`;
 }
+const avis=v=>v==="OK"?"favorable":v==="N"?"défavorable":"en attente";
+function preconisations(id){
+  const p=parcoursAnnee(id,anneeScolaire()),o=[];
+  if(p){
+    if(p.Bilan_ortho_preconise&&!p.Bilan_ortho_realise)o.push("Bilan orthophonique préconisé, pas encore réalisé");
+    if(p.Rased_demande&&!p.Rased_suivi)o.push("RASED demandé, pas encore de suivi");
+    if(p.Aide_perso_proposee&&!p.Aide_perso_acceptee)o.push("Aide personnalisée proposée, pas encore acceptée");
+    if(p.Stage_RAN_propose&&!p.Stage_RAN_accepte)o.push("Stage RAN proposé, pas encore accepté");
+    if(p.Redoublement_preconise)o.push(`Redoublement préconisé (parents : ${avis(p.Redoublement_avis_parents)}, IEN : ${avis(p.Redoublement_avis_IEN)})`);
+    if(p.Orientation_proposee)o.push(`Orientation ${p.Orientation_proposee} proposée (parents : ${avis(p.Orientation_avis_parents)}, commission : ${avis(p.Orientation_avis_commission)})`);
+  }
+  for(const s of deEleve("Suivis",id))if(s.Etat==="Préconisé")o.push(`Suivi ${nomSuivi(s)||"à préciser"} préconisé le ${fr(s.Date_preconisation)}`);
+  return o;
+}
+function ligneSuivi(s){
+  const pr=par("Professionnels",s.Professionnel);
+  return `<p style="margin:0 0 8px"><b>${esc(nomSuivi(s)||"Suivi à préciser")}</b> · ${esc(s.Etat||"")}${s.Etat==="Préconisé"?` le ${fr(s.Date_preconisation)}`:s.Debut?` depuis le ${fr(s.Debut)}`:""}${s.Frequence?` · ${esc(s.Frequence)}`:""}${s.Fin&&(s.Etat==="Terminé"||s.Etat==="Arrêté")?` · ${s.Etat.toLowerCase()} le ${fr(s.Fin)}`:""}${pr?`<br>${contact(pr)}`:""}${s.Note?`<br><span class="aide">${esc(s.Note)}</span>`:""}</p>`;
+}
 function ongletResume(e){
   const an=anneeScolaire(),p=parcoursAnnee(e.id,an),t=aujourdhui();
-  let h=`<div class="carte"><h3>Cette année · ${an}</h3>`;
+  let h=`<div class="carte"><h3>Dernière réunion</h3>`;
+  const r=deEleve("Rencontres",e.id).sort((a,b)=>(b.Date||0)-(a.Date||0))[0];
+  if(r){
+    h+=`<p><b>${fr(r.Date)}</b> · ${esc(r.Type||"Rencontre")}${r.Auteur?` · noté par ${esc(r.Auteur)}`:""}${r.Presents?`<br><span class="aide">Présents : ${esc(r.Presents)}</span>`:""}</p>`
+     +(r.Important?`<div class="important"><b>À retenir</b><br>${esc(r.Important).replace(/\n/g,"<br>")}</div>`:"")
+     +(r.Decisions?`<p><b>Décisions et préconisations</b><br>${esc(r.Decisions).replace(/\n/g,"<br>")}</p>`:"")
+     +(r.Resume?`<p><b>Résumé du bilan</b><br>${esc(r.Resume).replace(/\n/g,"<br>")}</p>`:"")
+     +(!r.Important&&!r.Decisions&&!r.Resume?`<p class="aide">Rien de rempli pour cette réunion.</p>`:"")
+     +`<p class="noprint"><a href="#" data-onglet="rencontres">Voir toutes les rencontres</a></p>`;
+  }else h+=`<p class="aide">Aucune réunion notée. <a href="#" data-onglet="rencontres">En noter une</a></p>`;
+  h+=`</div>`;
+  const pre=preconisations(e.id);
+  h+=`<div class="carte"><h3>Préconisations en cours</h3>${pre.length?`<ul style="margin:0;padding-left:20px">${pre.map(x=>`<li>${esc(x)}</li>`).join("")}</ul>`:`<p class="aide">Aucune préconisation en attente.</p>`}</div>`;
+  const su=deEleve("Suivis",e.id),vivants=su.filter(s=>s.Etat!=="Terminé"&&s.Etat!=="Arrêté"),finis=su.filter(s=>s.Etat==="Terminé"||s.Etat==="Arrêté");
+  h+=`<div class="carte"><h3>Suivis</h3>${vivants.map(ligneSuivi).join("")||`<p class="aide">Aucun suivi en cours.</p>`}${finis.length?`<details class="sous"><summary>Suivis terminés ou arrêtés (${finis.length})</summary>${finis.map(ligneSuivi).join("")}</details>`:""}</div>`;
+  const ms=deEleve("MDPH",e.id).sort((a,b)=>(b.Debut||0)-(a.Debut||0)),pai=deEleve("PAI",e.id).sort((a,b)=>(b.Date||0)-(a.Date||0))[0];
+  if(ms.length||pai){h+=`<div class="carte"><h3>MDPH et PAI</h3>`+ms.map(m=>`<p style="margin:0 0 8px">${badgeMdph(m,t)} ${liste(m.Nature).map(esc).join(", ")||"Notification"}${m.Fin?` jusqu'au <b>${fr(m.Fin)}</b>`:""}${m.Quotite_AESH?` · AESH <b>${esc(m.Quotite_AESH)} h/semaine</b>`:""}${m.Nom_AESH?` (${esc(m.Nom_AESH)})`:""}</p>`).join("")+(pai?`<p style="margin:0">PAI du ${fr(pai.Date)}${pai.Renouvellement?`, à renouveler le <b>${fr(pai.Renouvellement)}</b>`:""}</p>`:"")+`</div>`}
+  h+=`<div class="carte"><h3>Cette année · ${an}</h3>`;
   if(p){
     const flags=GROUPES.flatMap(g=>g.f).filter(f=>f.kind==="bool"&&p[f.c]).map(f=>`<span class="pastille">${esc(f.label)}</span>`).join(" ");
-    h+=`<p>${p.Travail?`Travail <b>${esc(p.Travail)}</b>/4`:""}${p.Travail&&p.Comportement?" · ":""}${p.Comportement?`comportement <b>${esc(p.Comportement)}</b>/4`:""}</p>${flags?`<p class="pastilles">${flags}</p>`:""}
+    h+=`<p>${p.Travail?`Travail <b>${esc(p.Travail)}</b>/4`:""}${p.Travail&&p.Comportement?" · ":""}${p.Comportement?`comportement <b>${esc(p.Comportement)}</b>/4`:""}</p>${flags?`<p class="pastilles" style="margin-left:0;flex-wrap:wrap">${flags}</p>`:""}
      ${liste(p.Amenagements).length?`<p><b>Aménagements :</b> ${liste(p.Amenagements).map(esc).join(", ")}</p>`:""}${p.Points_appui?`<p><b>Points d'appui :</b> ${esc(p.Points_appui)}</p>`:""}`;
   }else h+=`<p class="aide">Pas encore de parcours pour cette année. <a href="#" data-onglet="parcours">Le créer</a></p>`;
-  h+=`</div>`;
-  const ms=deEleve("MDPH",e.id).sort((a,b)=>(b.Debut||0)-(a.Debut||0)),pai=deEleve("PAI",e.id).sort((a,b)=>(b.Date||0)-(a.Date||0))[0];
-  if(ms.length||pai){h+=`<div class="carte"><h3>MDPH et PAI</h3>`+ms.map(m=>`<p>${badgeMdph(m,t)} ${liste(m.Nature).map(esc).join(", ")||"Notification"}${m.Fin?` jusqu'au <b>${fr(m.Fin)}</b>`:""}${m.Quotite_AESH?` · AESH <b>${esc(m.Quotite_AESH)} h/semaine</b>`:""}${m.Nom_AESH?` (${esc(m.Nom_AESH)})`:""}</p>`).join("")+(pai?`<p>PAI du ${fr(pai.Date)}${pai.Renouvellement?`, à renouveler le <b>${fr(pai.Renouvellement)}</b>`:""}</p>`:"")+`</div>`}
-  const su=deEleve("Suivis",e.id).filter(s=>s.Etat!=="Terminé"&&s.Etat!=="Arrêté");
-  if(su.length)h+=`<div class="carte"><h3>Suivis en cours</h3>${su.map(s=>{const pr=par("Professionnels",s.Professionnel);return `<p><b>${esc(pr?pr.Nom:"(professionnel à choisir)")}</b> · ${esc(s.Etat||"")}<br>${contact(pr)}</p>`}).join("")}</div>`;
-  const re=deEleve("Rencontres",e.id).sort((a,b)=>(b.Date||0)-(a.Date||0)).slice(0,3);
-  if(re.length)h+=`<div class="carte"><h3>Derniers bilans</h3>${re.map(r=>`<p><b>${fr(r.Date)}</b> · ${esc(r.Type||"")}<br>${esc(r.Resume||r.Decisions||"(pas de résumé)")}</p>`).join("")}</div>`;
-  return h;
+  return h+`</div>`;
 }
 function badgeMdph(m,t){const f=versDate(m.Fin);if(f&&f<t)return `<span class="pastille rouge">échue</span>`;if(f&&f<=plusMois(t,reglageNb("alerte_mdph_mois",6)))return `<span class="pastille orange">bientôt échue</span>`;return `<span class="pastille ok">en cours</span>`}
 function blocParcours(p,prefixe,replie){

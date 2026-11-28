@@ -1,5 +1,5 @@
 /* Parcours élève : événements, enregistrement, démarrage. */
-const VERSION="0.3.0";
+const VERSION="0.4.0";
 const lsGet=(k,d)=>{try{return JSON.parse(localStorage.getItem(k))??d}catch(e){return d}};
 const lsSet=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}};
 OUT.ouverts=lsGet("parcours-ui",{});

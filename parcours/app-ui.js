@@ -166,8 +166,9 @@ function ongletRencontres(e){
   if(!L.length)h+=`<div class="carte"><p class="aide">Aucune rencontre notée.</p></div>`;
   return h+L.map(r=>`<div class="carte"><div class="entete-eleve"><b>${fr(r.Date)} · ${esc(r.Type||"")}</b></div>${champs("Rencontres",r,F_RENC)}
    <div class="ch large"><span class="lab">Compte rendu joint</span><div class="pj">${liste(r.CR).map(id=>`<a class="btn petit" href="#" data-pj="${id}">📎 ${esc(ATT[id]||"fichier "+id)}</a>`).join("")||`<span class="aide">Aucun</span>`}</div>
-   <label class="btn petit noprint" style="margin-top:6px">Joindre un fichier<input type="file" data-pj-add="${r.id}" hidden></label></div><div class="noprint">${SUP("Rencontres",r.id)}</div></div>`).join("");
+   <button class="btn petit noprint" style="margin-top:6px" data-act="aide-pj" data-id="${r.id}">Joindre un fichier</button>${S.aidePJ===r.id?aidePJ(r):""}</div><div class="noprint">${SUP("Rencontres",r.id)}</div></div>`).join("");
 }
+function aidePJ(r){return `<div class="aidepj noprint"><p><b>Pour joindre un fichier (3 gestes) :</b></p><ol><li>Dans le menu de gauche de Grist, ouvre <b>Données source</b>, puis la table <b>Rencontres</b>.</li><li>Trouve la ligne du <b>${fr(r.Date)}</b> (${esc(nomEleve(par("Eleves",r.Eleve)))}) et dépose ton fichier dans la colonne <b>Compte rendu joint</b>.</li><li>Reviens ici et touche <b>Actualiser</b>.</li></ol><button class="btn petit plein" data-act="actualiser">Actualiser</button></div>`}
 function ongletMdph(e){
   const t=aujourdhui(),M=deEleve("MDPH",e.id).sort((a,b)=>(b.Debut||0)-(a.Debut||0)),P=deEleve("PAI",e.id).sort((a,b)=>(b.Date||0)-(a.Date||0));
   return `<div class="carte noprint"><button class="btn plein" data-act="ajout-mdph">+ Notification MDPH</button> <button class="btn" data-act="ajout-pai">+ PAI</button></div>`

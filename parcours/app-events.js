@@ -1,5 +1,5 @@
 /* Parcours élève : événements, enregistrement, démarrage. */
-const VERSION="0.2.0";
+const VERSION="0.2.1";
 const lsGet=(k,d)=>{try{return JSON.parse(localStorage.getItem(k))??d}catch(e){return d}};
 const lsSet=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}};
 OUT.ouverts=lsGet("parcours-ui",{});
@@ -48,6 +48,8 @@ async function action(a,el){
     case"ajout-mdph":await ajouter("MDPH",{Eleve:S.id,Date_notification:aujSec()},"notification MDPH");return rendre();
     case"ajout-pai":await ajouter("PAI",{Eleve:S.id,Date:aujSec()},"PAI");return rendre();
     case"tout-deplier":case"tout-replier":["alertes","install","apropos"].forEach(k=>OUT.ouverts[k]=a==="tout-deplier");lsSet("parcours-ui",OUT.ouverts);return rendre();
+    case"aide-pj":S.aidePJ=S.aidePJ===+el.dataset.id?null:+el.dataset.id;return rendre();
+    case"actualiser":await recharger();toast("✓ À jour");return;
     case"installer":{
       const j=$("journal");j.hidden=false;j.textContent="";const log=t=>{j.textContent+=t+"\n"};
       el.disabled=true;
@@ -78,12 +80,6 @@ document.addEventListener("click",async ev=>{
 document.addEventListener("change",async ev=>{
   const el=ev.target;
   if(el.id==="annee"){S.annee=el.value;return rendre()}
-  if(el.dataset&&el.dataset.pjAdd){
-    const f=el.files[0];if(!f)return;
-    try{toast("Envoi…");const id=await televerser(f);const r=par("Rencontres",+el.dataset.pjAdd);await modifier("Rencontres",r.id,"CR",["L",...liste(r.CR),id],"pièce jointe");await chargerPJ();toast("✓ Fichier joint");rendre()}
-    catch(e){toast("⚠ Envoi impossible : "+(e&&e.message||e))}
-    return;
-  }
   if(el.dataset&&el.dataset.k&&!el.hasAttribute("data-tog")&&!el.hasAttribute("data-seg")&&!el.hasAttribute("data-chip"))sauver(el);
 });
 document.addEventListener("input",ev=>{

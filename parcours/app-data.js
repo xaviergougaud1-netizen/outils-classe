@@ -61,15 +61,9 @@ async function annuler(){
   try{await a.undo();toast("↶ Annulé : "+a.label);majBoutonAnnuler();rendre()}catch(e){toast("Annulation impossible : "+(e&&e.message||e))}
 }
 
-/* ---------- Pièces jointes (REST de Grist) ---------- */
-async function jeton(){return G.docApi.getAccessToken({readOnly:false})}
-async function televerser(fichier){
-  const j=await jeton();const fd=new FormData();fd.append("upload",fichier,fichier.name);
-  const r=await fetch(`${j.baseUrl}/attachments?auth=${encodeURIComponent(j.token)}`,{method:"POST",body:fd});
-  if(!r.ok)throw new Error("Envoi refusé ("+r.status+")");
-  const ids=await r.json();return ids[0];
-}
-async function lienPJ(id){const j=await jeton();return `${j.baseUrl}/attachments/${id}/download?auth=${encodeURIComponent(j.token)}`}
+/* ---------- Pièces jointes : lecture seulement ----------
+   L'envoi depuis le widget est bloqué par le navigateur (« Failed to fetch ») : on joint le fichier dans la table Rencontres de Grist. */
+async function lienPJ(id){const j=await G.docApi.getAccessToken({readOnly:true});return `${j.baseUrl}/attachments/${id}/download?auth=${encodeURIComponent(j.token)}`}
 
 /* ---------- Installation du document (tables, listes, annuaire) ---------- */
 function chargerScript(src){return new Promise((ok,ko)=>{const s=document.createElement("script");s.src=src;s.onload=ok;s.onerror=ko;document.head.appendChild(s)})}

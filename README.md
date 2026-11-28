@@ -52,7 +52,7 @@ Licence : CC BY-NC-SA 4.0.
 4. Ajouter une ligne dans « Nouveautés ».
 
 ## Nouveautés
-- 2026-11-28 · Parcours élève 0.5.0 : listes PAI / MDPH avec retour à l'accueil, PPS et allophones retirés par défaut, Réglages › Page d'accueil (ordre et blocs, listes, alertes, pastilles masquables).
+- 2026-11-28 · Parcours élève 0.5.0 : listes PAI / MDPH avec retour à l'accueil, PPS et allophones retirés par défaut, Réglages › Page d'accueil, commun à toute l'équipe (ordre et blocs, listes, alertes, pastilles masquables).
 - 2026-11-28 · Parcours élève 0.4.0 : Résumé = fiche de synthèse (dernière réunion avec « À retenir », préconisations en cours, suivis avec contacts, MDPH et PAI).
 - 2026-11-28 · Parcours élève 0.3.0 : suivis (type puis nom filtré, dates selon l'état, fréquence en liste), rencontres réduites avec les cases du parcours, listes PAI / MDPH / PPS / PAP / PPRE à l'accueil, mise à jour automatique des colonnes.
 - 2026-11-28 · Parcours élève 0.2.1 : pièces jointes (l'envoi depuis le widget est bloqué par le navigateur) : guide pour joindre le fichier dans Grist, lecture conservée.

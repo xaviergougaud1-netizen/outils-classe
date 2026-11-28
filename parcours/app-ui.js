@@ -4,7 +4,9 @@ const OUT={ouverts:{},mem:{},freqAutre:{}};
 const BLOCS={recherche:"Recherche d'un élève",listes:"Listes (PAI, MDPH…)",alertes:"Alertes",nouveau:"Bouton « Nouvel élève »",classes:"Élèves classe par classe",archives:"Élèves archivés"};
 const ALERTES_T={mdph:"Fin de notification MDPH",pai:"PAI à renouveler",ess:"ESS annuelle à programmer",suivi:"Suivi sans nouvelles"};
 const PREF_DEF={ordre:["recherche","listes","alertes","nouveau","classes","archives"],masques:[],listes:["PAI","MDPH","PAP","PPRE"],alertes:["mdph","pai","ess","suivi"],pastilles:["PAI","MDPH","PAP","PPRE"]};
-let PREF=null; // chargé au démarrage (propre à l'appareil)
+let PREF=structuredClone(PREF_DEF);
+// Réglage COMMUN à toute l'équipe : stocké en JSON dans la table Reglages (clé « accueil_prefs »).
+function lirePref(){let p={};try{p=JSON.parse(reglage("accueil_prefs","{}"))||{}}catch(e){}return Object.assign(structuredClone(PREF_DEF),p)}
 function ordreBlocs(){const o=PREF.ordre.filter(k=>BLOCS[k]);for(const k of Object.keys(BLOCS))if(!o.includes(k))o.push(k);return o}
 const nomEleve=e=>e?`${e.Prenom||""} ${(e.Nom||"").toUpperCase()}`.trim()||"(sans nom)":"";
 const present=e=>e&&e.Statut!=="Archivé";
@@ -260,7 +262,7 @@ function vueReglages(){
   const reg=REG.map(([k,l])=>{const r=(T.Reglages||[]).find(x=>x.Cle===k);return r?champ("Reglages",r,{c:"Valeur",kind:"text",type:"number",label:l}):""}).join("");
   return `<div class="carte noprint"><button class="btn petit" data-act="tout-deplier">Tout déplier</button> <button class="btn petit" data-act="tout-replier">Tout replier</button></div>`
   +section("alertes","Alertes et conservation",`<div class="grille">${reg}</div>`,true)
-  +section("accueil","Page d'accueil",`<p class="aide">Change l'ordre des blocs avec ↑ ↓ et masque ce que tu n'utilises pas. <b>Rien n'est supprimé</b> : les données restent dans le document. Ce réglage est propre à cet appareil.</p>
+  +section("accueil","Page d'accueil",`<p class="aide">Change l'ordre des blocs avec ↑ ↓ et masque ce que tu n'utilises pas. <b>Rien n'est supprimé</b> : les données restent dans le document. Ce réglage est <b>commun à toute l'équipe</b> : si tu le changes, tes collègues voient le même accueil.</p>
     <div>${ordreBlocs().map((k,i,o)=>`<div class="ligne-bloc"><button type="button" class="chip" data-pref="bloc:${k}" aria-pressed="${!PREF.masques.includes(k)}">${BLOCS[k]}</button><button type="button" class="btn petit" data-pref="haut:${k}" aria-label="Monter" ${i===0?"disabled":""}>↑</button><button type="button" class="btn petit" data-pref="bas:${k}" aria-label="Descendre" ${i===o.length-1?"disabled":""}>↓</button></div>`).join("")}</div>
     <h3 style="margin-top:12px">Listes proposées</h3><div class="chips">${FILTRES.map(([k,l])=>`<button type="button" class="chip" data-pref="liste:${k}" aria-pressed="${PREF.listes.includes(k)}">${l}</button>`).join("")}</div>
     <h3 style="margin-top:12px">Alertes affichées</h3><div class="chips">${Object.keys(ALERTES_T).map(k=>`<button type="button" class="chip" data-pref="alerte:${k}" aria-pressed="${PREF.alertes.includes(k)}">${ALERTES_T[k]}</button>`).join("")}</div>

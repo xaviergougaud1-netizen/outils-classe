@@ -23,6 +23,7 @@ const liste=v=>Array.isArray(v)?(v[0]==="L"?v.slice(1):v):[];
 function lignes(raw){const ids=raw.id||[];return ids.map((id,i)=>{const o={id};for(const k of Object.keys(raw))if(k!=="id"&&k!=="manualSort")o[k]=raw[k][i];return o})}
 async function charger(){
   for(const n of TABLES){T[n]=lignes(await G.docApi.fetchTable(n))}
+  if(typeof lirePref==="function")PREF=lirePref();
 }
 async function chargerPJ(){
   try{const r=await G.docApi.fetchTable("_grist_Attachments");ATT={};(r.id||[]).forEach((id,i)=>ATT[id]=r.fileName?r.fileName[i]:("fichier "+id))}catch(e){}

@@ -3,7 +3,6 @@ const VERSION="0.5.0";
 const lsGet=(k,d)=>{try{return JSON.parse(localStorage.getItem(k))??d}catch(e){return d}};
 const lsSet=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}};
 OUT.ouverts=lsGet("parcours-ui",{});
-PREF=Object.assign(structuredClone(PREF_DEF),lsGet("parcours-prefs",{}));
 function prefAction(a,k){
   const bascule=(l,x)=>{const i=l.indexOf(x);if(i<0)l.push(x);else l.splice(i,1)};
   if(a==="haut"||a==="bas"){const o=ordreBlocs(),i=o.indexOf(k),j=a==="haut"?i-1:i+1;if(j>=0&&j<o.length){[o[i],o[j]]=[o[j],o[i]];PREF.ordre=o}}
@@ -12,7 +11,16 @@ function prefAction(a,k){
   else if(a==="alerte")bascule(PREF.alertes,k);
   else if(a==="pastille")bascule(PREF.pastilles,k);
   else if(a==="reset")PREF=structuredClone(PREF_DEF);
-  lsSet("parcours-prefs",PREF);rendre();
+  rendre();enregistrerPref();
+}
+let FILE_PREF=Promise.resolve();
+function enregistrerPref(){
+  const json=JSON.stringify(PREF);
+  FILE_PREF=FILE_PREF.then(async()=>{try{
+    const r=(T.Reglages||[]).find(x=>x.Cle==="accueil_prefs");
+    if(r){majLocal("Reglages",r.id,"Valeur",json);await envoyer([["UpdateRecord","Reglages",r.id,{Valeur:json}]])}
+    else{const res=await envoyer([["AddRecord","Reglages",null,{Cle:"accueil_prefs",Valeur:json}]]);const id=res&&res.retValues&&res.retValues[0];if(id!=null)T.Reglages.push({id,Cle:"accueil_prefs",Valeur:json});else await charger()}
+  }catch(err){toast("Réglage non enregistré : "+err.message)}});
 }
 
 function valeurDe(el){

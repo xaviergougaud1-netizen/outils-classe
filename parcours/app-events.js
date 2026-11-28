@@ -1,5 +1,5 @@
 /* Parcours élève : événements, enregistrement, démarrage. */
-const VERSION="0.2.1";
+const VERSION="0.3.0";
 const lsGet=(k,d)=>{try{return JSON.parse(localStorage.getItem(k))??d}catch(e){return d}};
 const lsSet=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}};
 OUT.ouverts=lsGet("parcours-ui",{});
@@ -12,12 +12,15 @@ function valeurDe(el){
   return v;
 }
 async function sauver(el){
-  const {t,id,c,k}=el.dataset,val=valeurDe(el);
+  const {t,id,c,k}=el.dataset;let val=valeurDe(el);
   try{
+    if(k==="freq"){if(val==="Autre (écrire)"){OUT.freqAutre[id]=true;val=LISTES.frequence.includes(par(t,+id)[c])?"":par(t,+id)[c]}else delete OUT.freqAutre[id]}
     await modifier(t,+id,c,val,"modification");
+    if(t==="Suivis"&&c==="Etat"&&val==="Préconisé"&&!par(t,+id).Date_preconisation)await modifier(t,+id,"Date_preconisation",aujSec(),"date du suivi");
+    if(t==="Suivis"&&c==="Type"){const pr=par("Professionnels",par(t,+id).Professionnel);if(pr&&norm(pr.Type)!==norm(val))await modifier(t,+id,"Professionnel",0,"professionnel")}
     if(c==="Auteur")lsSet("parcours-auteur",val);
     toast("✓ Enregistré");
-    if(k==="date"||k==="choice"||k==="ref"||t==="Eleves")rendre();
+    if(k==="date"||k==="choice"||k==="ref"||k==="freq"||t==="Eleves")rendre();
   }catch(e){toast("⚠ Pas enregistré : "+(e&&e.message||e));await recharger()}
 }
 async function recharger(){try{await charger();await chargerPJ();rendre()}catch(e){toast("Je n'arrive pas à relire le document")}}
@@ -44,12 +47,14 @@ async function action(a,el){
     case"creer-parcours":{const e=par("Eleves",S.id);await ajouter("Parcours",{Eleve:S.id,Annee:S.annee,Classe:e.Classe||""},"parcours");return rendre()}
     case"ajout-suivi":await ajouter("Suivis",{Eleve:S.id,Etat:"Préconisé",Date_preconisation:aujSec()},"suivi");return rendre();
     case"nouveau-pro":S.nouveauPro=!S.nouveauPro;return rendre();
-    case"ajout-rencontre":await ajouter("Rencontres",{Eleve:S.id,Date:aujSec(),Type:"Entretien avec les parents",Auteur:lsGet("parcours-auteur","")},"rencontre");return rendre();
+    case"creer-parcours-an":await ajouter("Parcours",{Eleve:S.id,Annee:el.dataset.an,Classe:par("Eleves",S.id).Classe||""},"parcours");return rendre();
+    case"ajout-rencontre":{const id=await ajouter("Rencontres",{Eleve:S.id,Date:aujSec(),Type:"Entretien avec les parents",Auteur:lsGet("parcours-auteur","")},"rencontre");OUT.mem["r"+id]=true;return rendre()}
     case"ajout-mdph":await ajouter("MDPH",{Eleve:S.id,Date_notification:aujSec()},"notification MDPH");return rendre();
     case"ajout-pai":await ajouter("PAI",{Eleve:S.id,Date:aujSec()},"PAI");return rendre();
     case"tout-deplier":case"tout-replier":["alertes","install","apropos"].forEach(k=>OUT.ouverts[k]=a==="tout-deplier");lsSet("parcours-ui",OUT.ouverts);return rendre();
     case"aide-pj":S.aidePJ=S.aidePJ===+el.dataset.id?null:+el.dataset.id;return rendre();
     case"actualiser":await recharger();toast("✓ À jour");return;
+    case"maj-doc":try{await installer(()=>{});await charger();S.maj=false;toast("✓ Document à jour")}catch(x){toast("⚠ Mise à jour impossible : "+(x&&x.message||x))}return rendre();
     case"installer":{
       const j=$("journal");j.hidden=false;j.textContent="";const log=t=>{j.textContent+=t+"\n"};
       el.disabled=true;
@@ -60,9 +65,10 @@ async function action(a,el){
 }
 
 document.addEventListener("click",async ev=>{
-  const b=ev.target.closest("[data-nav],[data-onglet],[data-act],[data-tog],[data-seg],[data-chip],[data-sup],[data-pj]");if(!b)return;
+  const b=ev.target.closest("[data-nav],[data-onglet],[data-filtre],[data-act],[data-tog],[data-seg],[data-chip],[data-sup],[data-pj]");if(!b)return;
   try{
     if(b.dataset.nav){ev.preventDefault();return aller(b.dataset.nav)}
+    if(b.dataset.filtre){S.filtre=S.filtre===b.dataset.filtre?null:b.dataset.filtre;return rendre()}
     if(b.dataset.onglet){ev.preventDefault();return aller(`eleve/${S.id}/${b.dataset.onglet}`)}
     if(b.dataset.act)return await action(b.dataset.act,b);
     if(b.hasAttribute("data-tog"))return basculer(b,v=>!v,nv=>b.setAttribute("aria-pressed",nv));
@@ -98,7 +104,7 @@ document.addEventListener("keydown",ev=>{
   if((ev.ctrlKey||ev.metaKey)&&ev.key.toLowerCase()==="z"&&!typ){ev.preventDefault();annuler()}
   else if(ev.key==="/"&&!typ&&S.vue==="accueil"){const r=$("recherche");if(r){ev.preventDefault();r.focus()}}
 });
-document.addEventListener("toggle",ev=>{const s=ev.target.dataset&&ev.target.dataset.sec;if(s){OUT.ouverts[s]=ev.target.open;lsSet("parcours-ui",OUT.ouverts)}},true);
+document.addEventListener("toggle",ev=>{const m=ev.target.dataset&&ev.target.dataset.mem;if(m)OUT.mem[m]=ev.target.open;const s=ev.target.dataset&&ev.target.dataset.sec;if(s){OUT.ouverts[s]=ev.target.open;lsSet("parcours-ui",OUT.ouverts)}},true);
 window.addEventListener("popstate",()=>{lireHash();rendre()});
 /* Rafraîchissement doux : un collègue a pu modifier le document */
 setInterval(()=>{if(!G||!S.pret||document.hidden)return;const a=document.activeElement;if(a&&/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))return;recharger()},30000);
@@ -111,7 +117,7 @@ setInterval(()=>{if(!G||!S.pret||document.hidden)return;const a=document.activeE
   G.ready({requiredAccess:"full"});
   try{
     const presentes=await tablesPresentes();
-    if(TABLES.every(n=>presentes.has(n))){await charger();await chargerPJ();S.pret=true;lireHash()}
+    if(TABLES.every(n=>presentes.has(n))){await charger();await chargerPJ();S.pret=true;S.maj=(await manquant()).length>0;lireHash()}
     else{S.vue="reglages";OUT.ouverts.install=true}
     rendre();
   }catch(e){$("app").innerHTML=`<div class="carte"><p>Je n'arrive pas à lire le document. Dans le panneau de droite de Grist, mets <b>« Accès complet au document »</b>.</p><p class="aide">${esc(e&&e.message||e)}</p></div>`}

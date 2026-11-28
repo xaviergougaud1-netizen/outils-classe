@@ -76,6 +76,12 @@ async function chargerGrist(){
 }
 const colonne=c=>{const o={id:c.id,type:c.type,label:c.label,isFormula:false};if(c.choices)o.widgetOptions=JSON.stringify({choices:LISTES[c.choices]});return o};
 async function tablesPresentes(){const m=await G.docApi.fetchTable("_grist_Tables");return new Set(m.tableId)}
+async function etatColonnes(){
+  const Tb=await G.docApi.fetchTable("_grist_Tables"),C=await G.docApi.fetchTable("_grist_Tables_column"),m={};
+  (C.id||[]).forEach((id,i)=>{const t=Tb.tableId[Tb.id.indexOf(C.parentId[i])];(m[t]=m[t]||{})[C.colId[i]]=C.widgetOptions?C.widgetOptions[i]:""});
+  return m;
+}
+async function manquant(){const m=await etatColonnes(),o=[];for(const t of SCHEMA){if(!m[t.id])continue;for(const c of t.cols)if(!(c.id in m[t.id]))o.push({t:t.id,c})}return o}
 async function installer(log){
   const presentes=await tablesPresentes();
   for(const t of SCHEMA){
@@ -93,6 +99,9 @@ async function installer(log){
       log(`✓ Professionnels : ${L.length} contacts repris de Boussole élève.`);
     }catch(e){log("• Annuaire : non rempli ("+(e&&e.message||e)+"). Tu pourras ajouter les professionnels à la main.")}
   }
+  for(const {t,c} of await manquant()){const {id,...info}=colonne(c);await envoyer([["AddColumn",t,id,info]]);log(`✓ ${t} : colonne « ${c.label} » ajoutée.`)}
+  const m=await etatColonnes();
+  for(const g of MIGRATIONS){const w=m[g.table]&&m[g.table][g.col];if(w&&w.includes(g.si)){await envoyer([["ModifyColumn",g.table,g.col,{widgetOptions:JSON.stringify({choices:LISTES[g.choices]})}]]);log(`✓ ${g.table} : liste « ${g.col} » mise à jour.`)}}
   await afficherNoms(log);
 }
 async function afficherNoms(log){

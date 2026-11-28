@@ -1,6 +1,6 @@
 /* Parcours élève : écrans (accueil, fiche élève, réglages) et saisie. */
 const S={vue:"accueil",id:null,onglet:"resume",annee:null,recherche:"",edit:false,nouveau:false};
-const OUT={ouverts:{}};
+const OUT={ouverts:{},mem:{},freqAutre:{}};
 const nomEleve=e=>e?`${e.Prenom||""} ${(e.Nom||"").toUpperCase()}`.trim()||"(sans nom)":"";
 const present=e=>e&&e.Statut!=="Archivé";
 let tTimer;function toast(t){const el=$("toast");el.textContent=t;el.style.opacity=1;clearTimeout(tTimer);tTimer=setTimeout(()=>el.style.opacity=0,2200)}
@@ -9,8 +9,9 @@ function majBoutonAnnuler(){const b=$("btn-annuler");if(!b)return;const a=PILE[P
 /* ---------- Champs de saisie génériques ---------- */
 const NOTE=LISTES.notes,OKN=LISTES.oui_non;
 function options(choix,v,vide){return (vide===false?"":`<option value=""></option>`)+choix.map(c=>`<option ${c===v?"selected":""}>${esc(c)}</option>`).join("")}
-function optionsRef(table,v){
-  const L=T[table].slice();
+function optionsRef(table,v,d){
+  let L=T[table].slice();
+  if(d&&d.type){L=L.filter(r=>norm(r.Type)===norm(d.type)||r.id===v);return `<option value="0"></option>`+L.sort((a,b)=>(a.Nom||"").localeCompare(b.Nom||"","fr")).map(r=>`<option value="${r.id}" ${r.id===v?"selected":""}>${esc(r.Nom)}</option>`).join("")}
   if(table==="Professionnels"){
     const types=[...new Set(L.map(r=>r.Type||"Autres"))].sort((a,b)=>a.localeCompare(b,"fr"));
     return `<option value="0"></option>`+types.map(ty=>`<optgroup label="${esc(ty)}">`+L.filter(r=>(r.Type||"Autres")===ty).sort((a,b)=>(a.Nom||"").localeCompare(b.Nom||"","fr")).map(r=>`<option value="${r.id}" ${r.id===v?"selected":""}>${esc(r.Nom)}</option>`).join("")+`</optgroup>`).join("");
@@ -25,7 +26,9 @@ function champ(table,row,d){
     case"date":return `<label class="ch">${lab}<input ${a} type="date" value="${jour(versDate(v))}"></label>`;
     case"num":return `<label class="ch">${lab}<input ${a} type="number" step="any" inputmode="decimal" value="${v==null?"":esc(v)}"></label>`;
     case"choice":return `<label class="ch">${lab}<select ${a}>${options(d.choices,v)}</select></label>`;
-    case"ref":return `<label class="ch">${lab}<select ${a}>${optionsRef(d.refTable,v)}</select></label>`;
+    case"ref":return `<label class="ch">${lab}<select ${a}>${optionsRef(d.refTable,v,d)}</select></label>`;
+    case"freq":{const std=LISTES.frequence,autre=OUT.freqAutre[row.id]||(v&&!std.includes(v));
+      return `<div class="ch">${lab}<select ${a}>${options([...std,"Autre (écrire)"],autre?"Autre (écrire)":(v||""))}</select>${autre?`<input data-t="${table}" data-id="${row.id}" data-c="${d.c}" data-k="text" placeholder="Écris la fréquence" value="${esc(std.includes(v)?"":v)}">`:""}</div>`}
     case"bool":return `<button type="button" class="chip" ${a} data-tog aria-pressed="${!!v}">${esc(d.label)}</button>`;
     case"seg":return `<div class="ch"><span class="lab">${esc(d.label)}</span><div class="seg">${d.choices.map(c=>`<button type="button" ${a} data-seg data-val="${esc(c)}" aria-pressed="${v===c}">${esc(c)}</button>`).join("")}</div></div>`;
     case"chips":{const l=liste(v);return `<div class="ch large"><span class="lab">${esc(d.label)}</span><div class="chips">${d.choices.map(c=>`<button type="button" class="chip" ${a} data-chip data-val="${esc(c)}" aria-pressed="${l.includes(c)}">${esc(c)}</button>`).join("")}</div></div>`}
@@ -48,7 +51,6 @@ const GROUPES=[
  {t:"Points d'appui et commentaires",f:[{c:"Points_appui",kind:"area",label:"Points d'appui, réussites"},{c:"Commentaire",kind:"area",label:"Commentaire"},{c:"Classe",kind:"text",label:"Classe cette année-là"},{c:"Enseignant",kind:"text",label:"Enseignant"}]}
 ];
 const F_ELEVE=[{c:"Prenom",kind:"text",label:"Prénom"},{c:"Nom",kind:"text",label:"Nom"},{c:"Naissance",kind:"date",label:"Date de naissance"},{c:"Classe",kind:"text",label:"Classe",liste:"classes"}];
-const F_SUIVI=[{c:"Professionnel",kind:"ref",refTable:"Professionnels",label:"Professionnel"},{c:"Etat",kind:"choice",label:"État",choices:LISTES.etat_suivi},{c:"Date_preconisation",kind:"date",label:"Préconisé le"},{c:"Debut",kind:"date",label:"Début"},{c:"Fin",kind:"date",label:"Fin"},{c:"Frequence",kind:"text",label:"Fréquence"},{c:"Note",kind:"area",label:"Note",rows:2}];
 const F_RENC=[{c:"Date",kind:"date",label:"Date"},{c:"Type",kind:"choice",label:"Type",choices:LISTES.type_rencontre},{c:"Auteur",kind:"text",label:"Auteur"},{c:"Presents",kind:"text",label:"Présents"},{c:"Dit",kind:"area",label:"Ce qui a été dit",rows:5},{c:"Decisions",kind:"area",label:"Décisions",rows:3},{c:"Resume",kind:"area",label:"Résumé du bilan (quelques lignes)",rows:4}];
 const F_MDPH=[{c:"Nature",kind:"chips",label:"Nature de la notification",choices:LISTES.nature_mdph},{c:"Date_notification",kind:"date",label:"Notifiée le"},{c:"Debut",kind:"date",label:"Début"},{c:"Fin",kind:"date",label:"Jusqu'au"},{c:"Quotite_AESH",kind:"num",label:"Quotité AESH (h/semaine)"},{c:"Nom_AESH",kind:"text",label:"Nom de l'AESH"},{c:"Enseignant_referent",kind:"ref",refTable:"Professionnels",label:"Enseignant référent"},{c:"Note",kind:"area",label:"Note",rows:2}];
 const F_PAI=[{c:"Date",kind:"date",label:"Date du PAI"},{c:"Renouvellement",kind:"date",label:"À renouveler le"},{c:"Note",kind:"area",label:"Note",rows:2}];
@@ -72,21 +74,35 @@ function alertes(){
       if(!dern||dern<plusMois(t,-mEss))A.push({n:1,e:id,txt:`ESS annuelle à programmer (dernière : ${dern?fr(dern.getTime()/1000):"aucune"})`});
     }
     for(const s of deEleve("Suivis",id)){const d=versDate(s.Date_preconisation);
-      if((s.Etat==="Préconisé"||s.Etat==="Demandé")&&d&&d<=plusMois(t,-mSuivi)){const pr=par("Professionnels",s.Professionnel);A.push({n:1,e:id,txt:`Suivi ${pr?"chez "+pr.Nom:""} ${s.Etat.toLowerCase()} le ${fr(s.Date_preconisation)} : pas de nouvelles ?`})}}
+      if((s.Etat==="Préconisé"||s.Etat==="Demandé")&&d&&d<=plusMois(t,-mSuivi)){A.push({n:1,e:id,txt:`Suivi ${nomSuivi(s)?"("+nomSuivi(s)+") ":""}préconisé le ${fr(s.Date_preconisation)} : pas de nouvelles ?`})}}
   }
   return A.sort((a,b)=>a.n-b.n);
 }
+const FILTRES=[["PAI","PAI"],["MDPH","MDPH"],["PPS","PPS"],["PAP","PAP"],["PPRE","PPRE"],["UPE2A","Allophones"]];
+function aFlag(id,f){
+  if(f==="MDPH")return deEleve("MDPH",id).some(m=>mdphActif(m,aujourdhui()));
+  const p=parcoursAnnee(id,anneeScolaire());
+  if(f==="PAI")return !!(p&&p.PAI)||deEleve("PAI",id).length>0;
+  return !!(p&&p[f]);
+}
+function detailFiltre(id,f){
+  const t=aujourdhui();
+  if(f==="MDPH")return deEleve("MDPH",id).filter(m=>mdphActif(m,t)).map(m=>`${liste(m.Nature).join(", ")||"Notification"}${m.Fin?` jusqu'au ${fr(m.Fin)}`:""}${m.Quotite_AESH?` · AESH ${m.Quotite_AESH} h/sem.`:""}`).join(" ; ");
+  if(f==="PAI"){const p=deEleve("PAI",id).sort((a,b)=>(b.Date||0)-(a.Date||0))[0];return p&&p.Renouvellement?`à renouveler le ${fr(p.Renouvellement)}`:""}
+  return "";
+}
+const nomSuivi=s=>{const pr=par("Professionnels",s.Professionnel);return [s.Type,pr?pr.Nom:s.Nom_libre].filter(Boolean).join(" · ")};
 function pastilles(id){
   const p=parcoursAnnee(id,anneeScolaire()),t=aujourdhui(),o=[];
-  if(p){for(const [c,l] of [["PAI","PAI"],["PPS","PPS"],["PAP","PAP"],["PPRE","PPRE"],["UPE2A","UPE2A"]])if(p[c])o.push(l)}
-  if(deEleve("MDPH",id).some(m=>mdphActif(m,t)))o.push("MDPH");
+  for(const [c,l] of FILTRES)if(aFlag(id,c))o.push(c==="UPE2A"?"UPE2A":l);
   return o.map(x=>`<span class="pastille">${x}</span>`).join("");
 }
 
 /* ---------- Écrans ---------- */
 function barre(){
   const retour=S.vue!=="accueil"?`<a class="btn petit" href="#accueil" data-nav="accueil">← Accueil</a>`:"";
-  return `<div class="barre noprint">${retour}<span class="titre"></span>
+  const maj=S.maj?`<div class="bandeau noprint">Le document a besoin d'une petite mise à jour (nouvelles colonnes). Rien n'est supprimé. <button class="btn petit plein" data-act="maj-doc">Mettre à jour maintenant</button></div>`:"";
+  return maj+`<div class="barre noprint">${retour}<span class="titre"></span>
    <button class="btn petit" id="btn-annuler" data-act="annuler">↶ Annuler</button>
    <a class="btn petit" href="#reglages" data-nav="reglages">⚙ Réglages</a></div>`;
 }
@@ -97,6 +113,12 @@ function vueAccueil(){
   if(q){
     const L=T.Eleves.filter(e=>norm(nomEleve(e)).includes(q)||norm((e.Nom||"")+" "+(e.Prenom||"")).includes(q)).sort((a,b)=>nomEleve(a).localeCompare(nomEleve(b),"fr"));
     return h+`<div class="carte"><h2>${L.length} résultat${L.length>1?"s":""}</h2>${L.map(ligne).join("")||`<p class="aide">Personne ne correspond.</p>`}</div>`;
+  }
+  const pres0=T.Eleves.filter(present);
+  h+=`<div class="carte noprint"><span class="lab">Voir la liste des élèves avec :</span><div class="chips" style="margin-top:6px">${FILTRES.map(([k,l])=>`<button type="button" class="chip" data-filtre="${k}" aria-pressed="${S.filtre===k}">${l} <b>${pres0.filter(e=>aFlag(e.id,k)).length}</b></button>`).join("")}</div></div>`;
+  if(S.filtre){
+    const L=pres0.filter(e=>aFlag(e.id,S.filtre)).sort((a,b)=>(a.Classe||"").localeCompare(b.Classe||"","fr")||nomEleve(a).localeCompare(nomEleve(b),"fr")),nom=(FILTRES.find(f=>f[0]===S.filtre)||[])[1];
+    return h+`<div class="carte"><h2>${nom} · ${L.length} élève${L.length>1?"s":""}</h2>${L.map(e=>`<a class="eleve" href="#eleve/${e.id}" data-nav="eleve/${e.id}"><b>${esc(nomEleve(e))}</b><span class="aide">${esc(e.Classe||"")}</span><span class="aide" style="flex-basis:100%">${esc(detailFiltre(e.id,S.filtre))}</span></a>`).join("")||`<p class="aide">Personne pour l'instant.</p>`}</div>`;
   }
   const A=alertes();
   h+=`<details class="carte alertes" ${A.length?"open":""}><summary>Alertes <span class="pastille ${A.some(a=>a.n===0)?"rouge":"orange"}">${A.length}</span></summary>${A.length?A.map(a=>`<a class="alerte n${a.n}" href="#eleve/${a.e}" data-nav="eleve/${a.e}"><b>${esc(nomEleve(par("Eleves",a.e)))}</b> ${esc(a.txt)}</a>`).join(""):`<p class="aide">Rien à signaler. Les délais se règlent dans ⚙ Réglages.</p>`}</details>`;
@@ -144,29 +166,49 @@ function ongletResume(e){
   return h;
 }
 function badgeMdph(m,t){const f=versDate(m.Fin);if(f&&f<t)return `<span class="pastille rouge">échue</span>`;if(f&&f<=plusMois(t,reglageNb("alerte_mdph_mois",6)))return `<span class="pastille orange">bientôt échue</span>`;return `<span class="pastille ok">en cours</span>`}
+function blocParcours(p,prefixe,replie){
+  return GROUPES.map((g,i)=>{
+    const corps=`${g.aide?`<p class="aide">${esc(g.aide)}</p>`:""}${g.chips?`<div class="chips">${g.f.map(f=>champ("Parcours",p,f)).join("")}</div>`:champs("Parcours",p,g.f)}`;
+    return replie?`<details class="sous" data-mem="${prefixe}${i}" ${OUT.mem[prefixe+i]?"open":""}><summary>${esc(g.t)}</summary>${corps}</details>`:`<div class="carte"><h3>${esc(g.t)}</h3>${corps}</div>`}).join("");
+}
 function ongletParcours(e){
   const rows=deEleve("Parcours",e.id),courante=anneeScolaire(),annees=[...new Set([...rows.map(r=>r.Annee),courante])].sort().reverse();
   if(!S.annee||!annees.includes(S.annee))S.annee=courante;
   const p=rows.find(r=>r.Annee===S.annee);
   let h=`<div class="carte noprint"><label class="ch"><span class="lab">Année scolaire</span><select id="annee">${annees.map(a=>`<option ${a===S.annee?"selected":""}>${a}</option>`).join("")}</select></label></div>`;
   if(!p)return h+`<div class="carte"><p class="aide">Pas de parcours pour ${S.annee}.</p><button class="btn plein" data-act="creer-parcours">Créer le parcours ${S.annee}</button></div>`;
-  for(const g of GROUPES)h+=`<div class="carte"><h3>${esc(g.t)}</h3>${g.aide?`<p class="aide">${esc(g.aide)}</p>`:""}${g.chips?`<div class="chips">${g.f.map(f=>champ("Parcours",p,f)).join("")}</div>`:champs("Parcours",p,g.f)}</div>`;
-  return h+`<div class="carte noprint">${SUP("Parcours",p.id,"Supprimer ce parcours "+S.annee)}</div>`;
+  return h+blocParcours(p,"pg",false)+`<div class="carte noprint">${SUP("Parcours",p.id,"Supprimer ce parcours "+S.annee)}</div>`;
+}
+function typesSuivi(cur){const vus=new Set(),o=[];for(const t of [...LISTES.types_suivi_base,...T.Professionnels.map(p=>p.Type).filter(Boolean),cur]){if(!t)continue;const k=norm(t);if(!vus.has(k)){vus.add(k);o.push(t)}}return o.sort((a,b)=>a.localeCompare(b,"fr"))}
+function carteSuivi(s){
+  const pr=par("Professionnels",s.Professionnel),etat=s.Etat||"",L=s.Type?T.Professionnels.filter(p=>norm(p.Type)===norm(s.Type)):[];
+  const defs=[{c:"Type",kind:"choice",label:"Type de suivi",choices:typesSuivi(s.Type)}];
+  if(s.Type){if(L.length||s.Professionnel)defs.push({c:"Professionnel",kind:"ref",refTable:"Professionnels",type:s.Type,label:"Nom (liste de l'annuaire)"});else defs.push({c:"Nom_libre",kind:"text",label:"Nom (pas dans l'annuaire)"})}
+  defs.push({c:"Etat",kind:"choice",label:"État",choices:LISTES.etat_suivi.includes(etat)||!etat?LISTES.etat_suivi:[...LISTES.etat_suivi,etat]},{c:"Date_preconisation",kind:"date",label:"Préconisé le"});
+  if(["En cours","Terminé","Arrêté"].includes(etat))defs.push({c:"Debut",kind:"date",label:"Début"});
+  if(etat==="Terminé"||etat==="Arrêté")defs.push({c:"Fin",kind:"date",label:etat==="Arrêté"?"Arrêté le":"Terminé le"});
+  defs.push({c:"Frequence",kind:"freq",label:"Fréquence"},{c:"Note",kind:"area",label:"Note",rows:2});
+  return `<div class="carte"><div class="entete-eleve"><b>${esc(nomSuivi(s)||"Suivi")}</b>${contact(pr)}</div>${champs("Suivis",s,defs)}<div class="noprint">${SUP("Suivis",s.id)}</div></div>`;
 }
 function ongletSuivis(e){
   const L=deEleve("Suivis",e.id).sort((a,b)=>(b.Date_preconisation||0)-(a.Date_preconisation||0));
   let h=`<div class="carte noprint"><button class="btn plein" data-act="ajout-suivi">+ Ajouter un suivi</button> <button class="btn" data-act="nouveau-pro">+ Nouveau professionnel dans l'annuaire</button>${S.nouveauPro?formPro():""}</div>`;
   if(!L.length)h+=`<div class="carte"><p class="aide">Aucun suivi noté.</p></div>`;
-  return h+L.map(s=>`<div class="carte"><div class="entete-eleve"><b>${esc((par("Professionnels",s.Professionnel)||{}).Nom||"Suivi")}</b>${contact(par("Professionnels",s.Professionnel))}</div>${champs("Suivis",s,F_SUIVI)}<div class="noprint">${SUP("Suivis",s.id)}</div></div>`).join("");
+  return h+L.map(carteSuivi).join("");
 }
 function formPro(){return `<form class="grille" data-form="pro" style="margin-top:10px"><label class="ch"><span class="lab">Type (orthophoniste, CMP…)</span><input name="Type" list="types" required></label><label class="ch"><span class="lab">Nom</span><input name="Nom" required></label><label class="ch"><span class="lab">Téléphone</span><input name="Telephone" type="tel"></label><label class="ch"><span class="lab">Mail</span><input name="Mail" type="email"></label><div class="ch large"><button class="btn plein" type="submit">Ajouter à l'annuaire</button></div></form><datalist id="types">${[...new Set(T.Professionnels.map(r=>r.Type).filter(Boolean))].map(c=>`<option value="${esc(c)}">`).join("")}</datalist>`}
+function carteRencontre(r,e){
+  const an=anneeScolaire(versDate(r.Date)||undefined),p=parcoursAnnee(e.id,an),ouvert=!!OUT.mem["r"+r.id];
+  const parcours=p?`<details class="sous" data-mem="rp${r.id}" ${OUT.mem["rp"+r.id]?"open":""}><summary>Parcours ${an} : mêmes cases que l'onglet Parcours, à remplir au fil de la rencontre</summary>${blocParcours(p,"rg"+r.id+"-",true)}</details>`:`<div class="noprint" style="margin-top:8px"><button class="btn petit" data-act="creer-parcours-an" data-an="${an}">Créer le parcours ${an} pour le remplir ici</button></div>`;
+  return `<details class="carte" data-mem="r${r.id}" ${ouvert?"open":""}><summary>${fr(r.Date)} · ${esc(r.Type||"Rencontre")} <span class="aide">${esc(r.Auteur||"")}</span></summary>${champs("Rencontres",r,F_RENC)}
+   <div class="ch large" style="margin-top:8px"><span class="lab">Compte rendu joint</span><div class="pj">${liste(r.CR).map(id=>`<a class="btn petit" href="#" data-pj="${id}">📎 ${esc(ATT[id]||"fichier "+id)}</a>`).join("")||`<span class="aide">Aucun</span>`}</div>
+   <button class="btn petit noprint" style="margin-top:6px" data-act="aide-pj" data-id="${r.id}">Joindre un fichier</button>${S.aidePJ===r.id?aidePJ(r):""}</div>${parcours}<div class="noprint" style="margin-top:8px">${SUP("Rencontres",r.id)}</div></details>`;
+}
 function ongletRencontres(e){
   const L=deEleve("Rencontres",e.id).sort((a,b)=>(b.Date||0)-(a.Date||0));
-  let h=`<div class="carte noprint"><button class="btn plein" data-act="ajout-rencontre">+ Nouvelle rencontre</button><p class="aide">Entretien avec les parents, équipe éducative ou ESS : date, ce qui a été dit, décisions, résumé du bilan, compte rendu en pièce jointe.</p></div>`;
+  let h=`<div class="carte noprint"><button class="btn plein" data-act="ajout-rencontre">+ Nouvelle rencontre</button><p class="aide">Entretien avec les parents, équipe éducative ou ESS : date, ce qui a été dit, décisions, résumé du bilan, compte rendu joint. Touche une rencontre pour l'ouvrir.</p></div>`;
   if(!L.length)h+=`<div class="carte"><p class="aide">Aucune rencontre notée.</p></div>`;
-  return h+L.map(r=>`<div class="carte"><div class="entete-eleve"><b>${fr(r.Date)} · ${esc(r.Type||"")}</b></div>${champs("Rencontres",r,F_RENC)}
-   <div class="ch large"><span class="lab">Compte rendu joint</span><div class="pj">${liste(r.CR).map(id=>`<a class="btn petit" href="#" data-pj="${id}">📎 ${esc(ATT[id]||"fichier "+id)}</a>`).join("")||`<span class="aide">Aucun</span>`}</div>
-   <button class="btn petit noprint" style="margin-top:6px" data-act="aide-pj" data-id="${r.id}">Joindre un fichier</button>${S.aidePJ===r.id?aidePJ(r):""}</div><div class="noprint">${SUP("Rencontres",r.id)}</div></div>`).join("");
+  return h+L.map(r=>carteRencontre(r,e)).join("");
 }
 function aidePJ(r){return `<div class="aidepj noprint"><p><b>Pour joindre un fichier (3 gestes) :</b></p><ol><li>Dans le menu de gauche de Grist, ouvre <b>Données source</b>, puis la table <b>Rencontres</b>.</li><li>Trouve la ligne du <b>${fr(r.Date)}</b> (${esc(nomEleve(par("Eleves",r.Eleve)))}) et dépose ton fichier dans la colonne <b>Compte rendu joint</b>.</li><li>Reviens ici et touche <b>Actualiser</b>.</li></ol><button class="btn petit plein" data-act="actualiser">Actualiser</button></div>`}
 function ongletMdph(e){

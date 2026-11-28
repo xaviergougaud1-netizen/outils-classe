@@ -7,7 +7,9 @@ const LISTES = {
   oui_non: ["OK", "N"],
   notes: ["1", "2", "3", "4"],
   orientation: ["ULIS", "SEGPA"],
-  etat_suivi: ["Préconisé", "Demandé", "En cours", "Terminé", "Arrêté"],
+  etat_suivi: ["Préconisé", "En cours", "Terminé", "Arrêté"],
+  frequence: ["1 fois par semaine", "2 fois par semaine", "1 fois tous les 15 jours"],
+  types_suivi_base: ["Orthophoniste", "Orthoptiste", "Ergothérapeute", "Psychomotricien", "Psychologue", "Neuropsychologue", "CMP", "CMPP"],
   type_rencontre: ["Entretien avec les parents", "Équipe éducative", "ESS", "Autre"],
   nature_mdph: ["AESH individuelle", "AESH mutualisée", "Matériel pédagogique adapté", "ULIS", "SESSAD", "Transport", "Autre"],
   amenagements: ["Temps majoré", "Police adaptée", "Ordinateur", "Lecture des consignes", "Place près du tableau", "Fiche à compléter", "Pauses", "Secrétaire / scripteur"],
@@ -70,6 +72,8 @@ const SCHEMA = [
   { id: "Suivis", cols: [
     { id: "Eleve", type: "Ref:Eleves", label: "Élève", visible: "Nom" },
     { id: "Professionnel", type: "Ref:Professionnels", label: "Professionnel", visible: "Nom" },
+    { id: "Type", type: "Text", label: "Type de suivi" },
+    { id: "Nom_libre", type: "Text", label: "Nom (hors annuaire)" },
     { id: "Etat", type: "Choice", label: "État", choices: "etat_suivi" },
     { id: "Date_preconisation", type: "Date", label: "Date de préconisation" },
     { id: "Debut", type: "Date", label: "Début" },
@@ -118,4 +122,9 @@ const REGLAGES_DEFAUT = [
   ["alerte_pai_mois", "2"],
   ["alerte_suivi_mois", "3"],
   ["archivage_mois", "12"]
+];
+
+// Retouches de colonnes déjà installées : appliquées une seule fois, seulement si l'ancien réglage est encore là.
+const MIGRATIONS = [
+  { table: "Suivis", col: "Etat", si: "Demandé", choices: "etat_suivi" }
 ];

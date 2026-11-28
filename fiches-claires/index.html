@@ -7,10 +7,14 @@ if(MODE_APP)document.write('<link rel="manifest" href="../manifest.webmanifest">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Andika:wght@400;700&family=Atkinson+Hyperlegible:wght@400;700&family=Lexend:wght@400;600&family=Playwrite+FR+Moderne:wght@300;400&display=swap">
-<style>/* 21/11/2026 · v1.11 : même fichier dans Classe et dans le kit des collègues ; bibliothèque Ta Mallette sortie dans tm-lib.js (Classe seulement). */
+<style>/* 28/11/2026 · v1.13 : mode simplifié par défaut (version dys cachée, 2 volets lisible + fiche réponses, menus « Fichier ▾ » et « ⋯ Plus » avec l'interrupteur « Mode avancé »). */
+/* 25/11/2026 · v1.12 : verbe sous le trait de réponse. */
+/* 21/11/2026 · v1.11 : même fichier dans Classe et dans le kit des collègues ; bibliothèque Ta Mallette sortie dans tm-lib.js (Classe seulement). */
 /* 15/11/2026 · colonne commune de Classe (../side-nav.js) sur ordinateur ≥ 1180 px, masquée en mode Projeter ; « ← Classe » masqué quand elle est là. Hors de fc-style : rien n'est recopié dans les fiches. */
 body:has(#stage.view-proj) .cnav{display:none!important}body.cnav-on:has(#stage.view-proj){padding-left:0!important}</style>
 <style id="fc-style">
+/* 28/11/2026 · v1.13 : mode simplifié (voir AVANCE) : tant que « Mode avancé » est désactivé, la version dys, son code couleur et ses réglages ne sont pas proposés ; rien n'est supprimé dans les fiches. */
+/* 25/11/2026 · v1.12 : verbe entre parenthèses en fin d'item (« … quatre ans. (avoir) ») affiché centré juste sous le trait de réponse (hintsUnder ; rien n'est modifié dans la fiche enregistrée). */
 /* 18/11/2026 · v1.10 : réponse à la ligne à la flèche aussi dans les versions lisible et dys. */
 /* 18/11/2026 · v1.9 : réponse toujours à la ligne à la flèche (fiche réponses), trait jusqu'au bout de la ligne ; un trait agrandi ne fait plus rapetisser la police à l'export. */
 /* 18/11/2026 · v1.8 : « Espace de réponse » de Normal à Maximum (×4), actif aussi sur la fiche réponses ; trous jamais seuls en début de ligne ; moins de colonnes quand l'espace est grand. */
@@ -164,6 +168,10 @@ html.fs-idle #stage{cursor:none}
 .zone{margin:.15em 0 0 1.85em}
 .zone .l{height:calc(1.75em * var(--esp,1)); border-bottom:.07em solid #a9b1c2}
 .tg{display:inline-flex; align-items:baseline; gap:.25em; max-width:100%; white-space:nowrap; vertical-align:baseline}
+.tv{display:inline-flex; flex-direction:column; align-items:center; flex:0 1 auto; max-width:100%; vertical-align:baseline}
+.tv>.trou{align-self:stretch; width:calc(3.6em * var(--esp,1)); min-width:1.5em; margin:0}
+.v-reponses .tv>.trou{width:calc(3.7em * var(--esp,1))}
+.vb{font-size:.82em; line-height:1.15; margin-top:.12em; white-space:nowrap; color:inherit; text-align:center}
 .tg>.trou{flex:0 1 auto; min-width:1.5em; width:calc(3.6em * var(--esp,1)); margin:0}
 .ans{display:flex; align-items:baseline; gap:.3em; width:100%; white-space:nowrap}
 .ans>.trou{flex:1 1 auto; min-width:2em; margin:0}
@@ -274,6 +282,15 @@ html.fs-idle #stage{cursor:none}
 .editing.v-dys .ref,.sheet.proj.v-dys .ref,.sheet.libre.v-dys .ref{right:38px}
 .editing .ex-head,.editing.v-dys .ex-head{padding-right:2.6em}
 .ex-menu{position:fixed; z-index:60; min-width:230px; max-height:min(70vh, 560px); overflow:auto; background:var(--panel); color:var(--fg); border:1px solid var(--line); border-radius:10px; box-shadow:0 10px 30px rgba(10,20,50,.22); padding:6px; display:flex; flex-direction:column; gap:2px; font-family:var(--ui); font-size:13.5px; letter-spacing:0; word-spacing:0; line-height:1.3}
+.top-pop{position:fixed; z-index:60; min-width:210px; background:var(--panel); color:var(--fg); border:1px solid var(--line); border-radius:10px; box-shadow:0 10px 30px rgba(10,20,50,.22); padding:6px; display:flex; flex-direction:column; gap:2px; font-family:var(--ui); font-size:13.5px; line-height:1.3}
+.top-pop button{border:0; background:transparent; color:inherit; text-align:left; padding:6px 10px; border-radius:6px; cursor:pointer; font:inherit}
+.top-pop button:hover,.top-pop button:focus-visible{background:var(--accent-soft)}
+.top-pop a,.top-pop button{display:block; width:100%; text-decoration:none}
+.top-pop a{color:inherit; padding:6px 10px; border-radius:6px}
+.top-pop a:hover,.top-pop a:focus-visible{background:var(--accent-soft)}
+.top-pop .pop-note{font-size:11.5px; color:var(--muted); padding:0 10px 6px; line-height:1.3}
+.ao-adv>summary{cursor:pointer; font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); padding:2px 0}
+.ao-adv[open]>summary{margin-bottom:6px}
 .ex-menu .mg{display:flex; flex-direction:column; padding:2px 0}
 .ex-menu .mg+.mg{border-top:1px solid var(--line)}
 .ex-menu .mg-t{font-size:10.5px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); padding:4px 8px 2px}
@@ -470,14 +487,14 @@ textarea{width:100%; box-sizing:border-box; resize:vertical; line-height:1.45}
   <header class="top">
     <div class="brand"><span class="brand-mark" aria-hidden="true"></span>Fiches Claires</div>
     <a class="btn" id="tm-back" href="../index.html" title="Revenir à Classe" data-cnav-hide>← Classe</a>
-    <a class="btn" id="tm-cp" href="coups-de-pouce.html" title="Cartes coups de pouce 1, 2, 3 de cette fiche (projection ou impression)">Coups de pouce</a>
-    <script>if(MODE_APP){var tb=document.getElementById("tm-back");tb.href="../";tb.title="Revenir aux outils";tb.textContent="← Outils";document.getElementById("tm-cp").hidden=true;document.title="Fiches Claires";}</script>
-    <script>(function(){var a=document.getElementById("tm-cp");function u(){a.href="coups-de-pouce.html"+(location.hash||"");}u();window.addEventListener("hashchange",u);})();</script>
     <div class="grp g-file" role="group" aria-label="Fiche">
-      <button class="btn primary" type="button" id="b-import" title="Ouvre une fiche vierge : glisse ensuite un document sur un volet">+ Nouvelle</button>
-      <button class="btn" type="button" id="b-open" title="Rouvrir une fiche enregistrée (.html)">Ouvrir</button>
-      <button class="btn" type="button" id="b-save" title="Télécharge la fiche sous forme de page web : un double clic la rouvre telle quelle">Enregistrer</button>
-      <button class="btn" type="button" id="b-export" title="PDF à imprimer : A5 pour le cahier ou A4">Télécharger</button>
+      <button class="btn primary" type="button" id="b-fichier" aria-haspopup="menu" aria-expanded="false" title="Nouvelle fiche, ouvrir, enregistrer, télécharger en PDF">Fichier ▾</button>
+      <div class="top-pop" id="fichier-pop" role="menu" aria-label="Fichier" hidden>
+        <button type="button" role="menuitem" id="b-import" title="Ouvre une fiche vierge : glisse ensuite un document sur un volet">+ Nouvelle fiche</button>
+        <button type="button" role="menuitem" id="b-open" title="Rouvrir une fiche enregistrée (.html)">Ouvrir…</button>
+        <button type="button" role="menuitem" id="b-save" title="Télécharge la fiche sous forme de page web : un double clic la rouvre telle quelle">Enregistrer</button>
+        <button type="button" role="menuitem" id="b-export" title="PDF à imprimer : A5 pour le cahier ou A4">Télécharger en PDF…</button>
+      </div>
       <input type="file" id="open-input" accept=".html,.htm,.json,text/html,application/json" hidden>
     </div>
     <div class="grp g-title">
@@ -495,7 +512,15 @@ textarea{width:100%; box-sizing:border-box; resize:vertical; line-height:1.45}
       </div>
       <button class="btn small icon" type="button" id="b-orient" aria-label="Disposition des volets">⇆</button>
       <button class="btn" type="button" id="b-full">⛶ Plein écran</button>
+      <button class="btn" type="button" id="b-plus" aria-haspopup="menu" aria-expanded="false" title="Coups de pouce, mode avancé">⋯ Plus</button>
+      <div class="top-pop" id="plus-pop" role="menu" aria-label="Plus" hidden>
+        <a id="tm-cp" role="menuitem" href="coups-de-pouce.html" title="Cartes coups de pouce 1, 2, 3 de cette fiche (projection ou impression)">Coups de pouce</a>
+        <button type="button" role="menuitemcheckbox" id="b-avance" aria-checked="false">Mode avancé</button>
+        <div class="pop-note">Version dys, code couleur grammatical et leurs réglages. Réglage propre à cet appareil.</div>
+      </div>
     </div>
+    <script>if(MODE_APP){var tb=document.getElementById("tm-back");tb.href="../";tb.title="Revenir aux outils";tb.textContent="← Outils";document.getElementById("tm-cp").hidden=true;document.title="Fiches Claires";}</script>
+    <script>(function(){var a=document.getElementById("tm-cp");function u(){a.href="coups-de-pouce.html"+(location.hash||"");}u();window.addEventListener("hashchange",u);})();</script>
   </header>
   <div class="marks" id="marks" hidden role="toolbar" aria-label="Marquage grammatical">
     <button class="mk" type="button" data-mark="b"><b>Gras</b></button>
@@ -695,6 +720,9 @@ function matiereOf(f) {
 const normMat = s => { s = String(s || '').toLowerCase(); return /math|calcul|num[ée]ration|g[ée]om|mesure|probl/.test(s) ? 'maths' : s ? 'francais' : ''; };
 const FONTS = [['Andika', 'Andika'], ['Lexend', 'Lexend'], ['Atkinson Hyperlegible', 'Atkinson Hyperlegible'], ['Arial', 'Arial'], ['Verdana', 'Verdana'], ['Playwrite FR Moderne', 'Cursive scolaire']];
 const fontStack = f => f === 'Playwrite FR Moderne' ? "'Playwrite FR Moderne', cursive" : `'${f}', Arial, Helvetica, sans-serif`;
+/* Mode simplifié (v1.13) : réglage propre à chaque appareil (« ⋯ Plus » › Mode avancé). Désactivé = la version dys, son code couleur et ses réglages ne sont pas proposés ; les fiches ne sont jamais modifiées. */
+let AVANCE = !!store.get('fc.avance', false);
+const versOk = () => AVANCE ? ['lisible', 'dys', 'reponses'] : ['lisible', 'reponses'];
 const VLABEL = { lisible: 'Version lisible', dys: 'Version dys', reponses: 'Fiche réponses', original: 'Document d’origine', libre: 'Zone libre' };
 const isVer = c => c === 'lisible' || c === 'dys' || c === 'reponses';
 const VNAME = { lisible: 'version-lisible', dys: 'version-dys', reponses: 'fiche-reponses' };
@@ -854,9 +882,23 @@ Object.values(S.fiches).forEach(ensureRep);
 })();
 if (!S.ui || !S.ui.prep) S.ui = {
   view: 'prep',
-  prep: { count: 2, orient: 'row', split: 50, panes: [defPaneProj('lisible'), defPaneProj('dys')] },
+  prep: { count: 2, orient: 'row', split: 50, panes: [defPaneProj('lisible'), defPaneProj('reponses')] },
   proj: { count: 2, orient: 'row', split: 50, panes: [defPaneProj('lisible'), defPaneProj('libre')] }
 };
+/* Mode simplifié : un volet qui montrait la version dys passe à la fiche réponses (ou disparaît si la fiche réponses est déjà affichée). */
+function simplifyUi() {
+  if (AVANCE) return;
+  for (const v of ['prep', 'proj']) {
+    const st = S.ui[v]; if (!st || !Array.isArray(st.panes)) continue;
+    for (let k = 0; k < st.panes.length;) {
+      const p = st.panes[k];
+      if (p.content !== 'dys') { k++; continue; }
+      if (k < st.count && st.count > 1 && st.panes.some(q => q !== p && q.content === 'reponses')) { st.panes.splice(k, 1); st.count--; }
+      else { p.content = 'reponses'; k++; }
+    }
+  }
+}
+simplifyUi();
 const cur = () => S.fiches[S.currentId];
 const stageS = () => S.ui[S.ui.view];
 let saveT;
@@ -1056,8 +1098,42 @@ function glueTrous(root, isRep) {
     const g = document.createElement('span'); g.className = 'tg';
     t.replaceWith(g); g.append(document.createTextNode(tail.replace(/\s+$/, '')), t);
   });
+  hintsUnder(root);
 }
-function unglue(el) { const c = el.cloneNode(true); c.querySelectorAll('.tg, .ans').forEach(g => g.replaceWith(...g.childNodes)); return c.innerHTML; }
+/* Verbe entre parenthèses en fin d'item (« … quatre ans. (avoir) ») : affiché centré juste sous le trait de réponse (span.tv > .trou + span.vb). Seulement à l'affichage : unglue() remet la parenthèse à sa place avant d'enregistrer. Un seul trait par item, sinon rien ne change. */
+function hintsUnder(root) {
+  const done = new Set();
+  root.querySelectorAll('.trou').forEach(t => {
+    if (t.closest('.ans, .tv')) return;
+    const box = t.closest('[data-f]') || t.closest('.it'); if (!box || done.has(box)) return; done.add(box);
+    if (box.querySelectorAll('.trou').length !== 1) return;
+    let last = box.lastChild; while (last && last.nodeType === 3 && !last.data.trim()) last = last.previousSibling;
+    if (!last || last.nodeType !== 3) return;
+    let br = '0', txt;
+    const m = last.data.match(/^(\s*)(\([^()]{1,30}\))\s*$/);
+    if (m) {
+      txt = m[2]; const pv = last.previousSibling;
+      if (pv && pv.nodeName === 'BR') { pv.remove(); br = '1'; }
+      else if (m[1]) br = '2';
+      last.remove();
+    } else {
+      const m2 = last.data.match(/^([\s\S]*\S)\s+(\([^()]{1,30}\))\s*$/); if (!m2) return;
+      txt = m2[2]; last.data = m2[1]; br = '2';
+    }
+    const v = document.createElement('span'); v.className = 'tv';
+    t.replaceWith(v);
+    const b = document.createElement('span'); b.className = 'vb'; b.dataset.br = br; b.textContent = txt;
+    v.append(t, b);
+  });
+}
+function unglue(el) {
+  const c = el.cloneNode(true);
+  c.querySelectorAll('.tv').forEach(v => {
+    const b = v.querySelector('.vb'), tr = v.querySelector('.trou'); v.replaceWith(tr);
+    if (b) { if (b.dataset.br === '1') c.append(document.createElement('br')); c.append(document.createTextNode((b.dataset.br === '2' ? ' ' : '') + b.textContent)); }
+  });
+  c.querySelectorAll('.tg, .ans').forEach(g => g.replaceWith(...g.childNodes)); return c.innerHTML;
+}
 function zoneEl(n) { return h('div', { class: 'zone' }, Array.from({ length: n }, () => h('div', { class: 'l' }))); }
 function renderEx(f, vk, e, num, o = {}) {
   const st = o.style || f.versions[vk].style, ed = !!o.editable;
@@ -1211,7 +1287,8 @@ function renderStage() {
   stage.className = `stage ${st.orient} view-${S.ui.view}`;
   for (const k in libreCache) libreCache[k].remove();
   stage.innerHTML = '';
-  while (st.panes.length < st.count) st.panes.push(defPaneProj(S.ui.view === 'prep' ? 'original' : (st.panes.some(p => p.content === 'dys') ? 'libre' : 'dys')));
+  const nv = AVANCE ? 'dys' : 'reponses';
+  while (st.panes.length < st.count) st.panes.push(defPaneProj(S.ui.view === 'prep' ? 'original' : (st.panes.some(p => p.content === nv) ? 'libre' : nv)));
   for (let i = 0; i < st.count; i++) {
     if (i > 0) stage.append(makeSplitter(i - 1));
     stage.append(buildPane(i));
@@ -1237,7 +1314,7 @@ function paneBar(ps, i) {
   const isV = isVer(ps.content);
   const set = (k, v, refill = true) => { ps[k] = v; saveSoon(); if (refill) renderStage(); };
   const contentSel = h('select', { class: 'content-sel', 'aria-label': 'Contenu du volet', onchange: ev => { ps.content = ev.target.value; ps.page = 0; ps.shown = 0; saveSoon(); renderStage(); } },
-    ['lisible', 'dys', 'reponses', 'original', 'libre'].map(k => opt(k, VLABEL[k], ps.content)));
+    ['lisible', 'dys', 'reponses', 'original', 'libre'].filter(k => AVANCE || k !== 'dys').map(k => opt(k, VLABEL[k], ps.content)));
   bar.append(contentSel);
   if (isVer(ps.content)) bar.append(
     h('button', { class: 'btn small', type: 'button', title: 'Télécharger cette version en PDF (A5 ou A4) pour l’imprimer', onclick: () => openExport([ps.content]) }, '⤓ Télécharger'),
@@ -2065,8 +2142,9 @@ function placeMarks() {
   if (!anc || !anc.closest('#stage [contenteditable="true"]')) { m.hidden = true; return; }
   const b = r.getBoundingClientRect(); if (!b.width && !b.height) { m.hidden = true; return; }
   m.hidden = false;
-  const lis = !!anc.closest('.v-lisible'); /* pas de code couleur dans la version lisible */
-  $$('.mk[data-mark^="g-"]', m).forEach(b => { b.hidden = lis; });
+  const lis = !!anc.closest('.v-lisible'); /* pas de code couleur dans la version lisible, ni en mode simplifié */
+  $$('.mk[data-mark^="g-"]', m).forEach(b => { b.hidden = lis || !AVANCE; });
+  $$('.mk[data-mark="clear"]', m).forEach(b => { b.hidden = !AVANCE; });
   const mw = m.offsetWidth, mh = m.offsetHeight;
   let top = b.top - mh - 8; if (top < 8) top = b.bottom + 8;
   m.style.top = top + 'px'; m.style.left = clamp(b.left + b.width / 2 - mw / 2, 8, window.innerWidth - mw - 8) + 'px';
@@ -2166,8 +2244,8 @@ function askWhat(i, pl) {
   const setStatus = (msg, kind) => { status.innerHTML = ''; status.className = 'status' + (kind === 'err' ? ' err' : ''); if (kind === 'busy') status.append(h('span', { class: 'spin', 'aria-hidden': 'true' })); status.append(h('span', {}, msg)); };
   let ctl = null, busy = false;
   const choice = (key, title, sub, primary) => h('button', { class: 'choice' + (primary ? ' primary' : ''), type: 'button', 'data-k': key, onclick: () => run(key) }, h('b', {}, title), h('span', {}, sub));
-  /* à chaque ouverture : seule la version lisible est cochée ; en ajout, les versions que la fiche a déjà */
-  const VS0 = addMode ? ['lisible', 'dys'].filter(v => f.versions[v].exercices.length).concat(f.repGen ? ['reponses'] : []) : ['lisible'];
+  /* à chaque ouverture : version lisible et fiche réponses cochées (la dys seulement en mode avancé) ; en ajout, les versions que la fiche a déjà */
+  const VS0 = addMode ? ['lisible', 'dys'].filter(v => (v !== 'dys' || AVANCE) && f.versions[v].exercices.length).concat(f.repGen ? ['reponses'] : []) : ['lisible', 'reponses'];
   const vchk = (vk, title, sub) => h('label', { class: 'vpick' }, h('input', { type: 'checkbox', name: 'ask-vers', value: vk, checked: VS0.includes(vk) ? 'checked' : null }), h('span', {}, h('b', {}, title), h('small', {}, sub)));
   const grid = h('div', { class: 'choices' },
     choice('read', 'Lecture seule', 'Projeter tel quel, sans adaptation. Ne consomme rien.'),
@@ -2175,17 +2253,18 @@ function askWhat(i, pl) {
       h('b', {}, addMode ? 'Ajouter à la fiche, dans les versions :' : 'Adapter : versions à créer'),
       h('div', { class: 'vpicks' },
         vchk('lisible', 'Version lisible', 'Tous les items, consignes claires.'),
-        vchk('dys', 'Version dys', 'Allégée : réponses à trou par défaut, ou entourer, relier… si c’est plus adapté.'),
+        AVANCE ? vchk('dys', 'Version dys', 'Allégée : réponses à trou par défaut, ou entourer, relier… si c’est plus adapté.') : null,
         vchk('reponses', 'Fiche réponses', 'L’élève n’écrit que ses réponses.')),
       h('button', { class: 'btn primary', type: 'button', 'data-k': 'create', onclick: () => run('create') }, addMode ? 'Ajouter aux versions cochées' : 'Créer les versions cochées')));
-  const AO = Object.assign({ defi: true, ex: true, rappel: true, corr: true, allege: 'moitie' }, store.get('fc.askopts', {}), { niv: '' }); /* niveau : vide à chaque ouverture */
+  const AO = Object.assign({ defi: false, ex: false, rappel: false, corr: false, allege: 'moitie' }, store.get('fc.askopts2', {}), { niv: '' }); /* niveau : vide à chaque ouverture */
   const rad = (val, label) => h('label', { class: 'chk' }, h('input', { type: 'radio', name: 'ask-allege', value: val, checked: AO.allege === val ? 'checked' : null }), label);
   const opts = h('div', { class: 'ask-opts' },
     h('div', { class: 'ao-row' }, h('span', { class: 'ao-l' }, 'Ajouter'),
       chkId('ask-ex', 'Exemples', AO.ex), chkId('ask-rap', 'Rappel de la règle', AO.rappel), chkId('ask-defi', 'Exercice Défi ★★★', addMode ? false : AO.defi), chkId('ask-corr', 'Corrigé (correction en projection)', AO.corr)),
-    h('div', { class: 'ao-row' }, h('span', { class: 'ao-l' }, 'Version dys'), rad('34', '3 à 4 items'), rad('moitie', 'La moitié des items'), rad('tout', 'Tous les items')),
-    h('div', { class: 'ao-row' }, h('span', { class: 'ao-l' }, 'Niveau'), h('select', { id: 'ask-niv' }, [['', 'Non précisé'], ['CM1', 'CM1'], ['CM2', 'CM2'], ['CM1-CM2', 'CM1 / CM2']].map(([v, l]) => opt(v, l, AO.niv))),
-      h('input', { type: 'text', id: 'ask-plus', class: 'ao-plus', placeholder: 'Précisions (facultatif) : ex. l’exercice 3 évalue l’orthographe…' })));
+    AVANCE ? h('div', { class: 'ao-row' }, h('span', { class: 'ao-l' }, 'Version dys'), rad('34', '3 à 4 items'), rad('moitie', 'La moitié des items'), rad('tout', 'Tous les items')) : null,
+    h('details', { class: 'ao-adv' }, h('summary', {}, 'Avancé'),
+      h('div', { class: 'ao-row' }, h('span', { class: 'ao-l' }, 'Niveau'), h('select', { id: 'ask-niv' }, [['', 'Non précisé'], ['CM1', 'CM1'], ['CM2', 'CM2'], ['CM1-CM2', 'CM1 / CM2']].map(([v, l]) => opt(v, l, AO.niv))),
+        h('input', { type: 'text', id: 'ask-plus', class: 'ao-plus', placeholder: 'Précisions (facultatif) : ex. l’exercice 3 évalue l’orthographe…' }))));
   const bSimple = text && !files.length ? h('button', { class: 'btn', type: 'button', title: 'Découpe le texte en exercices, sans adaptation automatique', onclick: () => run('simple') }, 'Mise en forme simple (sans IA)') : null;
   const bStop = h('button', { class: 'btn', type: 'button', hidden: true, onclick: () => ctl && ctl.abort() }, 'Arrêter');
   const d = dialog(addMode ? `Ajouter à « ${f.titre} »` : 'Que veux-tu faire de ce document ?', h('div', { style: 'display:flex;flex-direction:column;gap:14px' },
@@ -2209,9 +2288,9 @@ function askWhat(i, pl) {
         named();
         f.versions.lisible.exercices.push(...g.versions.lisible.exercices); f.versions.dys.exercices.push(...g.versions.dys.exercices);
         f.source.text = (f.source.text ? f.source.text + '\n\n' : '') + text;
-        panes[i].content = 'lisible'; if (stageS().count === 2 && panes[other].content !== 'libre') panes[other].content = 'dys';
+        panes[i].content = 'lisible'; if (stageS().count === 2 && panes[other].content !== 'libre') panes[other].content = AVANCE ? 'dys' : 'reponses';
         saveNow(); d.close(); renderAll();
-        toast('Texte mis en forme. Sans adaptation automatique, la version dys garde tous les items : allège-la à la main.', 6000);
+        toast(AVANCE ? 'Texte mis en forme. Sans adaptation automatique, la version dys garde tous les items : allège-la à la main.' : 'Texte mis en forme, sans adaptation automatique. Relis-le avant de diffuser.', 6000);
         return;
       }
       const picked = $$('input[name="ask-vers"]:checked', grid).map(x => x.value);
@@ -2232,7 +2311,7 @@ function askWhat(i, pl) {
       for (const c of src.canvases.slice(0, max)) images.push(await new Promise(res => c.toBlob(res, 'image/jpeg', 0.86)));
       const allege = ($('input[name="ask-allege"]:checked') || {}).value || 'moitie';
       const popts = { ocr: ocrDone > 0, niveau: $('#ask-niv').value, defi: $('#ask-defi').checked, exemple: $('#ask-ex').checked, rappel: $('#ask-rap').checked, corr: $('#ask-corr').checked, allege, plus: $('#ask-plus').value.trim(), which };
-      store.set('fc.askopts', { defi: addMode ? AO.defi : popts.defi, ex: popts.exemple, rappel: popts.rappel, corr: popts.corr, allege });
+      store.set('fc.askopts2', { defi: addMode ? AO.defi : popts.defi, ex: popts.exemple, rappel: popts.rappel, corr: popts.corr, allege });
       const ask = imgs => { ctl = new AbortController(); return sample.json(buildPrompt(src.text, imgs.length, popts), { images: imgs.length ? imgs : undefined, signal: ctl.signal, modelTier: 'default',
         onText: ({ text: t }) => setStatus(`Rédaction… ${t.length.toLocaleString('fr-FR')} caractères`, 'busy') }); };
       setStatus(which.length === 2 ? 'Création des deux versions… (1 à 2 minutes)' : `Création de la ${VLABEL[which[0]].toLowerCase()}… (environ une minute)`, 'busy');
@@ -2729,6 +2808,7 @@ function openExport(preVers) {
   const o = Object.assign({ vers: ['lisible'], mark: false, size: 'A5', split: '', orient: 'portrait', impo: '1', m: 4, titre: true, entete: true }, store.get('fc.export', {}));
   if (!Array.isArray(o.vers) || !o.vers.length) o.vers = [o.vk === 'dys' ? 'dys' : 'lisible'];
   if (Array.isArray(preVers)) o.vers = preVers;
+  o.vers = o.vers.filter(v => versOk().includes(v)); if (!o.vers.length) o.vers = ['lisible'];
   o.ov = {}; /* réglages du PDF par version : valables pour ce téléchargement seulement */
   const prev = h('div', { class: 'preview', 'aria-label': 'Aperçu des pages' });
   const info = h('div', { class: 'status', 'aria-live': 'polite' });
@@ -2766,7 +2846,7 @@ function openExport(preVers) {
   };
   const buildOpts = () => h('div', { class: 'export-opts' },
     h('div', { class: 'field' }, h('span', {}, 'Versions à imprimer (à la suite dans un seul PDF)'),
-      ['lisible', 'dys', 'reponses'].map(vk => chk(`${VSYM[vk]} ${VLABEL[vk]}`, o.vers.includes(vk), v => { o.vers = ['lisible', 'dys', 'reponses'].filter(k => k === vk ? v : o.vers.includes(k)); if (!o.vers.length) o.vers = [vk]; rebuildOpts(); redraw(); })),
+      versOk().map(vk => chk(`${VSYM[vk]} ${VLABEL[vk]}`, o.vers.includes(vk), v => { o.vers = ['lisible', 'dys', 'reponses'].filter(k => k === vk ? v : o.vers.includes(k)); if (!o.vers.length) o.vers = [vk]; rebuildOpts(); redraw(); })),
       chk('Repère discret de version en coin (● ▲ ■)', o.mark, v => { o.mark = v; redraw(); })),
     h('div', { class: 'field' }, h('span', {}, 'Texte et lignes d’écriture'), o.vers.map(verOpts)),
     h('div', { class: 'field' }, h('span', {}, 'Sens de la fiche dans le cahier'), radio('orient', 'portrait', 'Verticale (portrait)', o.orient), radio('orient', 'paysage', 'Horizontale (paysage)', o.orient)),
@@ -2890,6 +2970,7 @@ function openSaveDialog(preVers) {
   const f = cur(); if (!f) return;
   const o = Object.assign({ fmt: 'html', what: 'ecran', vers: ['lisible'] }, store.get('fc.saveopts', {})); o.fmt = 'html';
   if (Array.isArray(preVers)) { o.vers = preVers; if (o.fmt === 'html') o.what = 'versions'; }
+  o.vers = o.vers.filter(v => versOk().includes(v)); if (!o.vers.length) o.vers = ['lisible'];
   const box = h('div', { class: 'save-opts' }), info = h('div', { class: 'status', 'aria-live': 'polite' });
   const radio = (name, val, label, sub) => h('label', { class: 'save-choice' + (o[name] === val ? ' on' : '') }, h('input', { type: 'radio', name: 'sv-' + name, value: val, checked: o[name] === val ? 'checked' : null, onchange: () => { o[name] = val; draw(); } }), h('span', {}, h('b', {}, label), sub ? h('small', {}, sub) : null));
   const draw = () => {
@@ -2901,7 +2982,7 @@ function openSaveDialog(preVers) {
         radio('what', 'ecran', 'Toute la fiche, telle qu’à l’écran', 'Un seul fichier, avec les volets et la zone libre.'),
         radio('what', 'versions', 'Une page par version', 'Chaque version cochée dans son propre fichier.')) : null,
       h('div', { class: 'field' + (versDisabled ? ' dim' : '') }, h('span', {}, 'Versions (un fichier chacune)'),
-        ['lisible', 'dys', 'reponses'].map(vk => chk(VLABEL[vk], o.vers.includes(vk), v => { o.vers = ['lisible', 'dys', 'reponses'].filter(k => k === vk ? v : o.vers.includes(k)); draw(); }))));
+        versOk().map(vk => chk(VLABEL[vk], o.vers.includes(vk), v => { o.vers = ['lisible', 'dys', 'reponses'].filter(k => k === vk ? v : o.vers.includes(k)); draw(); }))));
     if (versDisabled) $$('.dim input', box).forEach(x => { x.disabled = true; });
   };
   draw();
@@ -3026,6 +3107,27 @@ $('#stage').addEventListener('drop', async ev => {
 $('#fiche-sel').addEventListener('change', ev => { S.currentId = ev.target.value; S.ui.proj.panes.forEach(p => { p.page = 0; p.shown = 0; }); saveSoon(); renderAll(); });
 $('#fiche-title').addEventListener('input', ev => { const f = cur(); if (!f) return; f.titre = ev.target.value; saveSoon(); const o = $(`#fiche-sel option[value="${f.id}"]`); if (o) o.textContent = f.titre || 'Sans titre'; });
 $('#b-import').addEventListener('click', newBlank);
+/* Menus de la barre du haut : « Fichier ▾ » et « ⋯ Plus ». Les boutons d'origine gardent leurs identifiants dans le menu. */
+function closeTopPops() { $$('.top-pop').forEach(p => { p.hidden = true; }); $$('#b-fichier, #b-plus').forEach(b => b.setAttribute('aria-expanded', 'false')); }
+[['#b-fichier', '#fichier-pop'], ['#b-plus', '#plus-pop']].forEach(([bs, ps]) => {
+  const btn = $(bs), pop = $(ps);
+  btn.addEventListener('click', ev => {
+    ev.stopPropagation(); const wasOpen = !pop.hidden; closeTopPops(); if (wasOpen) return;
+    pop.hidden = false; btn.setAttribute('aria-expanded', 'true');
+    const r = btn.getBoundingClientRect();
+    pop.style.top = (r.bottom + 4) + 'px'; pop.style.left = clamp(r.left, 8, innerWidth - pop.offsetWidth - 8) + 'px';
+    const first = pop.querySelector('button:not([hidden]), a:not([hidden])'); if (first) first.focus();
+  });
+  pop.addEventListener('click', ev => { if (ev.target.closest('button, a')) closeTopPops(); });
+});
+document.addEventListener('click', ev => { if (!ev.target.closest('.top-pop')) closeTopPops(); });
+document.addEventListener('keydown', ev => { if (ev.key === 'Escape' && $('.top-pop:not([hidden])')) { closeTopPops(); } });
+function syncAvance() { const b = $('#b-avance'); b.setAttribute('aria-checked', String(AVANCE)); b.textContent = (AVANCE ? '✓ ' : '') + 'Mode avancé'; }
+$('#b-avance').addEventListener('click', () => {
+  AVANCE = !AVANCE; store.set('fc.avance', AVANCE); simplifyUi(); syncAvance(); saveSoon(); renderAll();
+  toast(AVANCE ? 'Mode avancé activé : version dys et code couleur grammatical de retour.' : 'Mode simplifié : la version dys est cachée. Tes fiches ne sont pas modifiées.', 5000);
+});
+syncAvance();
 
 $('#b-export').addEventListener('click', () => openExport());
 $('#b-save').addEventListener('click', () => openSaveDialog());

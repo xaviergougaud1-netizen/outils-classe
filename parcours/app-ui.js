@@ -1,6 +1,11 @@
 /* Parcours élève : écrans (accueil, fiche élève, réglages) et saisie. */
 const S={vue:"accueil",id:null,onglet:"resume",annee:null,recherche:"",edit:false,nouveau:false};
 const OUT={ouverts:{},mem:{},freqAutre:{}};
+const BLOCS={recherche:"Recherche d'un élève",listes:"Listes (PAI, MDPH…)",alertes:"Alertes",nouveau:"Bouton « Nouvel élève »",classes:"Élèves classe par classe",archives:"Élèves archivés"};
+const ALERTES_T={mdph:"Fin de notification MDPH",pai:"PAI à renouveler",ess:"ESS annuelle à programmer",suivi:"Suivi sans nouvelles"};
+const PREF_DEF={ordre:["recherche","listes","alertes","nouveau","classes","archives"],masques:[],listes:["PAI","MDPH","PAP","PPRE"],alertes:["mdph","pai","ess","suivi"],pastilles:["PAI","MDPH","PAP","PPRE"]};
+let PREF=null; // chargé au démarrage (propre à l'appareil)
+function ordreBlocs(){const o=PREF.ordre.filter(k=>BLOCS[k]);for(const k of Object.keys(BLOCS))if(!o.includes(k))o.push(k);return o}
 const nomEleve=e=>e?`${e.Prenom||""} ${(e.Nom||"").toUpperCase()}`.trim()||"(sans nom)":"";
 const present=e=>e&&e.Statut!=="Archivé";
 let tTimer;function toast(t){const el=$("toast");el.textContent=t;el.style.opacity=1;clearTimeout(tTimer);tTimer=setTimeout(()=>el.style.opacity=0,2200)}
@@ -64,17 +69,17 @@ function alertes(){
   for(const id of ids){
     const ms=deEleve("MDPH",id),vivantes=ms.filter(m=>!versDate(m.Fin)||versDate(m.Fin)>=t);
     for(const m of ms){const f=versDate(m.Fin);if(!f)continue;
-      if(f<t&&!vivantes.length)A.push({n:0,e:id,txt:`Notification MDPH échue le ${fr(m.Fin)}`});
-      else if(f>=t&&f<=plusMois(t,mMdph)&&!ms.some(x=>x!==m&&(!versDate(x.Fin)||versDate(x.Fin)>f)))A.push({n:1,e:id,txt:`Notification MDPH jusqu'au ${fr(m.Fin)} : penser au renouvellement`})}
+      if(f<t&&!vivantes.length)A.push({k:"mdph",n:0,e:id,txt:`Notification MDPH échue le ${fr(m.Fin)}`});
+      else if(f>=t&&f<=plusMois(t,mMdph)&&!ms.some(x=>x!==m&&(!versDate(x.Fin)||versDate(x.Fin)>f)))A.push({k:"mdph",n:1,e:id,txt:`Notification MDPH jusqu'au ${fr(m.Fin)} : penser au renouvellement`})}
     const pai=deEleve("PAI",id).sort((a,b)=>(b.Date||0)-(a.Date||0))[0];
-    if(pai&&pai.Renouvellement){const r=versDate(pai.Renouvellement);if(r<t)A.push({n:0,e:id,txt:`PAI à renouveler (échu le ${fr(pai.Renouvellement)})`});else if(r<=plusMois(t,mPai))A.push({n:1,e:id,txt:`PAI à renouveler avant le ${fr(pai.Renouvellement)}`})}
+    if(pai&&pai.Renouvellement){const r=versDate(pai.Renouvellement);if(r<t)A.push({k:"pai",n:0,e:id,txt:`PAI à renouveler (échu le ${fr(pai.Renouvellement)})`});else if(r<=plusMois(t,mPai))A.push({k:"pai",n:1,e:id,txt:`PAI à renouveler avant le ${fr(pai.Renouvellement)}`})}
     const p=parcoursAnnee(id,anneeScolaire());
     if(ms.some(m=>mdphActif(m,t))||(p&&p.PPS)){
       const dern=deEleve("Rencontres",id).filter(r=>r.Type==="ESS").map(r=>versDate(r.Date)).filter(Boolean).sort((a,b)=>b-a)[0];
-      if(!dern||dern<plusMois(t,-mEss))A.push({n:1,e:id,txt:`ESS annuelle à programmer (dernière : ${dern?fr(dern.getTime()/1000):"aucune"})`});
+      if(!dern||dern<plusMois(t,-mEss))A.push({k:"ess",n:1,e:id,txt:`ESS annuelle à programmer (dernière : ${dern?fr(dern.getTime()/1000):"aucune"})`});
     }
     for(const s of deEleve("Suivis",id)){const d=versDate(s.Date_preconisation);
-      if((s.Etat==="Préconisé"||s.Etat==="Demandé")&&d&&d<=plusMois(t,-mSuivi)){A.push({n:1,e:id,txt:`Suivi ${nomSuivi(s)?"("+nomSuivi(s)+") ":""}préconisé le ${fr(s.Date_preconisation)} : pas de nouvelles ?`})}}
+      if((s.Etat==="Préconisé"||s.Etat==="Demandé")&&d&&d<=plusMois(t,-mSuivi)){A.push({k:"suivi",n:1,e:id,txt:`Suivi ${nomSuivi(s)?"("+nomSuivi(s)+") ":""}préconisé le ${fr(s.Date_preconisation)} : pas de nouvelles ?`})}}
   }
   return A.sort((a,b)=>a.n-b.n);
 }
@@ -94,44 +99,46 @@ function detailFiltre(id,f){
 const nomSuivi=s=>{const pr=par("Professionnels",s.Professionnel);return [s.Type,pr?pr.Nom:s.Nom_libre].filter(Boolean).join(" · ")};
 function pastilles(id){
   const p=parcoursAnnee(id,anneeScolaire()),t=aujourdhui(),o=[];
-  for(const [c,l] of FILTRES)if(aFlag(id,c))o.push(c==="UPE2A"?"UPE2A":l);
+  for(const [c,l] of FILTRES)if(PREF.pastilles.includes(c)&&aFlag(id,c))o.push(c==="UPE2A"?"UPE2A":l);
   return o.map(x=>`<span class="pastille">${x}</span>`).join("");
 }
 
 /* ---------- Écrans ---------- */
 function barre(){
-  const retour=S.vue!=="accueil"?`<a class="btn petit" href="#accueil" data-nav="accueil">← Accueil</a>`:"";
+  const dl=S.dernierListe||"accueil",nomListe=dl.startsWith("liste/")?(FILTRES.find(f=>f[0]===dl.slice(6))||[])[1]:"";
+  const retour=S.vue!=="accueil"?`<a class="btn petit" href="#${dl}" data-nav="${dl}">← ${nomListe?"Liste "+esc(nomListe):"Accueil"}</a>`:"";
   const maj=S.maj?`<div class="bandeau noprint">Le document a besoin d'une petite mise à jour (nouvelles colonnes). Rien n'est supprimé. <button class="btn petit plein" data-act="maj-doc">Mettre à jour maintenant</button></div>`:"";
   return maj+`<div class="barre noprint">${retour}<span class="titre"></span>
    <button class="btn petit" id="btn-annuler" data-act="annuler">↶ Annuler</button>
    <a class="btn petit" href="#reglages" data-nav="reglages">⚙ Réglages</a></div>`;
 }
 function vueAccueil(){
-  const q=norm(S.recherche),classes=[...new Set(T.Eleves.map(e=>e.Classe).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"fr"));
+  const q=norm(S.recherche),pres=T.Eleves.filter(present),vis=k=>!PREF.masques.includes(k),classes=[...new Set(T.Eleves.map(e=>e.Classe).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"fr"));
   const ligne=e=>`<a class="eleve" href="#eleve/${e.id}" data-nav="eleve/${e.id}"><b>${esc(nomEleve(e))}</b><span class="aide">${esc(e.Classe||"")}${e.Statut==="Archivé"?" · archivé":""}</span><span class="pastilles">${pastilles(e.id)}</span></a>`;
-  let h=`<div class="carte"><input id="recherche" type="search" placeholder="Chercher un élève (nom ou prénom)" value="${esc(S.recherche)}" aria-label="Chercher un élève"></div>`;
-  if(q){
+  const B={
+    recherche:()=>`<div class="carte"><input id="recherche" type="search" placeholder="Chercher un élève (nom ou prénom)" value="${esc(S.recherche)}" aria-label="Chercher un élève"></div>`,
+    listes:()=>`<div class="carte noprint"><span class="lab">Voir la liste des élèves avec :</span><div class="chips" style="margin-top:6px">${FILTRES.filter(f=>PREF.listes.includes(f[0])).map(([k,l])=>`<button type="button" class="chip" data-filtre="${k}" aria-pressed="${S.filtre===k}">${l} <b>${pres.filter(e=>aFlag(e.id,k)).length}</b></button>`).join("")}</div></div>`,
+    alertes:()=>{const A=alertes().filter(a=>PREF.alertes.includes(a.k));return `<details class="carte alertes" ${A.length?"open":""}><summary>Alertes <span class="pastille ${A.some(a=>a.n===0)?"rouge":"orange"}">${A.length}</span></summary>${A.length?A.map(a=>`<a class="alerte n${a.n}" href="#eleve/${a.e}" data-nav="eleve/${a.e}"><b>${esc(nomEleve(par("Eleves",a.e)))}</b> ${esc(a.txt)}</a>`).join(""):`<p class="aide">Rien à signaler. Les délais se règlent dans ⚙ Réglages.</p>`}</details>`},
+    nouveau:()=>`<div class="carte"><button class="btn plein" data-act="nouveau">+ Nouvel élève</button>${S.nouveau?formNouveau():""}</div>`,
+    classes:()=>{
+      let h=pres.length?"":`<div class="carte"><p class="aide">Aucun élève pour l'instant. Ajoute-en un (fictif tant que le DPD n'a pas répondu), ou on importera la liste d'ONDE dans une prochaine version.</p></div>`;
+      const parClasse={};pres.forEach(e=>(parClasse[e.Classe||"Sans classe"]=parClasse[e.Classe||"Sans classe"]||[]).push(e));
+      for(const c of Object.keys(parClasse).sort((a,b)=>a.localeCompare(b,"fr")))
+        h+=`<details class="carte" open><summary>${esc(c)} <span class="aide">${parClasse[c].length} élève${parClasse[c].length>1?"s":""}</span></summary>${parClasse[c].sort((a,b)=>nomEleve(a).localeCompare(nomEleve(b),"fr")).map(ligne).join("")}</details>`;
+      return h},
+    archives:()=>{const arch=T.Eleves.filter(e=>!present(e));if(!arch.length)return "";const lim=plusMois(aujourdhui(),-reglageNb("archivage_mois",12));
+      return `<details class="carte"><summary>Élèves archivés <span class="aide">${arch.length}</span></summary>${arch.map(e=>`${ligne(e)}${versDate(e.Depart)&&versDate(e.Depart)<lim?`<p class="msg">Parti(e) le ${fr(e.Depart)} : suppression proposée (plus de ${reglageNb("archivage_mois",12)} mois).</p>`:""}`).join("")}</details>`}
+  };
+  const liste=`<datalist id="classes">${classes.map(c=>`<option value="${esc(c)}">`).join("")}</datalist>`;
+  if(q&&vis("recherche")){
     const L=T.Eleves.filter(e=>norm(nomEleve(e)).includes(q)||norm((e.Nom||"")+" "+(e.Prenom||"")).includes(q)).sort((a,b)=>nomEleve(a).localeCompare(nomEleve(b),"fr"));
-    return h+`<div class="carte"><h2>${L.length} résultat${L.length>1?"s":""}</h2>${L.map(ligne).join("")||`<p class="aide">Personne ne correspond.</p>`}</div>`;
+    return B.recherche()+`<div class="carte"><h2>${L.length} résultat${L.length>1?"s":""}</h2>${L.map(ligne).join("")||`<p class="aide">Personne ne correspond.</p>`}</div>`;
   }
-  const pres0=T.Eleves.filter(present);
-  h+=`<div class="carte noprint"><span class="lab">Voir la liste des élèves avec :</span><div class="chips" style="margin-top:6px">${FILTRES.map(([k,l])=>`<button type="button" class="chip" data-filtre="${k}" aria-pressed="${S.filtre===k}">${l} <b>${pres0.filter(e=>aFlag(e.id,k)).length}</b></button>`).join("")}</div></div>`;
   if(S.filtre){
-    const L=pres0.filter(e=>aFlag(e.id,S.filtre)).sort((a,b)=>(a.Classe||"").localeCompare(b.Classe||"","fr")||nomEleve(a).localeCompare(nomEleve(b),"fr")),nom=(FILTRES.find(f=>f[0]===S.filtre)||[])[1];
-    return h+`<div class="carte"><h2>${nom} · ${L.length} élève${L.length>1?"s":""}</h2>${L.map(e=>`<a class="eleve" href="#eleve/${e.id}" data-nav="eleve/${e.id}"><b>${esc(nomEleve(e))}</b><span class="aide">${esc(e.Classe||"")}</span><span class="aide" style="flex-basis:100%">${esc(detailFiltre(e.id,S.filtre))}</span></a>`).join("")||`<p class="aide">Personne pour l'instant.</p>`}</div>`;
+    const L=pres.filter(e=>aFlag(e.id,S.filtre)).sort((a,b)=>(a.Classe||"").localeCompare(b.Classe||"","fr")||nomEleve(a).localeCompare(nomEleve(b),"fr")),nom=(FILTRES.find(f=>f[0]===S.filtre)||[])[1];
+    return `<div class="carte noprint"><a class="btn petit" href="#accueil" data-nav="accueil">← Retour à l'accueil</a></div>`+(vis("listes")?B.listes():"")+`<div class="carte"><h2>${nom} · ${L.length} élève${L.length>1?"s":""}</h2>${L.map(e=>`<a class="eleve" href="#eleve/${e.id}" data-nav="eleve/${e.id}"><b>${esc(nomEleve(e))}</b><span class="aide">${esc(e.Classe||"")}</span><span class="aide" style="flex-basis:100%">${esc(detailFiltre(e.id,S.filtre))}</span></a>`).join("")||`<p class="aide">Personne pour l'instant.</p>`}</div>`;
   }
-  const A=alertes();
-  h+=`<details class="carte alertes" ${A.length?"open":""}><summary>Alertes <span class="pastille ${A.some(a=>a.n===0)?"rouge":"orange"}">${A.length}</span></summary>${A.length?A.map(a=>`<a class="alerte n${a.n}" href="#eleve/${a.e}" data-nav="eleve/${a.e}"><b>${esc(nomEleve(par("Eleves",a.e)))}</b> ${esc(a.txt)}</a>`).join(""):`<p class="aide">Rien à signaler. Les délais se règlent dans ⚙ Réglages.</p>`}</details>`;
-  h+=`<div class="carte"><button class="btn plein" data-act="nouveau">+ Nouvel élève</button>${S.nouveau?formNouveau():""}</div>`;
-  const pres=T.Eleves.filter(present);
-  if(!pres.length)h+=`<div class="carte"><p class="aide">Aucun élève pour l'instant. Ajoute-en un (fictif tant que le DPD n'a pas répondu), ou on importera la liste d'ONDE dans une prochaine version.</p></div>`;
-  const parClasse={};pres.forEach(e=>(parClasse[e.Classe||"Sans classe"]=parClasse[e.Classe||"Sans classe"]||[]).push(e));
-  for(const c of Object.keys(parClasse).sort((a,b)=>a.localeCompare(b,"fr")))
-    h+=`<details class="carte" open><summary>${esc(c)} <span class="aide">${parClasse[c].length} élève${parClasse[c].length>1?"s":""}</span></summary>${parClasse[c].sort((a,b)=>nomEleve(a).localeCompare(nomEleve(b),"fr")).map(ligne).join("")}</details>`;
-  const arch=T.Eleves.filter(e=>!present(e));
-  if(arch.length){const lim=plusMois(aujourdhui(),-reglageNb("archivage_mois",12));
-    h+=`<details class="carte"><summary>Élèves archivés <span class="aide">${arch.length}</span></summary>${arch.map(e=>`${ligne(e)}${versDate(e.Depart)&&versDate(e.Depart)<lim?`<p class="msg">Parti(e) le ${fr(e.Depart)} : suppression proposée (plus de ${reglageNb("archivage_mois",12)} mois).</p>`:""}`).join("")}</details>`;}
-  return h+`<datalist id="classes">${classes.map(c=>`<option value="${esc(c)}">`).join("")}</datalist>`;
+  return ordreBlocs().filter(vis).map(k=>B[k]()).join("")+liste;
 }
 function formNouveau(){return `<form class="grille" data-form="eleve" style="margin-top:10px">
   <label class="ch"><span class="lab">Prénom</span><input name="Prenom" required></label><label class="ch"><span class="lab">Nom</span><input name="Nom" required></label>
@@ -253,6 +260,12 @@ function vueReglages(){
   const reg=REG.map(([k,l])=>{const r=(T.Reglages||[]).find(x=>x.Cle===k);return r?champ("Reglages",r,{c:"Valeur",kind:"text",type:"number",label:l}):""}).join("");
   return `<div class="carte noprint"><button class="btn petit" data-act="tout-deplier">Tout déplier</button> <button class="btn petit" data-act="tout-replier">Tout replier</button></div>`
   +section("alertes","Alertes et conservation",`<div class="grille">${reg}</div>`,true)
+  +section("accueil","Page d'accueil",`<p class="aide">Change l'ordre des blocs avec ↑ ↓ et masque ce que tu n'utilises pas. <b>Rien n'est supprimé</b> : les données restent dans le document. Ce réglage est propre à cet appareil.</p>
+    <div>${ordreBlocs().map((k,i,o)=>`<div class="ligne-bloc"><button type="button" class="chip" data-pref="bloc:${k}" aria-pressed="${!PREF.masques.includes(k)}">${BLOCS[k]}</button><button type="button" class="btn petit" data-pref="haut:${k}" aria-label="Monter" ${i===0?"disabled":""}>↑</button><button type="button" class="btn petit" data-pref="bas:${k}" aria-label="Descendre" ${i===o.length-1?"disabled":""}>↓</button></div>`).join("")}</div>
+    <h3 style="margin-top:12px">Listes proposées</h3><div class="chips">${FILTRES.map(([k,l])=>`<button type="button" class="chip" data-pref="liste:${k}" aria-pressed="${PREF.listes.includes(k)}">${l}</button>`).join("")}</div>
+    <h3 style="margin-top:12px">Alertes affichées</h3><div class="chips">${Object.keys(ALERTES_T).map(k=>`<button type="button" class="chip" data-pref="alerte:${k}" aria-pressed="${PREF.alertes.includes(k)}">${ALERTES_T[k]}</button>`).join("")}</div>
+    <h3 style="margin-top:12px">Pastilles sur chaque élève</h3><div class="chips">${FILTRES.map(([k,l])=>`<button type="button" class="chip" data-pref="pastille:${k}" aria-pressed="${PREF.pastilles.includes(k)}">${l}</button>`).join("")}</div>
+    <p style="margin-top:12px"><button type="button" class="btn petit" data-pref="reset:x">Remettre l'affichage de départ</button></p>`,true)
   +section("install","Installation du document",`<p class="aide">Crée les tables et listes qui manquent. Ne supprime rien et ne remplace rien.</p><div id="etat-tables" class="aide"></div><button class="btn plein" data-act="installer">Installer / compléter le document</button><pre id="journal" hidden></pre>`,false)
   +section("apropos","À propos",`<p class="aide">Version ${VERSION}. Les données sont dans ton document Grist, hébergé par l'État. Cette page publique ne contient aucune donnée d'élève.</p><p class="aide">Ctrl+Z annule la dernière modification. Tant que le DPD de l'académie n'a pas répondu : élèves fictifs seulement.</p>`,false);
 }
@@ -268,6 +281,8 @@ function lireHash(){
   const h=location.hash.replace(/^#/,"").split("/");
   if(h[0]==="eleve"&&par("Eleves",+h[1])){S.vue="eleve";S.id=+h[1];S.onglet=h[2]||"resume"}
   else if(h[0]==="reglages")S.vue="reglages";else S.vue="accueil";
+  S.filtre=(S.vue==="accueil"&&h[0]==="liste"&&FILTRES.some(f=>f[0]===h[1]))?h[1]:null;
+  if(S.vue==="accueil")S.dernierListe=S.filtre?"liste/"+S.filtre:"accueil";
   S.edit=false;S.nouveauPro=false;
 }
 function aller(h){history.pushState(null,"","#"+h);lireHash();window.scrollTo(0,0);rendre()}

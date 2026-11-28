@@ -9,6 +9,7 @@ Fiche d'identité
   Ce qu'il ne fait pas : PPRE / PAP / PPS officiels (le LPI), annuaire pour orienter et informations préoccupantes (Boussole élève, dossier orienter/), rédaction des comptes rendus (skill compte-rendu-equipe-educative).
 Version : voir VERSION dans app-events.js (une seule constante)
 Historique :
+  - 0.5.0 (2026-11-28) Accueil : PPS et Allophones retirés par défaut ; listes (PAI, MDPH…) dans l'historique du navigateur avec bouton « Retour à l'accueil » et retour à la liste depuis une fiche ; Réglages › Page d'accueil : ordre des blocs (↑ ↓), blocs, listes, alertes et pastilles masquables (propre à l'appareil, localStorage « parcours-prefs »).
   - 0.4.0 (2026-11-28) Résumé = fiche de synthèse : dernière réunion (« À retenir », décisions et préconisations, résumé du bilan), préconisations en cours (calculées depuis le parcours et les suivis), suivis avec contacts. Nouvelle colonne Rencontres.Important.
   - 0.3.0 (2026-11-28) Suivis : type de suivi puis nom dans la liste filtrée de l'annuaire, états sans « Demandé », dates selon l'état, fréquence en liste. Rencontres : cartes réduites + mêmes cases que Parcours. Accueil : listes PAI, MDPH, PPS, PAP, PPRE, allophones. Les tables existantes sont complétées (colonnes ajoutées) par « Installer / compléter ».
   - 0.2.1 (2026-11-28) Pièces jointes : l'envoi depuis le widget est bloqué (« Failed to fetch »), remplacé par un guide pour joindre le fichier dans la table Rencontres de Grist ; lecture des fichiers conservée.
@@ -61,6 +62,7 @@ textarea{resize:vertical}
 .btn.danger{color:var(--danger)}
 .sous{border-top:1px solid var(--trait);margin-top:8px;padding-top:2px}.sous>summary{min-height:44px;display:flex;align-items:center;font-weight:700;cursor:pointer}
 .important{margin:0 0 10px;padding:10px 12px;border-radius:var(--arrondi-m);border-left:5px solid var(--attention);background:color-mix(in srgb,var(--attention) 12%,var(--surface))}
+.ligne-bloc{display:flex;gap:8px;align-items:center;margin-bottom:6px}.ligne-bloc .chip{flex:1;text-align:left}
 .aidepj{margin-top:8px;padding:10px 12px;border-radius:var(--arrondi-m);background:var(--surface-2);border:1px solid var(--trait)}.aidepj p{margin:0 0 4px}.aidepj ol{margin:0 0 8px;padding-left:20px}
 pre{white-space:pre-wrap;background:var(--surface-2);border:1px solid var(--trait);border-radius:var(--arrondi-m);padding:10px;max-height:260px;overflow:auto;font-size:.85rem}
 #toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--encre);color:var(--fond);padding:10px 16px;border-radius:12px;opacity:0;transition:opacity .2s;pointer-events:none;max-width:90vw;z-index:9}

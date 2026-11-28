@@ -1,8 +1,19 @@
 /* Parcours élève : événements, enregistrement, démarrage. */
-const VERSION="0.4.0";
+const VERSION="0.5.0";
 const lsGet=(k,d)=>{try{return JSON.parse(localStorage.getItem(k))??d}catch(e){return d}};
 const lsSet=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}};
 OUT.ouverts=lsGet("parcours-ui",{});
+PREF=Object.assign(structuredClone(PREF_DEF),lsGet("parcours-prefs",{}));
+function prefAction(a,k){
+  const bascule=(l,x)=>{const i=l.indexOf(x);if(i<0)l.push(x);else l.splice(i,1)};
+  if(a==="haut"||a==="bas"){const o=ordreBlocs(),i=o.indexOf(k),j=a==="haut"?i-1:i+1;if(j>=0&&j<o.length){[o[i],o[j]]=[o[j],o[i]];PREF.ordre=o}}
+  else if(a==="bloc")bascule(PREF.masques,k);
+  else if(a==="liste")bascule(PREF.listes,k);
+  else if(a==="alerte")bascule(PREF.alertes,k);
+  else if(a==="pastille")bascule(PREF.pastilles,k);
+  else if(a==="reset")PREF=structuredClone(PREF_DEF);
+  lsSet("parcours-prefs",PREF);rendre();
+}
 
 function valeurDe(el){
   const k=el.dataset.k,v=el.value;
@@ -51,7 +62,7 @@ async function action(a,el){
     case"ajout-rencontre":{const id=await ajouter("Rencontres",{Eleve:S.id,Date:aujSec(),Type:"Entretien avec les parents",Auteur:lsGet("parcours-auteur","")},"rencontre");OUT.mem["r"+id]=true;return rendre()}
     case"ajout-mdph":await ajouter("MDPH",{Eleve:S.id,Date_notification:aujSec()},"notification MDPH");return rendre();
     case"ajout-pai":await ajouter("PAI",{Eleve:S.id,Date:aujSec()},"PAI");return rendre();
-    case"tout-deplier":case"tout-replier":["alertes","install","apropos"].forEach(k=>OUT.ouverts[k]=a==="tout-deplier");lsSet("parcours-ui",OUT.ouverts);return rendre();
+    case"tout-deplier":case"tout-replier":["alertes","accueil","install","apropos"].forEach(k=>OUT.ouverts[k]=a==="tout-deplier");lsSet("parcours-ui",OUT.ouverts);return rendre();
     case"aide-pj":S.aidePJ=S.aidePJ===+el.dataset.id?null:+el.dataset.id;return rendre();
     case"actualiser":await recharger();toast("✓ À jour");return;
     case"maj-doc":try{await installer(()=>{});await charger();S.maj=false;toast("✓ Document à jour")}catch(x){toast("⚠ Mise à jour impossible : "+(x&&x.message||x))}return rendre();
@@ -65,10 +76,11 @@ async function action(a,el){
 }
 
 document.addEventListener("click",async ev=>{
-  const b=ev.target.closest("[data-nav],[data-onglet],[data-filtre],[data-act],[data-tog],[data-seg],[data-chip],[data-sup],[data-pj]");if(!b)return;
+  const b=ev.target.closest("[data-nav],[data-onglet],[data-filtre],[data-pref],[data-act],[data-tog],[data-seg],[data-chip],[data-sup],[data-pj]");if(!b)return;
   try{
     if(b.dataset.nav){ev.preventDefault();return aller(b.dataset.nav)}
-    if(b.dataset.filtre){S.filtre=S.filtre===b.dataset.filtre?null:b.dataset.filtre;return rendre()}
+    if(b.dataset.filtre)return aller(S.filtre===b.dataset.filtre?"accueil":"liste/"+b.dataset.filtre);
+    if(b.dataset.pref){const [a,k]=b.dataset.pref.split(":");return prefAction(a,k)}
     if(b.dataset.onglet){ev.preventDefault();return aller(`eleve/${S.id}/${b.dataset.onglet}`)}
     if(b.dataset.act)return await action(b.dataset.act,b);
     if(b.hasAttribute("data-tog"))return basculer(b,v=>!v,nv=>b.setAttribute("aria-pressed",nv));

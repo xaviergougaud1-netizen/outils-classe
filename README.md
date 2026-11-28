@@ -25,6 +25,7 @@ Licence : CC BY-NC-SA 4.0.
 | Dictées adaptées (édition libre, cycle, devoirs, import PDF) | https://xaviergougaud1-netizen.github.io/outils-classe/dictees/ | 2.6.1 |
 | Plan de classe | https://xaviergougaud1-netizen.github.io/outils-classe/plan/ | 1.6 |
 | Boussole élève, ex-« Orienter un élève » (outil de Xavier, pas dans le portail) | https://xaviergougaud1-netizen.github.io/outils-classe/orienter/ | 1.3.1 |
+| Parcours élève (widget Grist, suivi des élèves de l'école ; **aucune donnée ici**, elles sont dans Grist) | https://xaviergougaud1-netizen.github.io/outils-classe/parcours/ | 0.1.0 |
 
 ## Organisation
 - `commun/charte.css` : charte Repères v1 commune (couleur de chaque outil : `--outil-calcul`, `--outil-problemes`).
@@ -51,6 +52,7 @@ Licence : CC BY-NC-SA 4.0.
 4. Ajouter une ligne dans « Nouveautés ».
 
 ## Nouveautés
+- 2026-11-28 · Parcours élève 0.1.0 : widget pour Grist (pas dans le portail), installation des tables et listes du suivi des élèves, annuaire repris de Boussole élève.
 - 2026-11-21 · Dictées adaptées 2.6.0 : « Importer un PDF » qui contient plusieurs dictées (découpage selon les titres, par page ou en un bloc ; mots et règle reconnus ; OCR si scanné ; aperçu modifiable).
 - 2026-11-21 · Kit 1.4.0 : Fiches Claires 1.11 dans le kit (bibliothèque Ta Mallette sortie dans tm-lib.js, Classe seulement).
 - 2026-11-21 · Kit 1.3.0 : Mes problèmes (Ateliers 2.2.0, édition libre), Flash maths 4.8 dans le kit, images sur l'appareil (kit-images.js) et dans la sauvegarde complète.

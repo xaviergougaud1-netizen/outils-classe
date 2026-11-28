@@ -5,13 +5,17 @@ Fiche d'identité
   Rôle : suivre le parcours et les aides de chaque élève de l'école, à plusieurs, sans classeur papier.
   Quand : avant ou après un entretien avec les parents, une EE ou une ESS ; en conseil des maîtres ou de cycle ; à la rentrée (import ONDE) ; en fin d'année (bilan annuel).
   Où : ordinateurs de l'école et de la maison (téléphone pour consulter). Page publique sur GitHub Pages, SANS aucune donnée d'élève : les données vivent dans le document Grist, hébergé par l'État.
-  Écran n° 1 : les alertes et la recherche d'élève (à venir ; en 0.1 : installation du document).
+  Écran n° 1 : les alertes et la recherche d'élève, puis les élèves classe par classe.
   Ce qu'il ne fait pas : PPRE / PAP / PPS officiels (le LPI), annuaire pour orienter et informations préoccupantes (Boussole élève, dossier orienter/), rédaction des comptes rendus (skill compte-rendu-equipe-educative).
-Version : voir VERSION (une seule constante)
+Version : voir VERSION dans app-events.js (une seule constante)
 Historique :
+  - 0.2.0 (2026-11-28) Accueil (recherche, alertes, classes, archivés), fiche élève (Résumé, Parcours, Suivis, Rencontres avec pièces jointes, MDPH et PAI), Réglages repliables, Ctrl+Z, installation déplacée dans Réglages.
   - 0.1.0 (2026-11-28) Installation : crée les tables, listes et réglages dans le document Grist, remplit l'annuaire des professionnels depuis orienter/donnees.js. Ne supprime et ne remplace jamais rien.
 Choix techniques :
-  - Deux fichiers : index.html (code) et schema.js (structure des tables et listes, modifiable sans toucher au code).
+  - Fichiers : index.html (page et styles), schema.js (structure des tables et listes), app-data.js (lecture, écriture, annulation, installation), app-ui.js (écrans), app-events.js (événements, démarrage).
+  - Pas de confirm() ni d'alert() : le widget est dans une iframe de Grist qui peut les bloquer ; suppression en deux touches.
+  - Les dates Grist sont en secondes (minuit UTC). Les listes à choix multiples s'écrivent ["L", ...].
+  - Plusieurs utilisateurs : dernière écriture gagnante par champ ; relecture douce toutes les 30 s.
   - Accès « complet au document » demandé à Grist (nécessaire pour créer les tables).
   - RGPD : données de santé -> jamais de Google, jamais d'IA sur du texte nominatif, rien dans ce dépôt public. Avertir le DPD de l'académie avant de saisir de vraies données.
   - Colonnes de liens (Ref) : l'affichage du nom de l'élève est tenté à l'installation ; le widget n'en dépend pas (il relie par numéro de ligne).
@@ -26,146 +30,43 @@ Choix techniques :
 <style>
 :root{--outil:#0F766E}
 @media (prefers-color-scheme:dark){:root{--outil:#4FD1C5}}
-main{width:min(100% - 24px,820px);margin:0 auto;padding:12px 0 40px}
-h1{margin:0;font-size:1.4rem}h2{margin:0 0 8px;font-size:1.1rem}
-.entete{padding:12px 0 14px}
-.carte{margin-top:12px}
-.tables{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:8px}
-.t{display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--trait);border-radius:var(--arrondi-m);background:var(--surface-2)}
-.t b{flex:1}.pastille{font-size:.8rem;font-weight:700;border-radius:8px;padding:1px 8px}
-.ok{background:#E3F2E8;color:#1E6B3A}.manque{background:#FDF0DC;color:#8A4B00}
-@media (prefers-color-scheme:dark){.ok{background:#1E3A2A;color:#9BE2B3}.manque{background:#3A2E14;color:#F5C97A}}
-pre{white-space:pre-wrap;background:var(--surface-2);border:1px solid var(--trait);border-radius:var(--arrondi-m);padding:10px;max-height:260px;overflow:auto;font-size:.85rem;margin:8px 0 0}
-details{border:1px solid var(--trait);border-radius:var(--arrondi-m);background:var(--surface);margin-top:12px}
-summary{min-height:var(--cible);display:flex;align-items:center;padding:0 14px;font-weight:700;cursor:pointer}
-details>div{padding:0 14px 14px}
+main{width:min(100% - 20px,860px);margin:0 auto;padding:8px 0 80px}
+h2{margin:0 0 8px;font-size:1.15rem}h3{margin:0 0 8px;font-size:1rem}
+.entete{padding:10px 0}.entete .bar{display:flex;align-items:center;gap:10px}
+.barre{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px}.barre .titre{flex:1;font-weight:700;min-width:0}
+.carte{margin-top:10px}details.carte>summary{min-height:var(--cible);display:flex;align-items:center;gap:10px;font-weight:700;cursor:pointer;margin:-14px;padding:0 14px}
+details.carte[open]>summary{margin-bottom:6px}
+input,select,textarea{width:100%;min-height:44px;border:1px solid var(--trait);border-radius:var(--arrondi-m);background:var(--surface);padding:8px 10px}
+textarea{resize:vertical}
+.grille>.chip{align-self:end;justify-self:start}
+.grille{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px}
+.ch{display:flex;flex-direction:column;gap:4px}.ch.large{grid-column:1/-1}.lab{font-size:.85rem;color:var(--encre-douce);font-weight:700}
+.chips,.pj{display:flex;flex-wrap:wrap;gap:8px}
+.chip{min-height:44px;padding:0 14px;border-radius:999px;border:1px solid var(--trait);background:var(--surface-2);font-weight:700}
+.chip[aria-pressed=true],.seg button[aria-pressed=true]{background:var(--outil);border-color:var(--outil);color:var(--sur-outil)}
+.seg{display:inline-flex;gap:4px;padding:4px;border-radius:var(--arrondi-m);background:var(--surface-2)}.seg button{min-width:48px;min-height:44px;border:0;border-radius:9px;background:transparent;font-weight:700}
+.pastille{display:inline-block;font-size:.78rem;font-weight:700;border-radius:8px;padding:1px 8px;background:color-mix(in srgb,var(--outil) 14%,var(--surface));color:var(--encre)}
+.pastille.ok{background:#E3F2E8;color:#1E6B3A}.pastille.orange{background:#FDF0DC;color:#8A4B00}.pastille.rouge{background:#FBE4E2;color:#9B1C14}
+@media (prefers-color-scheme:dark){.pastille.ok{background:#1E3A2A;color:#9BE2B3}.pastille.orange{background:#3A2E14;color:#F5C97A}.pastille.rouge{background:#3F1D1A;color:#FFB4AB}}
+.eleve{display:flex;align-items:center;gap:10px;flex-wrap:wrap;min-height:52px;padding:6px 4px;border-top:1px solid var(--trait);color:inherit;text-decoration:none}
+.eleve:hover{background:var(--surface-2)}.pastilles{display:flex;gap:6px;margin-left:auto}
+.alerte{display:block;padding:8px 10px;margin-top:6px;border-radius:var(--arrondi-m);color:inherit;text-decoration:none;border-left:5px solid #B45309;background:var(--surface-2)}.alerte.n0{border-left-color:#B42318}
+.entete-eleve{display:flex;gap:10px;align-items:flex-start;flex-wrap:wrap;justify-content:space-between}.actions{display:flex;gap:8px;flex-wrap:wrap}
+.onglets{display:flex;gap:6px;overflow-x:auto;margin-top:10px;padding-bottom:2px}
+.onglets button{flex:none;min-height:44px;padding:0 14px;border-radius:var(--arrondi-m);border:1px solid var(--trait);background:var(--surface);font-weight:700}
+.onglets button[aria-selected=true]{background:var(--outil);border-color:var(--outil);color:var(--sur-outil)}
+.btn.danger{color:var(--danger)}
+pre{white-space:pre-wrap;background:var(--surface-2);border:1px solid var(--trait);border-radius:var(--arrondi-m);padding:10px;max-height:260px;overflow:auto;font-size:.85rem}
+#toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--encre);color:var(--fond);padding:10px 16px;border-radius:12px;opacity:0;transition:opacity .2s;pointer-events:none;max-width:90vw;z-index:9}
 .bandeau{padding:10px 12px;border-radius:var(--arrondi-m);background:#FDF0DC;color:#8A4B00;margin-top:12px}
-@media (prefers-color-scheme:dark){.bandeau{background:#3A2E14;color:#F5C97A}}
+@media print{.noprint,.entete,#toast{display:none!important}body{background:#fff}.carte{box-shadow:none;break-inside:avoid}}
 </style></head><body>
 <header class="entete"><main style="padding:0">
-  <div class="bar" style="display:flex;align-items:center;gap:10px">
-    <span class="tuile" style="display:grid;place-items:center;width:40px;height:40px;border-radius:10px;background:var(--outil);color:var(--sur-outil)"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4-6 8-6s7 2 8 6"/></svg></span>
-    <h1>Parcours élève <small class="aide" id="ver"></small></h1>
-  </div>
+  <div class="bar"><span class="tuile" style="display:grid;place-items:center;width:40px;height:40px;border-radius:10px;background:var(--outil);color:var(--sur-outil)"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4-6 8-6s7 2 8 6"/></svg></span>
+  <b style="font-size:1.2rem">Parcours élève</b><small class="aide" id="ver"></small></div>
 </main></header>
-<main id="app">
-  <div id="horsgrist" class="bandeau" hidden>Cette page est faite pour s'ouvrir <b>dans Grist</b> (widget personnalisé). Ouverte seule, elle ne peut rien faire.</div>
-  <section class="carte" id="etat"><h2>Où en est ton document ?</h2><p class="aide" id="etatmsg">Connexion à Grist…</p><div class="tables" id="tables"></div></section>
-  <section class="carte" id="actions" hidden>
-    <h2>Installation</h2>
-    <p class="aide">Crée les tables, les listes et les réglages qui manquent. <b>Ne supprime rien et ne remplace rien</b> : tu peux l'utiliser plusieurs fois sans risque.</p>
-    <button class="btn plein" id="installer">Installer / compléter le document</button>
-    <pre id="journal" hidden></pre>
-  </section>
-  <details id="apropos" open><summary>À propos</summary><div>
-    <p class="aide">Les données restent dans ton document Grist (hébergé par l'État). Cette page, publique, ne contient aucune donnée d'élève.</p>
-    <p class="aide" id="verligne"></p>
-  </div></details>
-</main>
-<script src="schema.js"></script>
-<script>
-const VERSION="0.1.0";
-const $=id=>document.getElementById(id);
-const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-let G=null; // l'API de Grist
-
-function journal(t){const j=$("journal");j.hidden=false;j.textContent+=t+"\n";j.scrollTop=j.scrollHeight}
-function chargerScript(src){return new Promise((ok,ko)=>{const s=document.createElement("script");s.src=src;s.onload=ok;s.onerror=ko;document.head.appendChild(s)})}
-async function chargerGrist(){
-  if(window.grist)return window.grist;
-  for(const src of ["https://grist.numerique.gouv.fr/grist-plugin-api.js","https://docs.getgrist.com/grist-plugin-api.js"]){
-    try{await chargerScript(src);if(window.grist)return window.grist}catch(e){}
-  }
-  return null;
-}
-/* Lit une table Grist : renvoie {nb, cols} (cols : colonne -> liste de valeurs). */
-async function lire(table){const t=await G.docApi.fetchTable(table);return t}
-function nbLignes(t){return (t.id||[]).length}
-
-async function etat(){
-  const meta=await lire("_grist_Tables");
-  const presentes=new Set(meta.tableId);
-  const zone=$("tables");zone.innerHTML="";let manque=0;
-  for(const t of SCHEMA){
-    let txt;
-    if(presentes.has(t.id)){const d=await lire(t.id);txt=`<span class="pastille ok">✓ ${nbLignes(d)} ligne${nbLignes(d)>1?"s":""}</span>`}
-    else{manque++;txt=`<span class="pastille manque">à créer</span>`}
-    zone.insertAdjacentHTML("beforeend",`<div class="t"><b>${esc(t.id)}</b>${txt}</div>`);
-  }
-  $("etatmsg").textContent=manque?`${manque} table${manque>1?"s":""} à créer.`:"Toutes les tables sont là.";
-  return {presentes,manque};
-}
-
-function colonne(c){
-  const o={id:c.id,type:c.type,label:c.label,isFormula:false};
-  if(c.choices){o.widgetOptions=JSON.stringify({choices:LISTES[c.choices]})}
-  return o;
-}
-
-async function installer(){
-  const bouton=$("installer");bouton.disabled=true;$("journal").textContent="";
-  try{
-    const {presentes}=await etat();
-    for(const t of SCHEMA){
-      if(presentes.has(t.id)){journal(`• ${t.id} : déjà là, je n'y touche pas.`);continue}
-      await G.docApi.applyUserActions([["AddTable",t.id,t.cols.map(colonne)]]);
-      journal(`✓ ${t.id} : créée (${t.cols.length} colonnes).`);
-    }
-    await remplirReglages(presentes);
-    await remplirProfessionnels(presentes);
-    await afficherNoms();
-    journal("Terminé.");
-  }catch(e){journal("⚠ "+(e&&e.message||e)+"\nTouche « Installer » pour réessayer ; envoie-moi une capture de ce message.")}
-  bouton.disabled=false;await etat();
-}
-
-async function remplirReglages(presentes){
-  if(presentes.has("Reglages")){return}
-  await G.docApi.applyUserActions([["BulkAddRecord","Reglages",REGLAGES_DEFAUT.map(()=>null),{Cle:REGLAGES_DEFAUT.map(r=>r[0]),Valeur:REGLAGES_DEFAUT.map(r=>r[1])}]]);
-  journal(`✓ Reglages : ${REGLAGES_DEFAUT.length} réglages de départ.`);
-}
-
-async function remplirProfessionnels(presentes){
-  if(presentes.has("Professionnels")){return}
-  try{await chargerScript("../orienter/donnees.js")}catch(e){journal("• Annuaire : impossible de lire Boussole élève, tu pourras ajouter les professionnels à la main.");return}
-  if(typeof CONTACTS_DEFAUT==="undefined"||typeof PROS==="undefined"){journal("• Annuaire : format inattendu, rien ajouté.");return}
-  const type=id=>{const p=PROS.find(x=>x.id===id);return p?(p.court&&p.court.length<40?p.nom:p.nom):id};
-  const L=CONTACTS_DEFAUT;
-  const col=f=>L.map(f);
-  await G.docApi.applyUserActions([["BulkAddRecord","Professionnels",L.map(()=>null),{
-    Type:col(c=>type(c.pro)),Nom:col(c=>c.nom||""),Adresse:col(c=>c.adresse||""),Telephone:col(c=>c.tel||""),Mail:col(c=>c.mail||""),Verifie:col(c=>c.verifie||"")}]]);
-  journal(`✓ Professionnels : ${L.length} contacts repris de Boussole élève.`);
-}
-
-/* Fait afficher le nom (et pas un numéro) dans les colonnes de lien. Essai : le widget n'en dépend pas. */
-async function afficherNoms(){
-  try{
-    const T=await lire("_grist_Tables"),C=await lire("_grist_Tables_column");
-    const tid=n=>T.id[T.tableId.indexOf(n)];
-    const ref=(table,col)=>{const p=tid(table);for(let i=0;i<C.id.length;i++){if(C.parentId[i]===p&&C.colId[i]===col)return C.id[i]}return null};
-    let n=0;
-    for(const t of SCHEMA)for(const c of t.cols){
-      if(!c.visible)continue;
-      const cible=c.type.split(":")[1],r=ref(t.id,c.id),v=ref(cible,c.visible);
-      const i=C.id.indexOf(r);
-      if(r==null||v==null||(C.visibleCol&&C.visibleCol[i]===v))continue;
-      await G.docApi.applyUserActions([["UpdateRecord","_grist_Tables_column",r,{visibleCol:v}],["SetDisplayFormula",t.id,null,r,`$${c.id}.${c.visible}`]]);
-      n++;
-    }
-    if(n)journal(`✓ Liens : le nom s'affiche dans ${n} colonne${n>1?"s":""} de lien.`);
-  }catch(e){journal("• Liens : l'affichage des noms n'a pas pu être réglé ("+(e&&e.message||e)+"). Sans gravité : on le règle ensuite.")}
-}
-
-(async function(){
-  $("ver").textContent="v"+VERSION;$("verligne").textContent="Version "+VERSION;
-  try{const o=JSON.parse(localStorage.getItem("parcours-ui")||"{}");if(o.apropos===false)$("apropos").open=false}catch(e){}
-  $("apropos").addEventListener("toggle",()=>{try{localStorage.setItem("parcours-ui",JSON.stringify({apropos:$("apropos").open}))}catch(e){}});
-  G=await chargerGrist();
-  if(!G){$("horsgrist").hidden=false;$("etatmsg").textContent="Pas de Grist ici.";return}
-  G.ready({requiredAccess:"full"});
-  try{
-    $("actions").hidden=false;$("installer").onclick=installer;
-    await etat();
-  }catch(e){$("etatmsg").textContent="Je n'arrive pas à lire le document. Dans le panneau de droite, mets « Accès complet au document ». Détail : "+(e&&e.message||e)}
-})();
-</script></body></html>
+<main><div id="horsgrist" class="bandeau" hidden>Cette page est faite pour s'ouvrir <b>dans Grist</b> (widget personnalisé). Ouverte seule, elle ne peut rien faire.</div><div id="app"></div></main>
+<div id="toast" role="status"></div>
+<script src="schema.js"></script><script src="app-data.js"></script><script src="app-ui.js"></script><script src="app-events.js"></script>
+</body>
+</html>
